@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.RepairOrdersMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.RepairOrders">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="orderNumber" column="order_number" jdbcType="VARCHAR"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="addressId" column="address_id" jdbcType="BIGINT"/>
+            <result property="repairType" column="repair_type" jdbcType="VARCHAR"/>
+            <result property="title" column="title" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="images" column="images" jdbcType="VARCHAR"/>
+            <result property="contactPhone" column="contact_phone" jdbcType="VARCHAR"/>
+            <result property="expectedTime" column="expected_time" jdbcType="TIMESTAMP"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="workerId" column="worker_id" jdbcType="BIGINT"/>
+            <result property="workerName" column="worker_name" jdbcType="VARCHAR"/>
+            <result property="workerPhone" column="worker_phone" jdbcType="VARCHAR"/>
+            <result property="appointmentTime" column="appointment_time" jdbcType="TIMESTAMP"/>
+            <result property="completionTime" column="completion_time" jdbcType="TIMESTAMP"/>
+            <result property="satisfactionLevel" column="satisfaction_level" jdbcType="TINYINT"/>
+            <result property="feedback" column="feedback" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,order_number,user_id,
+        address_id,repair_type,title,
+        description,images,contact_phone,
+        expected_time,status,worker_id,
+        worker_name,worker_phone,appointment_time,
+        completion_time,satisfaction_level,feedback,
+        create_time,update_time
+    </sql>
+</mapper>

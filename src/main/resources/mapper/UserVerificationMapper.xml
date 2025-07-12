@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.UserVerificationMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.UserVerification">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="realName" column="real_name" jdbcType="VARCHAR"/>
+            <result property="idCardNumber" column="id_card_number" jdbcType="VARCHAR"/>
+            <result property="idCardFrontUrl" column="id_card_front_url" jdbcType="VARCHAR"/>
+            <result property="idCardBackUrl" column="id_card_back_url" jdbcType="VARCHAR"/>
+            <result property="verificationStatus" column="verification_status" jdbcType="TINYINT"/>
+            <result property="failureReason" column="failure_reason" jdbcType="VARCHAR"/>
+            <result property="submitTime" column="submit_time" jdbcType="TIMESTAMP"/>
+            <result property="completeTime" column="complete_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,real_name,
+        id_card_number,id_card_front_url,id_card_back_url,
+        verification_status,failure_reason,submit_time,
+        complete_time
+    </sql>
+</mapper>
