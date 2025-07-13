@@ -1,0 +1,122 @@
+/* 全局样式 */
+
+:root {
+  --primary-color: #4fc08d;
+  --primary-color-light: #8cdbbd;
+  --primary-color-dark: #3d996f;
+  --text-color: #333;
+  --text-color-light: #666;
+  --text-color-lighter: #999;
+  --background-color: #f7f8fa;
+  --border-color: #ebedf0;
+  --success-color: #07c160;
+  --warning-color: #ff976a;
+  --danger-color: #ee0a24;
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+}
+
+/* 重置浏览器默认样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  font-size: var(--font-size-md);
+  color: var(--text-color);
+  background-color: var(--background-color);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* 常用布局 */
+.page-container {
+  padding: 16px;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 常用边距类 */
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mb-8 {
+  margin-bottom: 8px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mr-8 {
+  margin-right: 8px;
+}
+
+.ml-8 {
+  margin-left: 8px;
+}
+
+.p-16 {
+  padding: 16px;
+}
+
+/* 卡片样式 */
+.card {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Vant Toast 样式覆盖 - 修复白色文字在白色背景上不可见的问题 */
+.van-toast {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+/* 成功提示保持绿底白字 */
+.van-toast--success {
+  color: #fff !important;
+  background-color: var(--success-color) !important;
+}
+
+/* 失败提示保持红底白字 */
+.van-toast--fail {
+  color: #fff !important; 
+  background-color: var(--danger-color) !important;
+}
+
+/* 加载提示保持黑底白字 */
+.van-toast--loading {
+  color: #fff !important;
+  background-color: rgba(0, 0, 0, 0.7) !important;
+} 

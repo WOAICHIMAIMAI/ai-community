@@ -16,6 +16,7 @@ import java.util.Date;
 @TableName(value ="hot_news")
 @Data
 public class HotNews implements Serializable {
+
     /**
      * 新闻ID
      */
@@ -121,6 +122,12 @@ public class HotNews implements Serializable {
      * 更新时间
      */
     private Date updateTime;
+    
+    /**
+     * 内容指纹，用于相似度检测
+     */
+    @TableField("content_hash")
+    private String contentHash;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
@@ -157,7 +164,8 @@ public class HotNews implements Serializable {
             && (this.getStatus() == null ? other.getStatus() == null : this.getStatus().equals(other.getStatus()))
             && (this.getCrawlTime() == null ? other.getCrawlTime() == null : this.getCrawlTime().equals(other.getCrawlTime()))
             && (this.getCreateTime() == null ? other.getCreateTime() == null : this.getCreateTime().equals(other.getCreateTime()))
-            && (this.getUpdateTime() == null ? other.getUpdateTime() == null : this.getUpdateTime().equals(other.getUpdateTime()));
+            && (this.getUpdateTime() == null ? other.getUpdateTime() == null : this.getUpdateTime().equals(other.getUpdateTime()))
+            && (this.getContentHash() == null ? other.getContentHash() == null : this.getContentHash().equals(other.getContentHash()));
     }
 
     @Override
@@ -185,6 +193,7 @@ public class HotNews implements Serializable {
         result = prime * result + ((getCrawlTime() == null) ? 0 : getCrawlTime().hashCode());
         result = prime * result + ((getCreateTime() == null) ? 0 : getCreateTime().hashCode());
         result = prime * result + ((getUpdateTime() == null) ? 0 : getUpdateTime().hashCode());
+        result = prime * result + ((getContentHash() == null) ? 0 : getContentHash().hashCode());
         return result;
     }
 
@@ -215,6 +224,7 @@ public class HotNews implements Serializable {
         sb.append(", crawlTime=").append(crawlTime);
         sb.append(", createTime=").append(createTime);
         sb.append(", updateTime=").append(updateTime);
+        sb.append(", contentHash=").append(contentHash);
         sb.append(", serialVersionUID=").append(serialVersionUID);
         sb.append("]");
         return sb.toString();

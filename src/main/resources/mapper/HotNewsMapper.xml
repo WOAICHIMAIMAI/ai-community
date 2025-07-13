@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.HotNewsMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.HotNews">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="title" column="title" jdbcType="VARCHAR"/>
+            <result property="content" column="content" jdbcType="VARCHAR"/>
+            <result property="summary" column="summary" jdbcType="VARCHAR"/>
+            <result property="coverImage" column="cover_image" jdbcType="VARCHAR"/>
+            <result property="images" column="images" jdbcType="VARCHAR"/>
+            <result property="source" column="source" jdbcType="VARCHAR"/>
+            <result property="sourceUrl" column="source_url" jdbcType="VARCHAR"/>
+            <result property="author" column="author" jdbcType="VARCHAR"/>
+            <result property="category" column="category" jdbcType="VARCHAR"/>
+            <result property="tags" column="tags" jdbcType="VARCHAR"/>
+            <result property="publishTime" column="publish_time" jdbcType="TIMESTAMP"/>
+            <result property="viewCount" column="view_count" jdbcType="INTEGER"/>
+            <result property="likeCount" column="like_count" jdbcType="INTEGER"/>
+            <result property="commentCount" column="comment_count" jdbcType="INTEGER"/>
+            <result property="isHot" column="is_hot" jdbcType="TINYINT"/>
+            <result property="isTop" column="is_top" jdbcType="TINYINT"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="crawlTime" column="crawl_time" jdbcType="TIMESTAMP"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,title,content,
+        summary,cover_image,images,
+        source,source_url,author,
+        category,tags,publish_time,
+        view_count,like_count,comment_count,
+        is_hot,is_top,status,
+        crawl_time,create_time,update_time
+    </sql>
+</mapper>
