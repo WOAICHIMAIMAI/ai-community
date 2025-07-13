@@ -5,6 +5,7 @@ import com.zheng.aicommunitybackend.domain.entity.HotNews;
 import com.zheng.aicommunitybackend.mapper.HotNewsMapper;
 import com.zheng.aicommunitybackend.properties.SpiderProperties;
 import com.zheng.aicommunitybackend.service.ContentSimilarityService;
+import com.zheng.aicommunitybackend.util.SimHashUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -24,6 +25,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
 
 /**
  * 新闻爬虫定时任务
@@ -352,10 +357,18 @@ public class NewsSpiderTask {
                 }
             }
             
-            // 保存到数据库
+            // 保存到数据库 - 修改为批量插入
             if (!newsList.isEmpty()) {
-                int successCount = 0;
+                // 使用Set保存URL，用于去除当前批次内的重复项
+                Set<String> batchUrlSet = new HashSet<>();
+                // 使用临时Map存储内容指纹，用于批次内去重
+                Map<String, String> batchContentHashMap = new HashMap<>();
+                
+                List<HotNews> validNewsList = new ArrayList<>();
                 int filteredCount = 0;
+                int duplicateUrlCount = 0;
+                int similarContentCount = 0;
+                
                 for (HotNews news : newsList) {
                     try {
                         // 确保content字段不为空
@@ -382,17 +395,61 @@ public class NewsSpiderTask {
                             news.setSummary(news.getSummary().substring(0, 500));
                         }
                         
-                        // 单条插入，避免一条失败导致整批回滚
-                        if (saveNewsAndUpdateBloomFilter(news)) {
-                            successCount++;
+                        // 先检查URL是否已在当前批次中
+                        if (batchUrlSet.contains(news.getSourceUrl())) {
+                            log.info("当前批次已存在相同URL，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            duplicateUrlCount++;
+                            continue;
                         }
+                        
+                        // 先检查URL是否已存在于数据库
+                        if (isNewsUrlExists(news.getSourceUrl())) {
+                            log.info("数据库中已存在该URL，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            continue;
+                        }
+                        
+                        // 生成内容指纹
+                        contentSimilarityService.generateContentHash(news);
+                        String contentHash = news.getContentHash();
+                        
+                        // 检查当前批次中是否有相似内容
+                        boolean hasSimilarInBatch = false;
+                        for (Map.Entry<String, String> entry : batchContentHashMap.entrySet()) {
+                            if (SimHashUtil.isSimilar(contentHash, entry.getValue())) {
+                                log.info("当前批次中已存在相似内容，跳过: {} - URL: {}, 相似于: {}", 
+                                        news.getTitle(), news.getSourceUrl(), entry.getKey());
+                                similarContentCount++;
+                                hasSimilarInBatch = true;
+                                break;
+                            }
+                        }
+                        if (hasSimilarInBatch) {
+                            continue;
+                        }
+                        
+                        // 检查数据库中是否有相似内容
+                        if (contentSimilarityService.isSimilarToExisting(news)) {
+                            log.info("数据库中已存在相似内容，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            continue;
+                        }
+                        
+                        // 添加到有效列表
+                        validNewsList.add(news);
+                        // 记录当前URL和内容指纹，用于后续去重
+                        batchUrlSet.add(news.getSourceUrl());
+                        batchContentHashMap.put(news.getSourceUrl(), contentHash);
+                        
                     } catch (Exception e) {
                         // 记录错误但不中断循环，继续处理下一条
-                        log.error("插入新闻记录失败: {} - URL: {}, 错误: {}", news.getTitle(), news.getSourceUrl(), e.getMessage());
+                        log.error("处理新闻记录失败: {} - URL: {}, 错误: {}", news.getTitle(), news.getSourceUrl(), e.getMessage());
                     }
                 }
-                log.info("成功抓取并保存{}条华尔街见闻财经新闻，过滤{}条无效内容，总抓取: {}", 
-                        successCount, filteredCount, newsList.size());
+                
+                // 批量保存有效新闻并更新布隆过滤器
+                int successCount = batchSaveNewsAndUpdateBloomFilter(validNewsList);
+                
+                log.info("成功抓取并保存{}条华尔街见闻财经新闻，过滤无效内容{}条，批次内重复URL{}条，相似内容{}条，总抓取: {}", 
+                        successCount, filteredCount, duplicateUrlCount, similarContentCount, newsList.size());
             } else {
                 log.warn("未抓取到任何华尔街见闻财经新闻");
             }
@@ -639,11 +696,17 @@ public class NewsSpiderTask {
                 }
             }
             
-            // 保存到数据库
+            // 保存到数据库 - 修改为批量插入
             if (!newsList.isEmpty()) {
-                int successCount = 0;
+                // 使用Set保存URL，用于去除当前批次内的重复项
+                Set<String> batchUrlSet = new HashSet<>();
+                // 使用临时Map存储内容指纹，用于批次内去重
+                Map<String, String> batchContentHashMap = new HashMap<>();
+                
+                List<HotNews> validNewsList = new ArrayList<>();
                 int filteredCount = 0;
-                int similarCount = 0;
+                int duplicateUrlCount = 0;
+                int similarContentCount = 0;
                 
                 log.info("开始处理财新网新闻，共{}条", newsList.size());
                 
@@ -673,37 +736,59 @@ public class NewsSpiderTask {
                             news.setSummary(news.getSummary().substring(0, 500));
                         }
                         
-                        // 先生成内容指纹
-                        contentSimilarityService.generateContentHash(news);
-                        log.debug("财新网文章内容指纹: {} - {}", news.getTitle(), news.getContentHash());
-                        
-                        // 检查内容是否相似
-                        if (contentSimilarityService.isSimilarToExisting(news)) {
-                            log.info("财新网文章内容与已有内容相似，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
-                            similarCount++;
+                        // 先检查URL是否已在当前批次中
+                        if (batchUrlSet.contains(news.getSourceUrl())) {
+                            log.info("当前批次已存在相同URL，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            duplicateUrlCount++;
                             continue;
                         }
                         
-                        // 检查URL是否已存在
-                        if (!isNewsUrlExists(news.getSourceUrl())) {
-                            // 保存到数据库
-                            hotNewsMapper.insert(news);
-                            
-                            // 更新布隆过滤器
-                            urlBloomFilter.put(news.getSourceUrl());
-                            
-                            log.info("成功保存财新网文章: {} - URL: {}", news.getTitle(), news.getSourceUrl());
-                            successCount++;
-                        } else {
-                            log.info("财新网文章URL已存在，跳过: {}", news.getSourceUrl());
+                        // 先检查URL是否已存在于数据库
+                        if (isNewsUrlExists(news.getSourceUrl())) {
+                            log.info("数据库中已存在该URL，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            continue;
                         }
+                        
+                        // 生成内容指纹
+                        contentSimilarityService.generateContentHash(news);
+                        String contentHash = news.getContentHash();
+                        
+                        // 检查当前批次中是否有相似内容
+                        boolean hasSimilarInBatch = false;
+                        for (Map.Entry<String, String> entry : batchContentHashMap.entrySet()) {
+                            if (SimHashUtil.isSimilar(contentHash, entry.getValue())) {
+                                log.info("当前批次中已存在相似内容，跳过: {} - URL: {}, 相似于: {}", 
+                                        news.getTitle(), news.getSourceUrl(), entry.getKey());
+                                similarContentCount++;
+                                hasSimilarInBatch = true;
+                                break;
+                            }
+                        }
+                        if (hasSimilarInBatch) {
+                            continue;
+                        }
+                        
+                        // 检查数据库中是否有相似内容
+                        if (contentSimilarityService.isSimilarToExisting(news)) {
+                            log.info("数据库中已存在相似内容，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            continue;
+                        }
+                        
+                        // 添加到有效列表
+                        validNewsList.add(news);
+                        // 记录当前URL和内容指纹，用于后续去重
+                        batchUrlSet.add(news.getSourceUrl());
+                        batchContentHashMap.put(news.getSourceUrl(), contentHash);
                     } catch (Exception e) {
-                        log.error("插入财新网新闻记录失败: {} - URL: {}, 错误: {}", news.getTitle(), news.getSourceUrl(), e.getMessage());
+                        log.error("处理财新网新闻记录失败: {} - URL: {}, 错误: {}", news.getTitle(), news.getSourceUrl(), e.getMessage());
                     }
                 }
                 
-                log.info("财新网爬虫执行完成: 成功保存{}条, 过滤无效内容{}条, 过滤相似内容{}条, 总抓取: {}", 
-                        successCount, filteredCount, similarCount, newsList.size());
+                // 批量保存有效新闻并更新布隆过滤器
+                int successCount = batchSaveNewsAndUpdateBloomFilter(validNewsList);
+                
+                log.info("财新网爬虫执行完成: 成功保存{}条, 过滤无效内容{}条, 批次内重复URL{}条, 相似内容{}条, 总抓取: {}", 
+                        successCount, filteredCount, duplicateUrlCount, similarContentCount, newsList.size());
             } else {
                 log.warn("未抓取到任何财新网财经新闻");
             }
@@ -858,10 +943,18 @@ public class NewsSpiderTask {
                 }
             }
             
-            // 保存到数据库
+            // 保存到数据库 - 修改为批量插入
             if (!newsList.isEmpty()) {
-                int successCount = 0;
+                // 使用Set保存URL，用于去除当前批次内的重复项
+                Set<String> batchUrlSet = new HashSet<>();
+                // 使用临时Map存储内容指纹，用于批次内去重
+                Map<String, String> batchContentHashMap = new HashMap<>();
+                
+                List<HotNews> validNewsList = new ArrayList<>();
                 int filteredCount = 0;
+                int duplicateUrlCount = 0;
+                int similarContentCount = 0;
+                
                 for (int i = 0; i < newsList.size(); i++) {
                     try {
                         HotNews news = newsList.get(i);
@@ -888,20 +981,59 @@ public class NewsSpiderTask {
                             news.setSummary(news.getSummary().substring(0, 500));
                         }
                         
-                        // 检查URL是否已存在
-                        if (!isNewsUrlExists(news.getSourceUrl())) {
-                            if (saveNewsAndUpdateBloomFilter(news)) {
-                                successCount++;
-                            }
-                        } else {
-                            log.info("文章URL已存在，跳过: {}", news.getSourceUrl());
+                        // 先检查URL是否已在当前批次中
+                        if (batchUrlSet.contains(news.getSourceUrl())) {
+                            log.info("当前批次已存在相同URL，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            duplicateUrlCount++;
+                            continue;
                         }
+                        
+                        // 先检查URL是否已存在于数据库
+                        if (isNewsUrlExists(news.getSourceUrl())) {
+                            log.info("数据库中已存在该URL，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            continue;
+                        }
+                        
+                        // 生成内容指纹
+                        contentSimilarityService.generateContentHash(news);
+                        String contentHash = news.getContentHash();
+                        
+                        // 检查当前批次中是否有相似内容
+                        boolean hasSimilarInBatch = false;
+                        for (Map.Entry<String, String> entry : batchContentHashMap.entrySet()) {
+                            if (SimHashUtil.isSimilar(contentHash, entry.getValue())) {
+                                log.info("当前批次中已存在相似内容，跳过: {} - URL: {}, 相似于: {}", 
+                                        news.getTitle(), news.getSourceUrl(), entry.getKey());
+                                similarContentCount++;
+                                hasSimilarInBatch = true;
+                                break;
+                            }
+                        }
+                        if (hasSimilarInBatch) {
+                            continue;
+                        }
+                        
+                        // 检查数据库中是否有相似内容
+                        if (contentSimilarityService.isSimilarToExisting(news)) {
+                            log.info("数据库中已存在相似内容，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                            continue;
+                        }
+                        
+                        // 添加到有效列表
+                        validNewsList.add(news);
+                        // 记录当前URL和内容指纹，用于后续去重
+                        batchUrlSet.add(news.getSourceUrl());
+                        batchContentHashMap.put(news.getSourceUrl(), contentHash);
                     } catch (Exception e) {
-                        log.error("插入新闻记录失败: {}, 错误: {}", newsList.get(i).getTitle(), e.getMessage());
+                        log.error("处理新闻记录失败: {}, 错误: {}", newsList.get(i).getTitle(), e.getMessage());
                     }
                 }
-                log.info("成功抓取并保存{}条新浪财经新闻，过滤{}条无效内容，总抓取: {}", 
-                        successCount, filteredCount, newsList.size());
+                
+                // 批量保存有效新闻并更新布隆过滤器
+                int successCount = batchSaveNewsAndUpdateBloomFilter(validNewsList);
+                
+                log.info("成功抓取并保存{}条新浪财经新闻，过滤无效内容{}条，批次内重复URL{}条，相似内容{}条，总抓取: {}", 
+                        successCount, filteredCount, duplicateUrlCount, similarContentCount, newsList.size());
             } else {
                 log.warn("未抓取到任何新浪财经新闻");
             }
@@ -1185,31 +1317,54 @@ public class NewsSpiderTask {
     }
     
     /**
-     * 保存新闻到数据库，并更新布隆过滤器
-     * @param news 新闻对象
-     * @return 是否保存成功
+     * 批量保存新闻到数据库，并更新布隆过滤器
+     * @param newsList 新闻对象列表
+     * @return 保存成功的数量
      */
-    private boolean saveNewsAndUpdateBloomFilter(HotNews news) {
-        try {
-            // 生成内容指纹
-            contentSimilarityService.generateContentHash(news);
-            
-            // 检查内容是否相似
-            if (contentSimilarityService.isSimilarToExisting(news)) {
-                log.info("发现相似内容，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
-                return false;
-            }
-            
-            // 插入数据库
-            hotNewsMapper.insert(news);
-            
-            // 更新布隆过滤器
-            urlBloomFilter.put(news.getSourceUrl());
-            
-            return true;
-        } catch (Exception e) {
-            log.error("保存新闻记录失败: {} - URL: {}, 错误: {}", news.getTitle(), news.getSourceUrl(), e.getMessage());
-            return false;
+    private int batchSaveNewsAndUpdateBloomFilter(List<HotNews> newsList) {
+        if (newsList == null || newsList.isEmpty()) {
+            return 0;
         }
+        
+        int successCount = 0;
+        
+        // 虽然仍是循环插入，但整个过程在一个事务中完成，减少事务开销
+        // 分批处理，每批最多50条记录，避免单个事务过大
+        int batchSize = 50;
+        int size = newsList.size();
+        
+        for (int i = 0; i < size; i += batchSize) {
+            int end = Math.min(i + batchSize, size);
+            List<HotNews> batch = newsList.subList(i, end);
+            
+            if (!batch.isEmpty()) {
+                try {
+                    // 在一个事务中批量执行插入操作
+                    for (HotNews news : batch) {
+                        hotNewsMapper.insert(news);
+                        // 更新布隆过滤器
+                        urlBloomFilter.put(news.getSourceUrl());
+                    }
+                    
+                    log.info("批量插入新闻成功: {}条", batch.size());
+                    successCount += batch.size();
+                } catch (Exception e) {
+                    log.error("批量插入失败，错误: {}", e.getMessage());
+                    // 单个批次失败，尝试逐条保存当前批次
+                    for (HotNews news : batch) {
+                        try {
+                            hotNewsMapper.insert(news);
+                            urlBloomFilter.put(news.getSourceUrl());
+                            successCount++;
+                        } catch (Exception ex) {
+                            log.error("单条保存失败: {} - URL: {}, 错误: {}", 
+                                    news.getTitle(), news.getSourceUrl(), ex.getMessage());
+                        }
+                    }
+                }
+            }
+        }
+        
+        return successCount;
     }
 } 
