@@ -108,7 +108,7 @@ public class ContentSimilarityService {
      * 缓存内容指纹
      * @param contentHash 内容指纹
      */
-    private void cacheContentHash(String contentHash) {
+    public void cacheContentHash(String contentHash) {
         if (redisTemplate == null || contentHash == null) {
             return;
         }

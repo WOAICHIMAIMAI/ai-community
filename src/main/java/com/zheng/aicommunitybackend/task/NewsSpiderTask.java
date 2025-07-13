@@ -29,6 +29,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 新闻爬虫定时任务
@@ -1317,7 +1321,8 @@ public class NewsSpiderTask {
     }
     
     /**
-     * 批量保存新闻到数据库，并更新布隆过滤器
+     * 批量保存新闻到数据库，并更新布隆过滤器和缓存
+     * 使用虚拟线程提升性能
      * @param newsList 新闻对象列表
      * @return 保存成功的数量
      */
@@ -1326,45 +1331,120 @@ public class NewsSpiderTask {
             return 0;
         }
         
-        int successCount = 0;
-        
-        // 虽然仍是循环插入，但整个过程在一个事务中完成，减少事务开销
-        // 分批处理，每批最多50条记录，避免单个事务过大
+        // 使用原子整数进行并发计数
+        java.util.concurrent.atomic.AtomicInteger successCount = new java.util.concurrent.atomic.AtomicInteger(0);
+        // 批次大小
         int batchSize = 50;
         int size = newsList.size();
+        // 计算需要创建的批次数
+        int batchCount = (int) Math.ceil((double) size / batchSize);
         
+        // 使用CountDownLatch等待所有任务完成
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(batchCount);
+        
+        // 限制并发数量，避免数据库连接池耗尽
+        // 假设每批任务需要1个连接，保留一些连接给其他操作
+        int maxConcurrentBatches = 10; // 根据实际连接池大小调整
+        java.util.concurrent.Semaphore semaphore = new java.util.concurrent.Semaphore(maxConcurrentBatches);
+        
+        log.info("开始使用虚拟线程批量处理 {} 条新闻，共 {} 个批次", size, batchCount);
+        
+        // 分批处理
         for (int i = 0; i < size; i += batchSize) {
+            int start = i;
             int end = Math.min(i + batchSize, size);
-            List<HotNews> batch = newsList.subList(i, end);
+            List<HotNews> batch = new ArrayList<>(newsList.subList(start, end));
+            final int batchNumber = i / batchSize + 1;
             
-            if (!batch.isEmpty()) {
-                try {
-                    // 在一个事务中批量执行插入操作
-                    for (HotNews news : batch) {
-                        hotNewsMapper.insert(news);
-                        // 更新布隆过滤器
-                        urlBloomFilter.put(news.getSourceUrl());
+            // 使用虚拟线程处理每个批次
+            try {
+                // 获取信号量，限制并发数
+                semaphore.acquire();
+                
+                // 启动虚拟线程
+                Thread.startVirtualThread(() -> {
+                    try {
+                        log.debug("批次 {}/{} 开始处理 {} 条新闻", batchNumber, batchCount, batch.size());
+                        int batchSuccess = processBatchWithTransaction(batch);
+                        successCount.addAndGet(batchSuccess);
+                        log.debug("批次 {}/{} 处理完成，成功插入 {} 条", batchNumber, batchCount, batchSuccess);
+                    } catch (Exception e) {
+                        log.error("批次 {} 处理失败: {}", batchNumber, e.getMessage());
+                    } finally {
+                        // 释放信号量
+                        semaphore.release();
+                        // 完成一个批次
+                        latch.countDown();
                     }
-                    
-                    log.info("批量插入新闻成功: {}条", batch.size());
-                    successCount += batch.size();
-                } catch (Exception e) {
-                    log.error("批量插入失败，错误: {}", e.getMessage());
-                    // 单个批次失败，尝试逐条保存当前批次
-                    for (HotNews news : batch) {
-                        try {
-                            hotNewsMapper.insert(news);
-                            urlBloomFilter.put(news.getSourceUrl());
-                            successCount++;
-                        } catch (Exception ex) {
-                            log.error("单条保存失败: {} - URL: {}, 错误: {}", 
-                                    news.getTitle(), news.getSourceUrl(), ex.getMessage());
-                        }
-                    }
-                }
+                });
+            } catch (InterruptedException e) {
+                log.error("线程中断异常: {}", e.getMessage());
+                Thread.currentThread().interrupt();
+                // 即使发生中断，也要确保countDown
+                latch.countDown();
             }
         }
         
-        return successCount;
+        try {
+            // 等待所有批次完成
+            boolean allDone = latch.await(5, java.util.concurrent.TimeUnit.MINUTES);
+            if (!allDone) {
+                log.warn("批量处理超时，部分批次可能未完成");
+            }
+        } catch (InterruptedException e) {
+            log.error("等待批次完成时发生中断: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+        
+        int totalSuccess = successCount.get();
+        log.info("虚拟线程批量处理完成，共成功插入 {} 条新闻", totalSuccess);
+        return totalSuccess;
+    }
+    
+    /**
+     * 在事务中处理单个批次
+     * @param batch 批次数据
+     * @return 成功处理的记录数
+     */
+    @Transactional(rollbackFor = Exception.class)
+    protected int processBatchWithTransaction(List<HotNews> batch) {
+        if (batch.isEmpty()) {
+            return 0;
+        }
+        
+        int batchSuccess = 0;
+        try {
+            // 批量处理该批次中的所有记录
+            for (HotNews news : batch) {
+                try {
+                    // 1. 插入数据库
+                    hotNewsMapper.insert(news);
+                    
+                    // 2. 更新布隆过滤器
+                    urlBloomFilter.put(news.getSourceUrl());
+                    
+                    // 3. 缓存内容指纹
+                    contentSimilarityService.cacheContentHash(news.getContentHash());
+                    
+                    batchSuccess++;
+                } catch (Exception e) {
+                    // 记录具体哪条数据失败
+                    log.error("单条新闻处理失败: {} - URL: {}, 错误: {}", 
+                            news.getTitle(), news.getSourceUrl(), e.getMessage());
+                    // 继续处理下一条，不影响整个批次
+                }
+            }
+            
+            // 如果该批次全部失败，抛出异常触发回滚
+            if (batchSuccess == 0 && !batch.isEmpty()) {
+                throw new RuntimeException("批次中所有记录处理失败");
+            }
+            
+            return batchSuccess;
+        } catch (Exception e) {
+            // 批次级别异常，整个批次回滚
+            log.error("批次处理发生严重错误，执行回滚: {}", e.getMessage());
+            throw e;
+        }
     }
 } 
