@@ -127,6 +127,35 @@ CREATE TABLE IF NOT EXISTS repair_progress (
     INDEX idx_order_id (order_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='维修进度记录表';
 
+-- 热点新闻表
+CREATE TABLE IF NOT EXISTS hot_news (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '新闻ID',
+    title VARCHAR(200) NOT NULL COMMENT '新闻标题',
+    content LONGTEXT NOT NULL COMMENT '新闻内容(可带HTML格式)',
+    summary VARCHAR(500) NOT NULL COMMENT '新闻摘要',
+    cover_image VARCHAR(255) COMMENT '封面图URL',
+    images VARCHAR(1000) COMMENT '新闻图片URL，多个用逗号分隔',
+    source VARCHAR(50) COMMENT '新闻来源(如: 人民日报)',
+    source_url VARCHAR(255) UNIQUE COMMENT '原文链接',
+    author VARCHAR(50) COMMENT '作者',
+    category VARCHAR(50) COMMENT '新闻分类(如: 国内/国际/财经/科技/体育/娱乐等)',
+    tags VARCHAR(200) COMMENT '新闻标签，多个用逗号分隔',
+    publish_time DATETIME COMMENT '发布时间',
+    view_count INT NOT NULL DEFAULT 0 COMMENT '浏览次数',
+    like_count INT NOT NULL DEFAULT 0 COMMENT '点赞数',
+    comment_count INT NOT NULL DEFAULT 0 COMMENT '评论数',
+    is_hot TINYINT NOT NULL DEFAULT 0 COMMENT '是否热点(0-否 1-是)',
+    is_top TINYINT NOT NULL DEFAULT 0 COMMENT '是否置顶(0-否 1-是)',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态(0-草稿 1-已发布 2-已下线)',
+    crawl_time DATETIME COMMENT '爬取时间',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_publish_time (publish_time),
+    INDEX idx_category (category),
+    INDEX idx_is_hot (is_hot),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='热点新闻表';
+
 -- 初始化管理员账号：账号-admin，密码-123456
 INSERT INTO users (username, password, nickname, status, is_verified, role)
 VALUES ('admin', 'e10adc3949ba59abbe56e057f20f883e', '系统管理员', 1, 1, 1); 

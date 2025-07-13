@@ -1,7 +1,5 @@
 package com.zheng.aicommunitybackend.util;
 
-
-
 import com.zheng.aicommunitybackend.domain.entity.Users;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -12,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -21,10 +20,11 @@ import java.util.Map;
  * JWT工具类，用于生成、解析和验证JWT令牌
  */
 @Component
+@Slf4j
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    // 使用强密钥生成器创建安全的密钥
+    private final SecretKey key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
 
     @Value("${jwt.expiration}")
     private Long expiration;
@@ -97,19 +97,10 @@ public class JwtUtil {
      */
     private Claims getAllClaimsFromToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+                .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-    }
-
-    /**
-     * 获取签名密钥
-     *
-     * @return 签名密钥
-     */
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     /**
@@ -152,13 +143,15 @@ public class JwtUtil {
     private String doGenerateToken(Map<String, Object> claims, String subject) {
         final Date createdDate = new Date();
         final Date expirationDate = calculateExpirationDate(createdDate);
+        
+        log.debug("生成令牌，主题: {}, 过期时间: {}", subject, expirationDate);
 
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
                 .setIssuedAt(createdDate)
                 .setExpiration(expirationDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 

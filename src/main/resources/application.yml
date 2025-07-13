@@ -31,8 +31,18 @@ springdoc:
     - group: 'default'
       paths-to-match: '/**'
       packages-to-scan: com.zheng.aicommunitybackend.controller
-# knife4j???????????????
+# knife4j配置
 knife4j:
   enable: true
   setting:
     language: zh_cn
+
+# 新闻爬虫配置
+spider:
+  enabled: true
+  user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  timeout: 10000
+  finance-news:
+    enabled: true
+    wall-street-cn-url: "https://wallstreetcn.com/news/global"
+    caixin-url: "https://www.caixin.com/finance/"
