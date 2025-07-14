@@ -3,17 +3,20 @@ package com.zheng.aicommunitybackend.controller.admin;
 import com.zheng.aicommunitybackend.domain.result.Result;
 import com.zheng.aicommunitybackend.domain.vo.*;
 import com.zheng.aicommunitybackend.service.DashboardService;
+import com.zheng.aicommunitybackend.task.LikeReconciliationTask;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 管理端仪表盘控制器
@@ -26,6 +29,9 @@ public class AdminDashboardController {
 
     @Autowired
     private DashboardService dashboardService;
+    
+    @Autowired
+    private LikeReconciliationTask likeReconciliationTask;
     
     /**
      * 获取仪表盘概览数据
@@ -99,5 +105,18 @@ public class AdminDashboardController {
         log.info("获取待审核内容，数量限制：{}", limit);
         List<PendingReviewVO> pendingReviews = dashboardService.getPendingReviews(limit);
         return Result.success(pendingReviews);
+    }
+    
+    /**
+     * 手动触发点赞数据对账补偿
+     * 
+     * @return 处理结果
+     */
+    @PostMapping("/reconcile-like-data")
+    @Operation(summary = "手动触发点赞数据对账补偿", description = "手动执行Redis和MySQL点赞数据对账补偿")
+    public Result<Map<String, Object>> reconcileLikeData() {
+        log.info("手动触发点赞数据对账补偿");
+        Map<String, Object> result = likeReconciliationTask.manualReconcile();
+        return Result.success(result);
     }
 } 

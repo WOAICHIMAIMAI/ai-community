@@ -162,7 +162,7 @@ public class LikeRecordsServiceImpl extends ServiceImpl<LikeRecordsMapper, LikeR
                 dto.getTargetId(),
                 isLiked ? 1 : 0  // 1表示点赞，0表示取消点赞
         );
-        mqProducerService.sendLikeMessage(message);
+        mqProducerService.sendLikeMessageAsync(message);
         
         // 5. 返回最新点赞状态
         int likeCount = getLikeCount(dto.getType(), dto.getTargetId());

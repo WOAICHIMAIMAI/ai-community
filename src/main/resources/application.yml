@@ -46,3 +46,5 @@ spider:
     enabled: true
     wall-street-cn-url: "https://wallstreetcn.com/news/global"
     caixin-url: "https://www.caixin.com/finance/"
+
+
