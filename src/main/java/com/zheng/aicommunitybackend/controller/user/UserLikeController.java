@@ -32,7 +32,7 @@ public class UserLikeController {
     @Operation(summary = "点赞或取消点赞", description = "点赞或取消点赞帖子/评论")
     public Result<LikeStatusVO> likeOrUnlike(@RequestBody @Validated LikeRecordDTO dto) {
         Long userId = UserContext.getUserId();
-        LikeStatusVO result = likeRecordsService.likeOrUnlike(dto, userId);
+        LikeStatusVO result = likeRecordsService.likeOrUnlikeRedis(dto, userId);
         return Result.success(result);
     }
     

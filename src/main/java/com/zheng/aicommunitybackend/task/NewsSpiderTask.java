@@ -4,13 +4,12 @@ import com.google.common.hash.BloomFilter;
 import com.zheng.aicommunitybackend.domain.entity.HotNews;
 import com.zheng.aicommunitybackend.mapper.HotNewsMapper;
 import com.zheng.aicommunitybackend.properties.SpiderProperties;
-import com.zheng.aicommunitybackend.service.ContentSimilarityService;
+import com.zheng.aicommunitybackend.service.impl.ContentSimilarityService;
 import com.zheng.aicommunitybackend.util.SimHashUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,10 +28,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 新闻爬虫定时任务

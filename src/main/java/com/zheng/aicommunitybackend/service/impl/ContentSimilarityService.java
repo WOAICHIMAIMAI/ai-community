@@ -1,4 +1,4 @@
-package com.zheng.aicommunitybackend.service;
+package com.zheng.aicommunitybackend.service.impl;
 
 import com.zheng.aicommunitybackend.domain.entity.HotNews;
 import com.zheng.aicommunitybackend.mapper.HotNewsMapper;

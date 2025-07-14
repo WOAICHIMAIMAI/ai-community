@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @SpringBootApplication
 @MapperScan("com.zheng.aicommunitybackend.mapper")
-
+@EnableTransactionManagement
 public class AiCommunityBackendApplication {
 
     public static void main(String[] args) {

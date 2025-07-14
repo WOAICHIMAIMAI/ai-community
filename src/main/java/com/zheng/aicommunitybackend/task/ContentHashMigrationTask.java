@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zheng.aicommunitybackend.domain.entity.HotNews;
 import com.zheng.aicommunitybackend.mapper.HotNewsMapper;
-import com.zheng.aicommunitybackend.service.ContentSimilarityService;
+import com.zheng.aicommunitybackend.service.impl.ContentSimilarityService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;

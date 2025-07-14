@@ -17,7 +17,11 @@ import com.zheng.aicommunitybackend.mapper.LikeRecordsMapper;
 import com.zheng.aicommunitybackend.mapper.PostCommentsMapper;
 import com.zheng.aicommunitybackend.service.LikeRecordsService;
 import com.zheng.aicommunitybackend.service.UsersService;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -26,6 +30,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+
+// 导入MQ相关
+import com.zheng.aicommunitybackend.domain.dto.LikeActionMessage;
+import com.zheng.aicommunitybackend.service.MQProducerService;
 
 /**
 * @author ZhengJJ
@@ -44,6 +52,12 @@ public class LikeRecordsServiceImpl extends ServiceImpl<LikeRecordsMapper, LikeR
 
     @Autowired
     private UsersService usersService;
+
+    @Resource
+    private RedisTemplate redisTemplate;
+    
+    @Autowired
+    private MQProducerService mqProducerService;
     
     /**
      * 点赞类型：帖子
@@ -93,6 +107,64 @@ public class LikeRecordsServiceImpl extends ServiceImpl<LikeRecordsMapper, LikeR
         }
         
         // 4. 返回最新点赞状态
+        int likeCount = getLikeCount(dto.getType(), dto.getTargetId());
+        return new LikeStatusVO(isLiked, likeCount);
+    }
+
+    /**
+     * 点赞 / 取消点赞 (Redis + RocketMQ) 优化
+     * @param dto 点赞记录DTO
+     * @param userId 用户ID
+     * @return
+     */
+    @Override
+    @Transactional
+    public LikeStatusVO likeOrUnlikeRedis(LikeRecordDTO dto, Long userId) {
+        // 1. 校验目标是否存在
+        checkTargetExists(dto.getType(), dto.getTargetId());
+
+        // 2. 使用Redis Lua脚本处理点赞/取消点赞
+        String key = "community:like:" + userId;
+        String field = dto.getType() + ":" + dto.getTargetId();
+        
+        // 编写Lua脚本 - 修复脚本语法，确保正确闭合
+        String script = 
+                "local key = KEYS[1];\n" +
+                "local field = ARGV[1];\n" +
+                "local exists = redis.call('HEXISTS', key, field);\n" +
+                "if exists == 1 then\n" +
+                "   redis.call('HDEL', key, field);\n" +
+                "   return 0;\n" +
+                "else\n" +
+                "   redis.call('HSET', key, field, 1);\n" +
+                "   return 1;\n" +
+                "end";
+        
+        // 执行Lua脚本
+        Long result = (Long) redisTemplate.execute(
+                (RedisCallback<Object>) connection -> 
+                        connection.scriptingCommands().eval(
+                                script.getBytes(),
+                                ReturnType.INTEGER,
+                                1,
+                                key.getBytes(),
+                                field.getBytes()
+                        )
+        );
+        
+        // 3. 根据结果处理业务逻辑
+        boolean isLiked = (result != null && result == 1);
+        
+        // 4. 发送消息到MQ处理数据库操作
+        LikeActionMessage message = new LikeActionMessage(
+                userId,
+                dto.getType(),
+                dto.getTargetId(),
+                isLiked ? 1 : 0  // 1表示点赞，0表示取消点赞
+        );
+        mqProducerService.sendLikeMessage(message);
+        
+        // 5. 返回最新点赞状态
         int likeCount = getLikeCount(dto.getType(), dto.getTargetId());
         return new LikeStatusVO(isLiked, likeCount);
     }
@@ -280,11 +352,14 @@ public class LikeRecordsServiceImpl extends ServiceImpl<LikeRecordsMapper, LikeR
 
     /**
      * 校验目标是否存在
-     * 
-     * @param type 目标类型
+     * @param type 目标类型：1-帖子 2-评论
      * @param targetId 目标ID
      */
     private void checkTargetExists(Integer type, Long targetId) {
+        if (type == null || targetId == null) {
+            throw new BaseException("目标类型或ID不能为空");
+        }
+        
         if (TYPE_POST == type) {
             CommunityPosts post = communityPostsMapper.selectById(targetId);
             if (post == null) {
@@ -296,45 +371,65 @@ public class LikeRecordsServiceImpl extends ServiceImpl<LikeRecordsMapper, LikeR
                 throw new BaseException("评论不存在");
             }
         } else {
-            throw new BaseException("不支持的点赞类型");
+            throw new BaseException("不支持的目标类型");
         }
     }
     
     /**
-     * 更新目标点赞数
-     * 
-     * @param type 目标类型
-     * @param targetId 目标ID
-     * @param delta 增量（正数增加，负数减少）
-     */
-    private void updateLikeCount(Integer type, Long targetId, int delta) {
-        if (TYPE_POST == type) {
-            CommunityPosts post = communityPostsMapper.selectById(targetId);
-            post.setLikeCount(post.getLikeCount() + delta);
-            communityPostsMapper.updateById(post);
-        } else if (TYPE_COMMENT == type) {
-            PostComments comment = postCommentsMapper.selectById(targetId);
-            comment.setLikeCount(comment.getLikeCount() + delta);
-            postCommentsMapper.updateById(comment);
-        }
-    }
-    
-    /**
-     * 获取目标点赞数
-     * 
-     * @param type 目标类型
+     * 获取目标的点赞数
+     * @param type 目标类型：1-帖子 2-评论
      * @param targetId 目标ID
      * @return 点赞数
      */
     private int getLikeCount(Integer type, Long targetId) {
+        if (type == null || targetId == null) {
+            return 0;
+        }
+        
         if (TYPE_POST == type) {
+            // 获取帖子点赞数
             CommunityPosts post = communityPostsMapper.selectById(targetId);
             return post != null ? post.getLikeCount() : 0;
         } else if (TYPE_COMMENT == type) {
+            // 获取评论点赞数
             PostComments comment = postCommentsMapper.selectById(targetId);
             return comment != null ? comment.getLikeCount() : 0;
         }
+        
         return 0;
+    }
+    
+    /**
+     * 更新目标的点赞数
+     * @param type 目标类型：1-帖子 2-评论
+     * @param targetId 目标ID
+     * @param count 更新的数量，正数为增加，负数为减少
+     */
+    @Override
+    public void updateLikeCount(Integer type, Long targetId, int count) {
+        if (type == null || targetId == null) {
+            return;
+        }
+        
+        if (TYPE_POST == type) {
+            // 更新帖子点赞数
+            CommunityPosts post = communityPostsMapper.selectById(targetId);
+            if (post != null) {
+                // 防止点赞数为负数
+                int newLikeCount = Math.max(0, post.getLikeCount() + count);
+                post.setLikeCount(newLikeCount);
+                communityPostsMapper.updateById(post);
+            }
+        } else if (TYPE_COMMENT == type) {
+            // 更新评论点赞数
+            PostComments comment = postCommentsMapper.selectById(targetId);
+            if (comment != null) {
+                // 防止点赞数为负数
+                int newLikeCount = Math.max(0, comment.getLikeCount() + count);
+                comment.setLikeCount(newLikeCount);
+                postCommentsMapper.updateById(comment);
+            }
+        }
     }
 }
 

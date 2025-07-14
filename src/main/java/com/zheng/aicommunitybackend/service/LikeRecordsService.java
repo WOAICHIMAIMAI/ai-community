@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.vo.AdminLikeVO;
 import com.zheng.aicommunitybackend.domain.vo.LikeStatusVO;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -24,6 +25,14 @@ public interface LikeRecordsService extends IService<LikeRecords> {
      * @return 点赞状态
      */
     LikeStatusVO likeOrUnlike(LikeRecordDTO dto, Long userId);
+    
+    /**
+     * 点赞或取消点赞（Redis优化版）
+     * @param dto 点赞记录DTO
+     * @param userId 用户ID
+     * @return 点赞状态
+     */
+    LikeStatusVO likeOrUnlikeRedis(LikeRecordDTO dto, Long userId);
     
     /**
      * 获取点赞状态
@@ -53,8 +62,16 @@ public interface LikeRecordsService extends IService<LikeRecords> {
 
     /**
      * 分页查询点赞列表
-     * @param adminLikePageQuery
-     * @return
+     * @param adminLikePageQuery 查询参数
+     * @return 分页结果
      */
     PageResult<AdminLikeVO> getLikesPage(AdminLikePageQuery adminLikePageQuery);
+    
+    /**
+     * 更新目标的点赞数
+     * @param type 目标类型：1-帖子 2-评论
+     * @param targetId 目标ID
+     * @param count 更新的数量，正数为增加，负数为减少
+     */
+    void updateLikeCount(Integer type, Long targetId, int count);
 }
