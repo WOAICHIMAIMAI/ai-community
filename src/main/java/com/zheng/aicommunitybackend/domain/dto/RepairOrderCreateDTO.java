@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
@@ -16,11 +17,11 @@ import java.util.Date;
 public class RepairOrderCreateDTO {
     
     /**
-     * 报修地址ID
+     * 报修地址
      */
-    @NotNull(message = "报修地址不能为空")
-    @Schema(description = "报修地址ID", required = true)
-    private Long addressId;
+    @NotBlank(message = "报修地址不能为空")
+    @Schema(description = "报修地址", required = true)
+    private String address;
     
     /**
      * 报修类型：水电/门窗/家电等

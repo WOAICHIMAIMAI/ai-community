@@ -8,7 +8,7 @@
             <id property="id" column="id" jdbcType="BIGINT"/>
             <result property="orderNumber" column="order_number" jdbcType="VARCHAR"/>
             <result property="userId" column="user_id" jdbcType="BIGINT"/>
-            <result property="addressId" column="address_id" jdbcType="BIGINT"/>
+            <result property="address" column="address" jdbcType="VARCHAR"/>
             <result property="repairType" column="repair_type" jdbcType="VARCHAR"/>
             <result property="title" column="title" jdbcType="VARCHAR"/>
             <result property="description" column="description" jdbcType="VARCHAR"/>
@@ -29,7 +29,7 @@
 
     <sql id="Base_Column_List">
         id,order_number,user_id,
-        address_id,repair_type,title,
+        address,repair_type,title,
         description,images,contact_phone,
         expected_time,status,worker_id,
         worker_name,worker_phone,appointment_time,

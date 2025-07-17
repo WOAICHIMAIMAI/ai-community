@@ -32,9 +32,9 @@ public class RepairOrders implements Serializable {
     private Long userId;
 
     /**
-     * 报修地址ID
+     * 报修地址
      */
-    private Long addressId;
+    private String address;
 
     /**
      * 报修类型：水电/门窗/家电等
@@ -134,7 +134,7 @@ public class RepairOrders implements Serializable {
         return (this.getId() == null ? other.getId() == null : this.getId().equals(other.getId()))
             && (this.getOrderNumber() == null ? other.getOrderNumber() == null : this.getOrderNumber().equals(other.getOrderNumber()))
             && (this.getUserId() == null ? other.getUserId() == null : this.getUserId().equals(other.getUserId()))
-            && (this.getAddressId() == null ? other.getAddressId() == null : this.getAddressId().equals(other.getAddressId()))
+            && (this.getAddress() == null ? other.getAddress() == null : this.getAddress().equals(other.getAddress()))
             && (this.getRepairType() == null ? other.getRepairType() == null : this.getRepairType().equals(other.getRepairType()))
             && (this.getTitle() == null ? other.getTitle() == null : this.getTitle().equals(other.getTitle()))
             && (this.getDescription() == null ? other.getDescription() == null : this.getDescription().equals(other.getDescription()))
@@ -160,7 +160,7 @@ public class RepairOrders implements Serializable {
         result = prime * result + ((getId() == null) ? 0 : getId().hashCode());
         result = prime * result + ((getOrderNumber() == null) ? 0 : getOrderNumber().hashCode());
         result = prime * result + ((getUserId() == null) ? 0 : getUserId().hashCode());
-        result = prime * result + ((getAddressId() == null) ? 0 : getAddressId().hashCode());
+        result = prime * result + ((getAddress() == null) ? 0 : getAddress().hashCode());
         result = prime * result + ((getRepairType() == null) ? 0 : getRepairType().hashCode());
         result = prime * result + ((getTitle() == null) ? 0 : getTitle().hashCode());
         result = prime * result + ((getDescription() == null) ? 0 : getDescription().hashCode());
@@ -189,7 +189,7 @@ public class RepairOrders implements Serializable {
         sb.append(", id=").append(id);
         sb.append(", orderNumber=").append(orderNumber);
         sb.append(", userId=").append(userId);
-        sb.append(", addressId=").append(addressId);
+        sb.append(", address=").append(address);
         sb.append(", repairType=").append(repairType);
         sb.append(", title=").append(title);
         sb.append(", description=").append(description);

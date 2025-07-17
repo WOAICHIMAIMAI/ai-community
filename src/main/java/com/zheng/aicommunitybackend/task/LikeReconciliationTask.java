@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,10 +40,13 @@ public class LikeReconciliationTask {
     
     // Redis中用户点赞记录的hash结构key前缀
     private static final String LIKE_KEY_PREFIX = "community:like:";
+
+
     
     /**
      * 每天凌晨3点执行点赞数据对账补偿
      */
+    @Transactional
     @Scheduled(cron = "0 0 3 * * ?")
     public void reconcileLikeData() {
         log.info("开始执行点赞数据对账补偿任务...");
@@ -58,12 +62,13 @@ public class LikeReconciliationTask {
             collectLikeDataFromRedis(postLikeCountMap, commentLikeCountMap, 
                     postLikeUsersMap, commentLikeUsersMap);
             
-            // 2. 同步文章点赞数和记录
+            // 2. 同步处理文章点赞数和记录
             reconcilePostsLikeData(postLikeCountMap, postLikeUsersMap);
-            
-            // 3. 同步评论点赞数和记录
+
+            // 3. 同步处理评论点赞数和记录
             reconcileCommentsLikeData(commentLikeCountMap, commentLikeUsersMap);
-            
+
+
             log.info("点赞数据对账补偿任务执行完成");
         } catch (Exception e) {
             log.error("点赞数据对账补偿任务执行失败", e);
@@ -340,11 +345,10 @@ public class LikeReconciliationTask {
                     record.setCreateTime(new Date());
                     toAddRecords.add(record);
                 }
-                
-                for (LikeRecords record : toAddRecords) {
-                    likeRecordsMapper.insert(record);
-                    addedLikeRecords++;
-                }
+
+                Thread.ofVirtual().start(() -> {
+                    likeRecordsMapper.insert(toAddRecords);
+                });
                 
                 log.info("为评论ID={}添加了{}条点赞记录", commentId, toAddRecords.size());
             }
@@ -355,10 +359,14 @@ public class LikeReconciliationTask {
                 removeWrapper.eq(LikeRecords::getTargetType, 2)  // 2表示评论
                         .eq(LikeRecords::getTargetId, commentId)
                         .in(LikeRecords::getUserId, toRemoveUserIds);
-                int removedCount = likeRecordsMapper.delete(removeWrapper);
-                removedLikeRecords += removedCount;
-                
-                log.info("从评论ID={}删除了{}条点赞记录", commentId, removedCount);
+                Thread.ofVirtual().start(() -> {
+                    int removedCount = likeRecordsMapper.delete(removeWrapper);
+//                    return removedCount;
+                });
+
+//                removedLikeRecords += removedCount;
+
+                log.info("从评论ID={}删除了{}条点赞记录", commentId, -1);
             }
         }
         

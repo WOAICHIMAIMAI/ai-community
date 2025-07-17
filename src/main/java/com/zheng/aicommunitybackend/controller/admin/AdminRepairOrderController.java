@@ -56,8 +56,7 @@ public class AdminRepairOrderController {
     @PutMapping("/assign")
     @Operation(summary = "分配报修工单", description = "将工单分配给维修工")
     public Result<Boolean> assignRepairOrder(@RequestBody @Validated AdminRepairOrderAssignDTO dto) {
-        Long adminId = UserContext.getUserId();
-        boolean result = repairOrdersService.assignRepairOrder(dto, adminId);
+        boolean result = repairOrdersService.assignRepairWorker(dto);
         return Result.success(result);
     }
     
@@ -67,8 +66,7 @@ public class AdminRepairOrderController {
     @PutMapping("/status")
     @Operation(summary = "更新工单状态", description = "更新报修工单状态")
     public Result<Boolean> updateOrderStatus(@RequestBody @Validated AdminRepairOrderUpdateDTO dto) {
-        Long adminId = UserContext.getUserId();
-        boolean result = repairOrdersService.updateOrderStatus(dto, adminId);
+        boolean result = repairOrdersService.updateRepairOrder(dto);
         return Result.success(result);
     }
     
@@ -81,6 +79,4 @@ public class AdminRepairOrderController {
         RepairStatsVO stats = repairOrdersService.getRepairStats();
         return Result.success(stats);
     }
-    
-
 } 

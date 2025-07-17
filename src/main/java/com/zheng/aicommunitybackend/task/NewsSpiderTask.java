@@ -1,11 +1,13 @@
 package com.zheng.aicommunitybackend.task;
 
 import com.google.common.hash.BloomFilter;
+import com.huaban.analysis.jieba.JiebaSegmenter;
 import com.zheng.aicommunitybackend.domain.entity.HotNews;
 import com.zheng.aicommunitybackend.mapper.HotNewsMapper;
 import com.zheng.aicommunitybackend.properties.SpiderProperties;
 import com.zheng.aicommunitybackend.service.impl.ContentSimilarityService;
 import com.zheng.aicommunitybackend.util.SimHashUtil;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -48,6 +50,50 @@ public class NewsSpiderTask {
     
     @Autowired
     private ContentSimilarityService contentSimilarityService;
+    
+    // 结巴分词器实例
+    private final JiebaSegmenter jiebaSegmenter = new JiebaSegmenter();
+
+    /**
+     * 组件初始化后预热结巴分词器
+     */
+    @PostConstruct
+    public void init() {
+        // 预热结巴分词器，避免首次使用时性能问题
+        warmupJiebaSegmenter();
+        log.info("结巴分词器预热完成");
+    }
+    
+    /**
+     * 预热结巴分词器
+     * 通过处理一些常见的文本样本来加载词典和模型
+     */
+    private void warmupJiebaSegmenter() {
+        try {
+            // 使用一些常见的财经文本预热
+            String[] samples = {
+                "中国经济增长率达到6.5%，超出市场预期",
+                "央行宣布降低存款准备金率，释放流动性超过1万亿元",
+                "科技股大涨，带动市场走高",
+                "新能源汽车产业政策出台，利好相关企业",
+                "人工智能技术在金融领域的应用不断深入",
+                "国际原油价格上涨，能源板块表现活跃",
+                "数字经济成为经济增长新动能，相关政策不断完善"
+            };
+            
+            for (String sample : samples) {
+                // 进行分词处理，加载词典
+                List<String> segments = jiebaSegmenter.sentenceProcess(sample);
+                // 日志级别设为debug，避免产生太多输出
+                if (log.isDebugEnabled()) {
+                    log.debug("预热分词结果: {}", segments);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("结巴分词器预热过程中发生异常", e);
+            // 预热失败不影响系统运行
+        }
+    }
 
     /**
      * 检查新闻内容是否有效
@@ -77,18 +123,17 @@ public class NewsSpiderTask {
         
         // 检查内容是否只是简单的标签文本
         String plainContent = content.replaceAll("<[^>]*>", "").trim();
-        if (plainContent.length() < 20) { // 降低最小长度要求
+        if (plainContent.length() < 15) { // 降低最小长度要求，允许更短的内容（原为20）
             return false;
         }
         
-        // 检查内容是否包含特定的无效内容模式
-        if (plainContent.contains("下载新浪财经APP") && plainContent.length() < 50) {
+        // 检查内容是否包含特定的无效内容模式，但如果内容长度足够，也允许通过
+        if (plainContent.contains("下载新浪财经APP") && plainContent.length() < 40) {
             return false;
         }
         
-        // 摘要不能为默认值
-        if (summary == null || summary.isEmpty() || 
-            summary.equals("暂无摘要")) {
+        // 摘要不能为默认值，但如果有内容，即使摘要是默认值也可以接受
+        if ((summary == null || summary.isEmpty() || summary.equals("暂无摘要")) && plainContent.length() < 60) {
             return false;
         }
         
@@ -109,6 +154,17 @@ public class NewsSpiderTask {
         }
         
         try {
+            // 添加随机延迟（0-120秒）
+            int randomDelay = java.util.concurrent.ThreadLocalRandom.current().nextInt(120000);
+            log.info("华尔街见闻爬虫将在{}秒后开始执行...", randomDelay / 1000);
+            try {
+                Thread.sleep(randomDelay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("华尔街见闻爬虫执行被中断");
+                return;
+            }
+            
             log.info("开始抓取华尔街见闻财经新闻...");
             // 更新为华尔街见闻的主页，避免使用可能已更改的子页面
             String url = "https://wallstreetcn.com";
@@ -472,6 +528,17 @@ public class NewsSpiderTask {
         }
         
         try {
+            // 添加随机延迟（0-120秒）
+            int randomDelay = java.util.concurrent.ThreadLocalRandom.current().nextInt(120000);
+            log.info("财新网爬虫将在{}秒后开始执行...", randomDelay / 1000);
+            try {
+                Thread.sleep(randomDelay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("财新网爬虫执行被中断");
+                return;
+            }
+            
             log.info("开始抓取财新网财经新闻...");
             String url = spiderProperties.getFinanceNews().getCaixinUrl();
             log.info("抓取URL: {}", url);
@@ -800,49 +867,103 @@ public class NewsSpiderTask {
     /**
      * 抓取财经新闻 - 新浪财经
      */
+    @Scheduled(cron = "0 11 * * * ?")
     @Transactional(rollbackFor = Exception.class)
     public void crawlFinanceNewsFromSina() {
         try {
+  /*          // 添加随机延迟（0-120秒）
+            int randomDelay = java.util.concurrent.ThreadLocalRandom.current().nextInt(120000);
+            log.info("新浪财经爬虫将在{}秒后开始执行...", randomDelay / 1000);
+            try {
+                Thread.sleep(randomDelay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("新浪财经爬虫执行被中断");
+                return;
+            }*/
+            
             log.info("开始抓取新浪财经新闻...");
-            String url = "https://finance.sina.com.cn/";
+            // 基础URL
+            String mainUrl = "https://finance.sina.com.cn/";
             
-            // 使用Jsoup连接网站并获取HTML文档
-            Document doc = Jsoup.connect(url)
-                    .userAgent(spiderProperties.getUserAgent())
-                    .timeout(spiderProperties.getTimeout())
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                    .header("Accept-Language", "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3")
-                    .get();
+            // 定义多个需要爬取的子页面，增加数据源
+            List<String> urlsToFetch = new ArrayList<>();
+            urlsToFetch.add(mainUrl);
+            urlsToFetch.add("https://finance.sina.com.cn/stock/");  // 股票页面
+            urlsToFetch.add("https://finance.sina.com.cn/roll/");   // 滚动新闻
+            urlsToFetch.add("https://finance.sina.com.cn/china/");  // 国内财经
             
-            log.debug("新浪财经页面标题: {}", doc.title());
+            List<Element> allFilteredElements = new ArrayList<>();
             
-            // 获取所有链接
-            Elements newsElements = doc.select("a[href]");
-            log.info("新浪财经找到链接元素数量: {}", newsElements.size());
-            
-            // 过滤链接，只保留财经新闻链接
-            List<Element> filteredElements = new ArrayList<>();
-            for (Element element : newsElements) {
-                String href = element.attr("href");
-                String text = element.text().trim();
-                
-                // 过滤条件：链接必须有文本，且文本长度大于5，链接必须包含finance或money
-                if (href != null && !href.isEmpty() && text.length() > 5 
-                        && !href.contains("#") && !href.contains("javascript:")
-                        && (href.contains("finance") || href.contains("money"))) {
-                    filteredElements.add(element);
+            // 遍历并爬取每个URL
+            for (String url : urlsToFetch) {
+                try {
+                    log.info("正在抓取URL: {}", url);
+                    
+                    // 使用Jsoup连接网站并获取HTML文档
+                    Document doc = Jsoup.connect(url)
+                            .userAgent(spiderProperties.getUserAgent())
+                            .timeout(spiderProperties.getTimeout())
+                            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                            .header("Accept-Language", "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3")
+                            .get();
+                    
+                    log.info("抓取页面标题: {}", doc.title());
+                    
+                    // 获取所有链接
+                    Elements newsElements = doc.select("a[href]");
+                    log.debug("发现链接元素数量: {}", newsElements.size());
+                    
+                    // 过滤链接，放宽筛选条件
+                    List<Element> filteredElements = new ArrayList<>();
+                    for (Element element : newsElements) {
+                        String href = element.attr("href");
+                        String text = element.text().trim();
+                        
+                        // 扩大关键词范围，包含更多财经相关内容
+                        if (href != null && !href.isEmpty() && text.length() > 4  // 降低文本长度要求
+                                && !href.contains("#") && !href.contains("javascript:")
+                                && (href.contains("finance") || href.contains("money") 
+                                || href.contains("stock") || href.contains("business")
+                                || href.contains("economy") || href.contains("china")
+                                || href.contains("forex") || href.contains("fund")
+                                || href.contains("industry") || href.contains("bank"))) {
+                            filteredElements.add(element);
+                        }
+                    }
+                    
+                    log.info("页面 {} 过滤后的新闻链接数量: {}", url, filteredElements.size());
+                    allFilteredElements.addAll(filteredElements);
+                } catch (Exception e) {
+                    log.warn("抓取URL {}失败: {}", url, e.getMessage());
+                    // 继续处理下一个URL，不影响整体流程
                 }
             }
             
-            log.info("过滤后的财经新闻链接数量: {}", filteredElements.size());
+            log.info("总共过滤后的新闻链接数量: {}", allFilteredElements.size());
+            if (allFilteredElements.isEmpty()) {
+                log.warn("未找到符合条件的新浪财经新闻链接");
+                return;
+            }
+            
+            // 去重，确保不处理重复的URL
+            Map<String, Element> uniqueElements = new HashMap<>();
+            for (Element element : allFilteredElements) {
+                String href = element.attr("abs:href");
+                if (!uniqueElements.containsKey(href) && href.startsWith("http")) {
+                    uniqueElements.put(href, element);
+                }
+            }
             
             List<HotNews> newsList = new ArrayList<>();
             
-            // 限制处理的链接数量，增加到30个
-            int maxLinks = Math.min(filteredElements.size(), 30);
+            // 增加处理的链接数量上限
+            int maxLinks = Math.min(uniqueElements.size(), 100);  // 从30增加到100
             
+            List<String> urls = new ArrayList<>(uniqueElements.keySet());
             for (int i = 0; i < maxLinks; i++) {
-                Element newsElement = filteredElements.get(i);
+                String sourceUrl = urls.get(i);
+                Element newsElement = uniqueElements.get(sourceUrl);
                 try {
                     HotNews news = new HotNews();
                     
@@ -852,12 +973,11 @@ public class NewsSpiderTask {
                     
                     // 抓取标题和URL
                     String title = newsElement.text().trim();
-                    String sourceUrl = newsElement.attr("abs:href");
                     
                     if (!title.isEmpty() && sourceUrl.startsWith("http")) {
                         news.setTitle(title);
                         news.setSourceUrl(sourceUrl);
-                        log.info("找到文章: {} - URL: {}", news.getTitle(), news.getSourceUrl());
+                        log.debug("找到文章: {} - URL: {}", news.getTitle(), news.getSourceUrl());
                         
                         // 先检查URL是否已存在
                         if (isNewsUrlExists(sourceUrl)) {
@@ -865,60 +985,83 @@ public class NewsSpiderTask {
                             continue;
                         }
                         
-                        try {
-                            // 获取详情页面抓取更多信息
-                            Document detailDoc = Jsoup.connect(news.getSourceUrl())
-                                    .userAgent(spiderProperties.getUserAgent())
-                                    .timeout(spiderProperties.getTimeout())
-                                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                                    .header("Accept-Language", "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3")
-                                    .get();
-                            
-                            // 抓取内容 - 使用更通用的选择器
-                            Element contentElement = detailDoc.selectFirst("article, .article, .content, .article-content, #artibody, .main-content");
-                            if (contentElement != null) {
-                                // 只提取文本内容并处理成简单的HTML格式
-                                String content = extractContentText(contentElement);
-                                news.setContent(content);
+                        // 添加重试机制
+                        boolean detailFetched = false;
+                        int maxRetries = 3;
+                        for (int retry = 0; retry < maxRetries && !detailFetched; retry++) {
+                            try {
+                                // 获取详情页面抓取更多信息
+                                Document detailDoc = Jsoup.connect(sourceUrl)
+                                        .userAgent(spiderProperties.getUserAgent())
+                                        .timeout(spiderProperties.getTimeout() * 2)  // 增加超时时间
+                                        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                                        .header("Accept-Language", "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3")
+                                        .header("Referer", mainUrl)
+                                        .get();
                                 
-                                // 生成摘要，取内容前100个字符
-                                String text = contentElement.text().trim();
-                                news.setSummary(text.length() > 100 ? text.substring(0, 100) + "..." : text);
-                            } else {
-                                // 如果找不到内容，设置默认内容
-                                news.setContent("<p>" + title + "</p>");
-                                news.setSummary(title);
-                            }
-                            
-                            // 抓取封面图
-                            Element imgElement = detailDoc.selectFirst("img");
-                            if (imgElement != null) {
-                                news.setCoverImage(imgElement.attr("abs:src"));
-                            }
-                            
-                            // 抓取发布时间
-                            Element timeElement = detailDoc.selectFirst("time, .time, .date, .publish-time, .article-time");
-                            if (timeElement != null) {
-                                String timeText = timeElement.text().trim();
-                                try {
-                                    Date publishTime = parseDate(timeText);
-                                    if (publishTime != null) {
-                                        news.setPublishTime(publishTime);
-                                    } else {
+                                // 抓取内容 - 使用更多的选择器，增加匹配概率
+                                Element contentElement = detailDoc.selectFirst("article, .article, .content, .article-content, #artibody, .main-content, .article-text, #content, .news-text");
+                                if (contentElement != null) {
+                                    // 只提取文本内容并处理成简单的HTML格式
+                                    String content = extractContentText(contentElement);
+                                    news.setContent(content);
+                                    
+                                    // 生成摘要，取内容前100个字符
+                                    String text = contentElement.text().trim();
+                                    news.setSummary(text.length() > 100 ? text.substring(0, 100) + "..." : text);
+                                    
+                                    log.debug("成功抓取内容，长度: {}", content.length());
+                                    detailFetched = true;
+                                } else {
+                                    // 如果找不到内容，设置默认内容
+                                    log.warn("未找到内容元素: {}", sourceUrl);
+                                    news.setContent("<p>" + title + "</p>");
+                                    news.setSummary(title);
+                                    detailFetched = true;  // 即使没找到内容，也算是处理完成
+                                }
+                                
+                                // 抓取封面图，尝试多种选择器
+                                Element imgElement = detailDoc.selectFirst(".article-img img, .main-pic img, article img:first-child, .content img:first-child, img");
+                                if (imgElement != null) {
+                                    news.setCoverImage(imgElement.attr("abs:src"));
+                                }
+                                
+                                // 抓取发布时间，使用更多选择器
+                                Element timeElement = detailDoc.selectFirst("time, .time, .date, .publish-time, .article-time, .pubtime, .release-time");
+                                if (timeElement != null) {
+                                    String timeText = timeElement.text().trim();
+                                    try {
+                                        Date publishTime = parseDate(timeText);
+                                        if (publishTime != null) {
+                                            news.setPublishTime(publishTime);
+                                            log.debug("解析到发布时间: {}", publishTime);
+                                        } else {
+                                            news.setPublishTime(new Date());
+                                        }
+                                    } catch (Exception e) {
                                         news.setPublishTime(new Date());
+                                        log.warn("解析发布时间失败: {}", timeText);
                                     }
-                                } catch (Exception e) {
+                                } else {
                                     news.setPublishTime(new Date());
                                 }
-                            } else {
-                                news.setPublishTime(new Date());
+                                
+                            } catch (Exception e) {
+                                if (retry == maxRetries - 1) {
+                                    log.warn("获取详情页多次重试失败: {}, 错误: {}", sourceUrl, e.getMessage());
+                                    // 即使获取详情页失败，我们仍然可以创建一个基础的新闻记录
+                                    news.setSummary(title);
+                                    news.setContent("<p>" + title + "</p>");
+                                    news.setPublishTime(new Date());
+                                } else {
+                                    log.debug("获取详情页失败，准备重试: {}/{}, URL: {}", retry+1, maxRetries, sourceUrl);
+                                    try {
+                                        Thread.sleep(1000);  // 重试前等待1秒
+                                    } catch (InterruptedException ie) {
+                                        Thread.currentThread().interrupt();
+                                    }
+                                }
                             }
-                        } catch (Exception e) {
-                            log.warn("获取新浪详情页失败: {}, 错误: {}", sourceUrl, e.getMessage());
-                            // 即使获取详情页失败，我们仍然可以创建一个基础的新闻记录
-                            news.setSummary(title);
-                            news.setContent("<p>" + title + "</p>");
-                            news.setPublishTime(new Date());
                         }
                         
                         // 设置其他属性
@@ -935,12 +1078,17 @@ public class NewsSpiderTask {
                         news.setCreateTime(new Date());
                         news.setUpdateTime(new Date());
                         
+                        // 生成内容指纹
+                        contentSimilarityService.generateContentHash(news);
+                        
                         newsList.add(news);
                     }
                 } catch (Exception e) {
-                    log.error("解析新浪财经单条新闻出错", e);
+                    log.error("解析新浪财经单条新闻出错: {}", e.getMessage(), e);
                 }
             }
+            
+            log.info("成功解析新浪财经新闻数量: {}", newsList.size());
             
             // 保存到数据库 - 修改为批量插入
             if (!newsList.isEmpty()) {
@@ -965,7 +1113,7 @@ public class NewsSpiderTask {
                             news.setSummary(news.getTitle());
                         }
                         
-                        // 验证新闻内容是否有效
+                        // 验证新闻内容是否有效，放宽验证条件
                         if (!isValidNewsContent(news.getTitle(), news.getContent(), news.getSummary())) {
                             log.info("过滤无效新闻: {} - URL: {}", news.getTitle(), news.getSourceUrl());
                             filteredCount++;
@@ -987,14 +1135,16 @@ public class NewsSpiderTask {
                             continue;
                         }
                         
-                        // 先检查URL是否已存在于数据库
+                        // 再次检查URL是否已存在于数据库（可能在处理过程中被其他进程添加）
                         if (isNewsUrlExists(news.getSourceUrl())) {
                             log.info("数据库中已存在该URL，跳过: {} - URL: {}", news.getTitle(), news.getSourceUrl());
                             continue;
                         }
                         
-                        // 生成内容指纹
-                        contentSimilarityService.generateContentHash(news);
+                        // 确保内容哈希已生成
+                        if (news.getContentHash() == null) {
+                            contentSimilarityService.generateContentHash(news);
+                        }
                         String contentHash = news.getContentHash();
                         
                         // 检查当前批次中是否有相似内容
@@ -1024,9 +1174,16 @@ public class NewsSpiderTask {
                         batchUrlSet.add(news.getSourceUrl());
                         batchContentHashMap.put(news.getSourceUrl(), contentHash);
                     } catch (Exception e) {
-                        log.error("处理新闻记录失败: {}, 错误: {}", newsList.get(i).getTitle(), e.getMessage());
+                        log.error("处理新闻记录失败: {}, 错误: {}", newsList.get(i).getTitle(), e.getMessage(), e);
                     }
                 }
+                
+                if (validNewsList.isEmpty()) {
+                    log.warn("没有有效的新闻需要保存到数据库");
+                    return;
+                }
+                
+                log.info("开始保存{}条有效新闻到数据库", validNewsList.size());
                 
                 // 批量保存有效新闻并更新布隆过滤器
                 int successCount = batchSaveNewsAndUpdateBloomFilter(validNewsList);
@@ -1036,9 +1193,8 @@ public class NewsSpiderTask {
             } else {
                 log.warn("未抓取到任何新浪财经新闻");
             }
-            
-        } catch (IOException e) {
-            log.error("抓取新浪财经新闻出错", e);
+        } catch (Exception e) {
+            log.error("新浪财经爬虫执行过程中发生错误", e);
         }
     }
     
@@ -1115,19 +1271,27 @@ public class NewsSpiderTask {
     }
     
     /**
-     * 抓取两个财经新闻源的新闻
+     * 抓取所有财经新闻源的新闻
      * @return 抓取到的新闻总数
      */
     public int crawlAllFinanceNews() {
         // 记录抓取前数据库中的新闻数量
-        int beforeCount = 0;
+        Long beforeCount = hotNewsMapper.selectCount(null);
+        
+        log.info("开始批量抓取所有财经新闻源...");
         
         // 手动触发爬取任务
         crawlFinanceNewsFromWallStreetCn();
         crawlFinanceNewsFromCaixin();
+        crawlFinanceNewsFromSina();
         
-        // 返回新闻总数 (这里无法精确计算新增数量，但可以返回抓取的两个源的数量)
-        return 0;  // 此方法主要用于触发爬虫，返回值意义不大
+        // 计算新增的新闻数量
+        Long afterCount = hotNewsMapper.selectCount(null);
+        int addedCount = afterCount.intValue() - beforeCount.intValue();
+        
+        log.info("批量抓取完成，共新增{}条新闻", addedCount);
+        
+        return addedCount;
     }
     
     /**
@@ -1329,7 +1493,7 @@ public class NewsSpiderTask {
         // 使用原子整数进行并发计数
         java.util.concurrent.atomic.AtomicInteger successCount = new java.util.concurrent.atomic.AtomicInteger(0);
         // 批次大小
-        int batchSize = 50;
+        int batchSize = 15;
         int size = newsList.size();
         // 计算需要创建的批次数
         int batchCount = (int) Math.ceil((double) size / batchSize);
@@ -1412,20 +1576,26 @@ public class NewsSpiderTask {
             // 批量处理该批次中的所有记录
             for (HotNews news : batch) {
                 try {
-                    // 1. 插入数据库
+                    // 确保内容哈希不为空
+                    if (news.getContentHash() == null) {
+                        contentSimilarityService.generateContentHash(news);
+                    }
+                    
+                    // 1. 先插入数据库
                     hotNewsMapper.insert(news);
                     
-                    // 2. 更新布隆过滤器
+                    // 2. 数据库插入成功后，再更新布隆过滤器和缓存
                     urlBloomFilter.put(news.getSourceUrl());
-                    
-                    // 3. 缓存内容指纹
                     contentSimilarityService.cacheContentHash(news.getContentHash());
+                    
+                    log.debug("成功保存新闻: ID={}, 标题={}, URL={}", 
+                            news.getId(), news.getTitle(), news.getSourceUrl());
                     
                     batchSuccess++;
                 } catch (Exception e) {
                     // 记录具体哪条数据失败
                     log.error("单条新闻处理失败: {} - URL: {}, 错误: {}", 
-                            news.getTitle(), news.getSourceUrl(), e.getMessage());
+                            news.getTitle(), news.getSourceUrl(), e.getMessage(), e);
                     // 继续处理下一条，不影响整个批次
                 }
             }
@@ -1438,8 +1608,40 @@ public class NewsSpiderTask {
             return batchSuccess;
         } catch (Exception e) {
             // 批次级别异常，整个批次回滚
-            log.error("批次处理发生严重错误，执行回滚: {}", e.getMessage());
+            log.error("批次处理发生严重错误，执行回滚: {}", e.getMessage(), e);
             throw e;
         }
     }
-} 
+
+    /**
+     * 清理缓存并重新爬取新浪财经新闻
+     * 这个方法可以在怀疑缓存与数据库不一致时调用
+     * @return 重新抓取的新闻数量
+     */
+    public int resetAndCrawlSinaNews() {
+        try {
+            log.info("开始清理缓存并重新爬取新浪财经新闻...");
+            
+            // 记录清理前的新闻数量
+            Long beforeCount = hotNewsMapper.selectCount(null);
+            
+            // 清理内容哈希缓存
+            contentSimilarityService.clearContentHashCache();
+            
+            // 重新抓取新浪财经新闻
+            crawlFinanceNewsFromSina();
+            
+            // 计算新增的新闻数量
+            Long afterCount = hotNewsMapper.selectCount(null);
+            int addedCount = afterCount.intValue() - beforeCount.intValue();
+            
+            log.info("清理缓存并重新抓取完成，新增了{}条新闻", addedCount);
+            return addedCount;
+        } catch (Exception e) {
+            log.error("清理缓存并重新抓取新浪财经新闻时出错", e);
+            return -1;
+        }
+    }
+}
+
+

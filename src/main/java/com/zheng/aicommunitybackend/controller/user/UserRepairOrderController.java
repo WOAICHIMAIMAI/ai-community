@@ -33,10 +33,10 @@ public class UserRepairOrderController {
      */
     @PostMapping
     @Operation(summary = "创建报修工单", description = "用户创建物业报修工单")
-    public Result<Long> createRepairOrder(@RequestBody @Validated RepairOrderCreateDTO dto) {
+    public Result<String> createRepairOrder(@RequestBody @Validated RepairOrderCreateDTO dto) {
         Long userId = UserContext.getUserId();
-        Long orderId = repairOrdersService.createRepairOrder(dto, userId);
-        return Result.success(orderId);
+        String orderNumber = repairOrdersService.createRepairOrder(dto, userId);
+        return Result.success(orderNumber);
     }
     
     /**

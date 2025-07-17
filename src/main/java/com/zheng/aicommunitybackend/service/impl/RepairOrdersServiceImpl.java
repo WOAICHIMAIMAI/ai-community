@@ -65,7 +65,7 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
 
     @Override
     @Transactional
-    public Long createRepairOrder(RepairOrderCreateDTO dto, Long userId) {
+    public String createRepairOrder(RepairOrderCreateDTO dto, Long userId) {
         // 1. 构建工单对象并设置初始属性
         RepairOrders order = new RepairOrders();
         BeanUtils.copyProperties(dto, order);
@@ -86,7 +86,7 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
                 "创建工单", 
                 "用户创建了报修工单，等待物业受理");
         
-        return order.getId();
+        return order.getOrderNumber();
     }
 
     @Override
@@ -346,7 +346,7 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
 
     @Override
     @Transactional
-    public boolean assignRepairOrder(AdminRepairOrderAssignDTO dto, Long adminId) {
+    public boolean assignRepairWorker(AdminRepairOrderAssignDTO dto) {
         // 1. 查询工单并校验
         RepairOrders order = getById(dto.getOrderId());
         if (order == null) {
@@ -388,7 +388,7 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
                             "管理员已将工单分配给维修工" + worker.getName() + 
                                     "，预约上门时间：" + formatDate(dto.getAppointmentTime()) + remark
                     ),
-                    adminId,
+                    null,
                     OPERATOR_TYPE_ADMIN
             );
             
@@ -402,7 +402,7 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
 
     @Override
     @Transactional
-    public boolean updateOrderStatus(AdminRepairOrderUpdateDTO dto, Long adminId) {
+    public boolean updateRepairOrder(AdminRepairOrderUpdateDTO dto) {
         // 1. 查询工单并校验
         RepairOrders order = getById(dto.getOrderId());
         if (order == null) {
@@ -442,7 +442,7 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
                             "更新状态",
                             "管理员将工单状态更新为：" + statusDesc + remark
                     ),
-                    adminId,
+                    null,
                     OPERATOR_TYPE_ADMIN
             );
         }
@@ -724,25 +724,13 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
     
     /**
      * 生成工单编号
-     * 
-     * @return 工单编号
+     * 格式：WX + 年月日 + 6位随机数，例如：WX2023071012345
      */
     private String generateOrderNumber() {
-        // 生成格式：年月日时分秒 + 4位随机数
-        Calendar calendar = Calendar.getInstance();
-        String dateStr = String.format("%04d%02d%02d%02d%02d%02d",
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH) + 1,
-                calendar.get(Calendar.DAY_OF_MONTH),
-                calendar.get(Calendar.HOUR_OF_DAY),
-                calendar.get(Calendar.MINUTE),
-                calendar.get(Calendar.SECOND));
-        
-        // 生成4位随机数
-        int random = new Random().nextInt(10000);
-        String randomStr = String.format("%04d", random);
-        
-        return "R" + dateStr + randomStr;
+        String prefix = "WX";
+        String datePart = LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE); // yyyyMMdd
+        String randomPart = String.format("%06d", new Random().nextInt(1000000));
+        return prefix + datePart + randomPart;
     }
     
     /**
