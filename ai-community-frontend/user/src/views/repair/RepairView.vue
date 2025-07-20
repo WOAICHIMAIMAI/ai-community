@@ -364,6 +364,10 @@ export default {
     }
   },
   computed: {
+    // 使用computed获取认证状态
+    authStore() {
+      return useAuthStore()
+    },
     // 过滤后的维修工列表
     filteredWorkers() {
       if (this.workerType === '全部') {
@@ -376,11 +380,8 @@ export default {
     }
   },
   created() {
-    // 在created钩子中获取认证状态
-    const authStore = useAuthStore()
-    this.isLoggedIn = authStore.isLoggedIn
-    
-    if (!this.isLoggedIn) {
+    // 检查登录状态
+    if (!this.authStore.isLoggedIn) {
       showToast('请先登录')
       this.$router.push('/login')
       return
