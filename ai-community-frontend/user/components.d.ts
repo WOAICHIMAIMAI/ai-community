@@ -9,6 +9,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     BottomTabbar: typeof import('./src/components/BottomTabbar.vue')['default']
     DatePicker: typeof import('./src/components/DatePicker.vue')['default']
+    NewsCard: typeof import('./src/components/NewsCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     VanActionSheet: typeof import('vant/es')['ActionSheet']

@@ -21,9 +21,10 @@
             <van-grid-item icon="service-o" text="在线报修" to="/repair" />
             <van-grid-item icon="comment-o" text="社区互动" to="/community" />
             <van-grid-item icon="chat-o" text="聊天消息" @click="goToChat" />
-            <van-grid-item icon="newspaper-o" text="通知公告" @click="goToAnnouncementList" />
+            <van-grid-item icon="newspaper-o" text="新闻资讯" to="/news" />
+            <van-grid-item icon="bullhorn-o" text="通知公告" @click="goToAnnouncementList" />
             <van-grid-item icon="user-o" text="个人中心" to="/profile" />
-            <van-grid-item icon="robot" text="AI聊天" @click="goToAiChat" />
+            <van-grid-item icon="wechat-o" text="AI聊天" @click="goToAiChat" />
           </van-grid>
         </div>
 
@@ -64,6 +65,50 @@
               >
                 <template #label>
                   <span class="notice-date">{{ formatDate(notice.createTime) }}</span>
+                </template>
+              </van-cell>
+            </template>
+          </van-cell-group>
+        </div>
+
+        <!-- 热点新闻 -->
+        <div class="news-section">
+          <div class="section-header">
+            <span class="section-title">热点新闻</span>
+            <van-button type="text" class="more-btn" size="small" @click="goToNewsList">更多</van-button>
+          </div>
+          <van-cell-group inset>
+            <template v-if="loadingNews">
+              <van-cell>
+                <template #title>
+                  <van-skeleton title :row="1" />
+                </template>
+              </van-cell>
+              <van-cell>
+                <template #title>
+                  <van-skeleton title :row="1" />
+                </template>
+              </van-cell>
+            </template>
+            <template v-else-if="hotNews.length === 0">
+              <van-empty description="暂无新闻" />
+            </template>
+            <template v-else>
+              <van-cell
+                v-for="news in hotNews"
+                :key="news.id"
+                :title="news.title"
+                is-link
+                @click="goToNewsDetail(news.id)"
+              >
+                <template #label>
+                  <div class="news-meta">
+                    <span class="news-source">{{ news.source }}</span>
+                    <span class="news-date">{{ formatDate(news.publishTime) }}</span>
+                  </div>
+                </template>
+                <template #right-icon>
+                  <van-tag v-if="news.isHot" type="danger" size="small">热</van-tag>
                 </template>
               </van-cell>
             </template>
@@ -140,6 +185,7 @@ import { useRouter } from 'vue-router'
 import { showToast, showFailToast } from 'vant'
 import { useAuthStore } from '@/store/auth'
 import { getAnnouncements, getCommunityUpdates, getAllPosts } from '@/api/post'
+import { newsApi, type NewsItem } from '@/api/news'
 import { handleUserAvatarClick } from '@/utils/userUtils'
 
 const authStore = useAuthStore()
@@ -173,12 +219,16 @@ const bannerList = ref([
 // 加载状态
 const loadingAnnouncements = ref(true)
 const loadingUpdates = ref(true)
+const loadingNews = ref(true)
 
 // 社区公告
 const announcements = ref<any[]>([])
 
 // 社区动态
 const communityUpdates = ref<any[]>([])
+
+// 热点新闻
+const hotNews = ref<NewsItem[]>([])
 
 // 模拟数据 - 社区公告
 const mockAnnouncements = [
@@ -331,6 +381,45 @@ const fetchCommunityUpdates = async () => {
   }
 }
 
+// 获取热点新闻
+const fetchHotNews = async () => {
+  try {
+    loadingNews.value = true
+    const response = await newsApi.getHotNews(3)
+    if (response.code === 200 && response.data) {
+      hotNews.value = response.data.records || []
+    }
+  } catch (error) {
+    console.error('获取热点新闻失败:', error)
+    // 使用虚拟数据作为降级
+    hotNews.value = [
+      {
+        id: 1001,
+        title: "财经市场迎来新机遇，投资者关注度持续上升",
+        source: "财经日报",
+        publishTime: "2024-01-20 10:30:00",
+        isHot: 1
+      },
+      {
+        id: 1002,
+        title: "科技创新推动产业升级，数字化转型加速",
+        source: "科技周刊",
+        publishTime: "2024-01-20 09:15:00",
+        isHot: 1
+      },
+      {
+        id: 1003,
+        title: "社区服务质量提升，居民满意度显著改善",
+        source: "社区新闻",
+        publishTime: "2024-01-20 08:45:00",
+        isHot: 0
+      }
+    ] as NewsItem[]
+  } finally {
+    loadingNews.value = false
+  }
+}
+
 // 截取内容
 const truncateContent = (content: string) => {
   if (!content) return ''
@@ -365,6 +454,16 @@ const goToCommunityUpdates = () => {
     path: '/community',
     query: { category: '动态' }
   })
+}
+
+// 跳转到新闻列表
+const goToNewsList = () => {
+  router.push('/news')
+}
+
+// 跳转到新闻详情
+const goToNewsDetail = (newsId: number) => {
+  router.push(`/news/${newsId}`)
 }
 
 // 获取帖子图片
@@ -415,6 +514,7 @@ onMounted(() => {
   // 获取数据
   fetchAnnouncements()
   fetchCommunityUpdates()
+  fetchHotNews()
 })
 
 // 下拉刷新
@@ -422,7 +522,8 @@ const onRefresh = async () => {
   try {
     await Promise.all([
       fetchAnnouncements(),
-      fetchCommunityUpdates()
+      fetchCommunityUpdates(),
+      fetchHotNews()
     ])
     showToast('刷新成功')
   } catch (error) {
@@ -503,12 +604,30 @@ const onRefresh = async () => {
   }
 }
 
-.notice-section {
+.notice-section, .news-section {
   margin-bottom: 10px;
-  
-  .notice-date {
+
+  .notice-date, .news-date {
     font-size: 12px;
     color: var(--text-color-light);
+  }
+}
+
+.news-section {
+  .news-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+
+    .news-source {
+      color: var(--primary-color);
+      font-weight: 500;
+    }
+
+    .news-date {
+      color: var(--text-color-light);
+    }
   }
 }
 

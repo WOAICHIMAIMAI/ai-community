@@ -2,6 +2,7 @@
   <van-tabbar route fixed v-if="authStore.isLoggedIn">
     <van-tabbar-item replace to="/" icon="home-o">首页</van-tabbar-item>
     <van-tabbar-item replace to="/community" icon="friends-o">社区</van-tabbar-item>
+    <van-tabbar-item replace to="/news" icon="newspaper-o">新闻</van-tabbar-item>
     <van-tabbar-item replace to="/chat-list" icon="chat-o">消息</van-tabbar-item>
     <van-tabbar-item replace to="/profile" icon="user-o">我的</van-tabbar-item>
   </van-tabbar>

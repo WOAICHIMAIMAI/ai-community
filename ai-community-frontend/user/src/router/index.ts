@@ -23,6 +23,18 @@ const routes = [
     component: () => import('@/views/user/UserProfileView.vue')
   },
   {
+    path: '/news',
+    name: 'NewsList',
+    component: () => import('@/views/news/NewsListView.vue'),
+    meta: { title: '新闻资讯' }
+  },
+  {
+    path: '/news/:id',
+    name: 'NewsDetail',
+    component: () => import('@/views/news/NewsDetailView.vue'),
+    meta: { title: '新闻详情' }
+  },
+  {
     path: '/post-publish',
     name: 'PostPublish',
     component: () => import('@/views/posts/PostPublishView.vue')
