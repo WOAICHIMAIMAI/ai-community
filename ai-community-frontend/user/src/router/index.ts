@@ -106,6 +106,12 @@ const router = createRouter({
       ]
     },
     {
+      path: '/ai-chat-list',
+      name: 'ai-chat-list',
+      component: () => import('@/views/ai-chat/AiChatListView.vue'),
+      meta: { requiresAuth: true, title: 'AI聊天记录' }
+    },
+    {
       path: '/ai-chat',
       name: 'ai-chat',
       component: () => import('@/views/ai-chat/AiChatView.vue'),

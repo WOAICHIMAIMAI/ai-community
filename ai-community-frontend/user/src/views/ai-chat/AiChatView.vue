@@ -4,7 +4,7 @@
       title="AI助手" 
       left-text="返回" 
       left-arrow 
-      @click-left="$router.back()"
+      @click-left="handleBack"
       fixed
     />
     
@@ -34,7 +34,7 @@
               round
               class="avatar"
             />
-            <div class="message-content">{{ message.content }}</div>
+            <div class="message-content markdown-content" v-html="renderMarkdown(message.content)"></div>
           </div>
         </div>
         
@@ -85,8 +85,25 @@ import { Image, NavBar, Field, Button, Loading } from 'vant';
 import { useRoute, useRouter } from 'vue-router';
 import { showToast, showFailToast } from 'vant';
 import { v4 as uuidv4 } from 'uuid';
+import { marked } from 'marked';
 import { aiChatApi } from '@/api/aiChatApi';
 import { useAuthStore } from '@/store/auth';
+
+// 配置marked选项
+marked.setOptions({
+  breaks: true,
+  gfm: true
+});
+
+// 渲染Markdown
+const renderMarkdown = (content: string) => {
+  try {
+    return marked(content);
+  } catch (error) {
+    console.error('Markdown渲染失败:', error);
+    return content;
+  }
+};
 
 // 类型定义
 interface Message {
@@ -106,6 +123,17 @@ const chatId = ref('');
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+
+// 处理返回
+const handleBack = () => {
+  // 优先返回到聊天列表页面
+  if (route.query.from === 'list' || document.referrer.includes('/ai-chat-list')) {
+    router.push('/ai-chat-list');
+  } else {
+    // 如果是从其他页面进入，返回上一页
+    router.back();
+  }
+};
 
 // 初始化聊天ID
 const initChatId = () => {
@@ -136,7 +164,7 @@ const scrollToBottom = () => {
 const loadChatHistory = async () => {
   try {
     const response = await aiChatApi.getChatMessages(chatId.value, 50);
-    if (response.success && response.data && response.data.length > 0) {
+    if (response.code === 200 && response.data && response.data.length > 0) {
       messageList.value = response.data.map((msg: any) => ({
         role: msg.messageType === 'USER' ? 'user' : 'ai',
         content: msg.content
@@ -192,7 +220,7 @@ const handleSend = async () => {
 };
 
 // 组件挂载
-onMounted(() => {
+onMounted(async () => {
   // 检查登录状态
   if (!authStore.isLoggedIn) {
     showToast('请先登录');
@@ -204,9 +232,9 @@ onMounted(() => {
   initChatId();
   
   // 加载聊天记录
-  loadChatHistory();
+  await loadChatHistory();
 
-  // 添加欢迎消息（如果是新会话）
+  // 只有在没有历史记录时才添加欢迎消息
   if (messageList.value.length === 0) {
     messageList.value.push({
       role: 'ai',
@@ -221,13 +249,33 @@ onMounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f5f5f5;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  position: relative;
+}
+
+.ai-chat-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="warm-dots" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1.5" fill="rgba(79,192,141,0.06)"/><circle cx="10" cy="30" r="1" fill="rgba(255,193,7,0.04)"/></pattern></defs><rect width="100" height="100" fill="url(%23warm-dots)"/></svg>');
+  pointer-events: none;
+}
+
+:deep(.van-nav-bar) {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-bottom: 1px solid rgba(79, 192, 141, 0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
 }
 
 .chat-content {
   flex: 1;
   overflow-y: auto;
-  padding: 60px 16px 80px;
+  padding: 70px 16px 90px;
+  position: relative;
+  z-index: 1;
 }
 
 .message-list {
@@ -239,26 +287,40 @@ onMounted(() => {
 .message-item {
   display: flex;
   align-items: flex-start;
+  animation: messageSlideIn 0.4s ease-out;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .user-message {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
   margin-left: auto;
 }
 
 .user-message .message-content {
-  background-color: #1989fa;
+  background: linear-gradient(135deg, #4fc08d 0%, #52c41a 100%);
   color: white;
-  border-bottom-right-radius: 4px;
-  max-width: 70%;
-  padding: 12px 16px;
-  border-radius: 12px;
+  max-width: 75%;
+  padding: 14px 18px;
+  border-radius: 18px 18px 6px 18px;
   word-wrap: break-word;
-  line-height: 1.4;
+  line-height: 1.5;
+  font-size: 15px;
+  box-shadow: 0 3px 12px rgba(79, 192, 141, 0.25);
+  position: relative;
 }
 
 .message-item.user {
@@ -271,27 +333,37 @@ onMounted(() => {
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px;
 }
 
 .message-content {
-  max-width: 70%;
-  padding: 12px 16px;
-  border-radius: 12px;
+  max-width: 75%;
+  padding: 14px 18px;
+  border-radius: 18px;
   word-wrap: break-word;
-  line-height: 1.4;
+  line-height: 1.5;
+  font-size: 15px;
 }
 
 .ai-message .message-content,
 .loading-message .message-content {
-  background-color: white;
-  color: #333;
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  color: #2c3e50;
+  border-radius: 18px 18px 18px 6px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  position: relative;
 }
 
 .avatar {
   flex-shrink: 0;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
 }
 
 .input-area {
@@ -299,25 +371,55 @@ onMounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: white;
-  padding: 12px 16px;
-  border-top: 1px solid #eee;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  padding: 16px;
+  border-top: 1px solid rgba(79, 192, 141, 0.1);
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 12px;
   z-index: 100;
+  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.06);
 }
 
-.input-area .van-field {
+.input-area :deep(.van-field) {
   flex: 1;
-  background-color: #f5f5f5;
+  background: #f8f9fa;
   border-radius: 20px;
-  border: none;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  
+  &:focus-within {
+    border-color: rgba(79, 192, 141, 0.3);
+    background: #ffffff;
+    box-shadow: 0 0 12px rgba(79, 192, 141, 0.15);
+  }
+  
+  .van-field__control {
+    color: #2c3e50;
+  }
 }
 
 .send-btn {
   border-radius: 20px;
-  min-width: 60px;
+  min-width: 70px;
+  height: 44px;
+  background: linear-gradient(135deg, #4fc08d 0%, #52c41a 100%);
+  border: none;
+  font-weight: 500;
+  box-shadow: 0 3px 12px rgba(79, 192, 141, 0.25);
+  transition: all 0.3s ease;
+  color: white;
+  
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(79, 192, 141, 0.3);
+  }
+  
+  &:disabled {
+    background: #dee2e6;
+    box-shadow: none;
+    color: #6c757d;
+  }
 }
 
 /* 滚动条样式 */
@@ -330,7 +432,153 @@ onMounted(() => {
 }
 
 .chat-content::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(79, 192, 141, 0.3);
   border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.chat-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(79, 192, 141, 0.5);
+}
+
+/* Markdown样式优化 */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4),
+.markdown-content :deep(h5),
+.markdown-content :deep(h6) {
+  margin: 14px 0 10px 0;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.markdown-content :deep(h1) { 
+  font-size: 18px;
+  border-bottom: 2px solid rgba(79, 192, 141, 0.2);
+  padding-bottom: 6px;
+}
+.markdown-content :deep(h2) { 
+  font-size: 17px;
+  color: #495057;
+}
+.markdown-content :deep(h3) { 
+  font-size: 16px;
+  color: #495057;
+}
+
+.markdown-content :deep(p) {
+  margin: 10px 0;
+  color: #2c3e50;
+}
+
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.markdown-content :deep(li) {
+  margin: 4px 0;
+  color: #2c3e50;
+}
+
+.markdown-content :deep(ul li::marker) {
+  color: #4fc08d;
+}
+
+.markdown-content :deep(code) {
+  background: #f8f9fa;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 13px;
+  color: #e74c3c;
+  border: 1px solid #e9ecef;
+}
+
+.markdown-content :deep(pre) {
+  background: #2c3e50;
+  border: none;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+  overflow-x: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.markdown-content :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: #ecf0f1;
+  border: none;
+  font-size: 13px;
+}
+
+.markdown-content :deep(blockquote) {
+  border-left: 3px solid #4fc08d;
+  padding: 12px 16px;
+  margin: 12px 0;
+  color: #495057;
+  background: rgba(79, 192, 141, 0.05);
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+}
+
+.markdown-content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.markdown-content :deep(th),
+.markdown-content :deep(td) {
+  border: 1px solid #e9ecef;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.markdown-content :deep(th) {
+  background: linear-gradient(135deg, #4fc08d 0%, #52c41a 100%);
+  color: white;
+  font-weight: 500;
+}
+
+.markdown-content :deep(tr:nth-child(even)) {
+  background-color: #f8f9fa;
+}
+
+.markdown-content :deep(strong) {
+  font-weight: 600;
+  color: #2c3e50;
+  background: rgba(79, 192, 141, 0.1);
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.markdown-content :deep(em) {
+  font-style: italic;
+  color: #6c757d;
+}
+
+.markdown-content :deep(a) {
+  color: #4fc08d;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.markdown-content :deep(a:hover) {
+  border-bottom-color: #4fc08d;
+  background: rgba(79, 192, 141, 0.08);
+  padding: 1px 3px;
+  border-radius: 3px;
 }
 </style>

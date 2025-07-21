@@ -129,22 +129,11 @@ import { getAnnouncements, getCommunityUpdates, getAllPosts } from '@/api/post'
 const authStore = useAuthStore()
 const router = useRouter()
 const goToAiChat = () => {
-  console.log('[AI聊天导航] 按钮被点击，开始处理跳转');
-  console.log('[AI聊天导航] 当前路由:', router.currentRoute.value.path);
-  console.log('[AI聊天导航] 目标路由:', '/ai-chat');
+  console.log('[AI聊天导航] 按钮被点击，跳转到聊天记录列表');
   try {
-    const result = router.push('/ai-chat');
-    console.log('[AI聊天导航] 路由跳转已触发，结果:', result);
-    // 如果是Promise，等待其完成
-    if (result instanceof Promise) {
-      result.then(() => {
-        console.log('[AI聊天导航] 路由跳转Promise已 resolved');
-      }).catch(err => {
-        console.error('[AI聊天导航] 路由跳转Promise rejected:', err);
-      });
-    }
+    router.push('/ai-chat-list');
   } catch (error) {
-    console.error('[AI聊天导航] 路由跳转抛出异常:', error);
+    console.error('[AI聊天导航] 路由跳转异常:', error);
   }
 }
 const refreshing = ref(false)
