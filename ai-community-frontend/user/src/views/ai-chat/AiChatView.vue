@@ -143,10 +143,10 @@ const initChatId = () => {
     chatId.value = routeChatId;
   } else {
     chatId.value = uuidv4();
-    // 更新路由，添加chatId参数
+    // 更新路由，添加chatId参数和新会话标识
     router.replace({
       path: route.path,
-      query: { ...route.query, chatId: chatId.value }
+      query: { ...route.query, chatId: chatId.value, isNew: 'true' }
     });
   }
 };
@@ -219,6 +219,31 @@ const handleSend = async () => {
   }
 };
 
+// 发送隐式自我介绍请求
+const sendIntroductionPrompt = async () => {
+  try {
+    const introPrompt = "请简单介绍一下你自己，包括你的名字、身份以及你能为社区居民提供哪些服务和帮助。请用温馨友好的语气，控制在100字以内。";
+    
+    const response = await aiChatApi.sendMessage(introPrompt, chatId.value);
+    if (response.code === 200) {
+      // 添加AI的自我介绍到消息列表
+      messageList.value.push({
+        role: 'ai',
+        content: response.data
+      });
+      scrollToBottom();
+    }
+  } catch (error) {
+    console.error('获取AI自我介绍失败:', error);
+    // 如果请求失败，显示默认欢迎消息
+    messageList.value.push({
+      role: 'ai',
+      content: '您好！我是小智，您的AI社区管家助手。我可以帮您处理物业报修、查询便民信息、解答社区相关问题等。有什么需要帮助的吗？'
+    });
+    scrollToBottom();
+  }
+};
+
 // 组件挂载
 onMounted(async () => {
   // 检查登录状态
@@ -234,12 +259,20 @@ onMounted(async () => {
   // 加载聊天记录
   await loadChatHistory();
 
-  // 只有在没有历史记录时才添加欢迎消息
-  if (messageList.value.length === 0) {
-    messageList.value.push({
-      role: 'ai',
-      content: '您好！我是AI助手，有什么可以帮助您的吗？'
-    });
+  // 判断是否为新会话（没有历史记录或者有isNew标识）
+  const isNewSession = messageList.value.length === 0 || route.query.isNew === 'true';
+  
+  if (isNewSession) {
+    // 发送隐式自我介绍请求
+    await sendIntroductionPrompt();
+    
+    // 清除isNew标识，避免刷新页面时重复发送
+    if (route.query.isNew) {
+      router.replace({
+        path: route.path,
+        query: { ...route.query, isNew: undefined }
+      });
+    }
   }
 });
 </script>

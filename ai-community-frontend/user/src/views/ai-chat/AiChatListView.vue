@@ -76,6 +76,7 @@ interface ChatItem {
   title: string;
   lastMessage: string;
   updateTime: string;
+  lastMessageTimestamp: number;
 }
 
 // 状态管理
@@ -100,25 +101,35 @@ const fetchChatList = async () => {
             ? messagesRes.data[0].content 
             : '暂无消息';
           
+          // 获取最后一条消息的时间戳用于排序
+          const lastMessageTime = messagesRes.code === 200 && messagesRes.data.length > 0 
+            ? new Date(messagesRes.data[0].createTime).getTime()
+            : 0;
+          
           return {
             chatId,
             title: `对话 ${chatId.substring(0, 8)}`,
             lastMessage: lastMessage.length > 30 ? lastMessage.substring(0, 30) + '...' : lastMessage,
             updateTime: messagesRes.code === 200 && messagesRes.data.length > 0 
               ? formatDate(messagesRes.data[0].createTime) 
-              : ''
+              : '',
+            lastMessageTimestamp: lastMessageTime // 用于排序的时间戳
           };
         } catch (error) {
           return {
             chatId,
             title: `对话 ${chatId.substring(0, 8)}`,
             lastMessage: '加载失败',
-            updateTime: ''
+            updateTime: '',
+            lastMessageTimestamp: 0
           };
         }
       });
       
-      chatList.value = await Promise.all(chatPromises);
+      const chatResults = await Promise.all(chatPromises);
+      
+      // 按最后消息时间倒序排列（最新的在前面）
+      chatList.value = chatResults.sort((a, b) => b.lastMessageTimestamp - a.lastMessageTimestamp);
     }
   } catch (error) {
     console.error('获取聊天记录失败:', error);
@@ -131,7 +142,7 @@ const fetchChatList = async () => {
 // 创建新聊天
 const createNewChat = () => {
   const newChatId = uuidv4();
-  router.push(`/ai-chat?chatId=${newChatId}&from=list`);
+  router.push(`/ai-chat?chatId=${newChatId}&from=list&isNew=true`);
 };
 
 // 进入聊天
