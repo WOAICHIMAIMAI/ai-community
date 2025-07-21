@@ -51,7 +51,9 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
         if (!chatMessages.isEmpty()) {
             Collections.reverse(chatMessages);
         }
-        redisTemplate.opsForValue().set(String.format(RedisKeys.AI_CHAT_CONVERSATION, chatId), JSONUtil.toJsonStr(chatMessages));
+        if(!lastN.equals(1)){
+            redisTemplate.opsForValue().set(String.format(RedisKeys.AI_CHAT_CONVERSATION, chatId), JSONUtil.toJsonStr(chatMessages));
+        }
         return chatMessages;
     }
 

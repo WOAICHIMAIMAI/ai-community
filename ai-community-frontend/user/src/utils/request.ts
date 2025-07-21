@@ -48,27 +48,55 @@ service.interceptors.response.use(
       authStore.setLoading(false)
     }
     
+    // 处理大整数精度丢失问题
+    const processLargeIntegers = (obj: any): any => {
+      if (typeof obj === 'string') {
+        // 检查是否是大整数字符串
+        if (/^\d{16,}$/.test(obj)) {
+          return obj // 保持字符串格式
+        }
+      } else if (typeof obj === 'number') {
+        // 如果是超出安全范围的数字，转换为字符串
+        if (obj > Number.MAX_SAFE_INTEGER || obj < Number.MIN_SAFE_INTEGER) {
+          return obj.toString()
+        }
+      } else if (Array.isArray(obj)) {
+        return obj.map(processLargeIntegers)
+      } else if (obj && typeof obj === 'object') {
+        const processed: any = {}
+        for (const key in obj) {
+          // 特别处理可能是大整数的字段
+          if (['userId', 'id', 'authorId', 'createBy', 'targetId'].includes(key)) {
+            processed[key] = obj[key]?.toString() || obj[key]
+          } else {
+            processed[key] = processLargeIntegers(obj[key])
+          }
+        }
+        return processed
+      }
+      return obj
+    }
+    
     // 处理响应数据
-    const res = response.data
+    let res = response.data
+    
+    // 处理大整数
+    res = processLargeIntegers(res)
     
     // 处理mock数据或直接返回成功
     if (import.meta.env.DEV) {
-      // 开发环境，如果没有code字段，则视为mock数据，直接返回
       if (res.code === undefined) {
         return res
       }
     }
     
     // 根据接口规范，判断响应是否成功
-    if (res.code === 200) { // 修改为后端实际使用的成功状态码
+    if (res.code === 200) {
       return res
     } else {
-      // 统一处理业务错误
       const errorMsg = res.msg || res.message || '操作失败'
       
-      // 处理特殊错误码
       if (res.code === 401) {
-        // token失效，需要重新登录
         handleAuthError(errorMsg)
       } else {
         showFailToast({

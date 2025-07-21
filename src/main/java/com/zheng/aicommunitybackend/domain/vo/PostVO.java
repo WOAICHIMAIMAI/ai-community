@@ -21,7 +21,12 @@ public class PostVO {
     private Long userId;
     
     /**
-     * 发帖用户名
+     * 发帖用户昵称
+     */
+    private String nickname;
+
+    /**
+     * 发帖用户用户名
      */
     private String username;
     

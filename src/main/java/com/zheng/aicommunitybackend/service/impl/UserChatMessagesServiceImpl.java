@@ -65,9 +65,13 @@ public class UserChatMessagesServiceImpl extends ServiceImpl<UserChatMessagesMap
         UserMessageReadRecords readRecord = new UserMessageReadRecords();
         readRecord.setMessageId(message.getId());
         readRecord.setUserId(userId);
+        readRecord.setConversationId(dto.getConversationId());
         readRecord.setReadTime(new Date());
         userMessageReadRecordsMapper.insert(readRecord);
-        
+
+        // 4. 更新会话的最后消息信息
+        userConversationsService.updateLastMessage(dto.getConversationId(), message.getId(), message.getCreateTime());
+
         return message.getId();
     }
 
@@ -78,16 +82,16 @@ public class UserChatMessagesServiceImpl extends ServiceImpl<UserChatMessagesMap
             throw new BaseException("您不是该会话的成员");
         }
         
-        // 2. 分页查询消息
+        // 2. 分页查询消息（按时间正序，旧消息在前）
         LambdaQueryWrapper<UserChatMessages> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserChatMessages::getConversationId, conversationId)
                .eq(UserChatMessages::getStatus, 1)
-               .orderByDesc(UserChatMessages::getCreateTime);
-        
+               .orderByAsc(UserChatMessages::getCreateTime);
+
         // 计算分页参数
         int offset = (page - 1) * size;
         wrapper.last("LIMIT " + offset + ", " + size);
-        
+
         List<UserChatMessages> messages = list(wrapper);
         
         // 3. 转换为VO
@@ -156,6 +160,7 @@ public class UserChatMessagesServiceImpl extends ServiceImpl<UserChatMessagesMap
             UserMessageReadRecords readRecord = new UserMessageReadRecords();
             readRecord.setMessageId(messageId);
             readRecord.setUserId(userId);
+            readRecord.setConversationId(message.getConversationId());
             readRecord.setReadTime(new Date());
             userMessageReadRecordsMapper.insert(readRecord);
             
@@ -182,6 +187,9 @@ public class UserChatMessagesServiceImpl extends ServiceImpl<UserChatMessagesMap
         // 3. 软删除消息
         message.setStatus(0);
         updateById(message);
+
+        // 4. 如果删除的是最后一条消息，更新会话的最后消息信息
+        updateConversationLastMessageIfNeeded(message.getConversationId(), messageId);
     }
 
     /**
@@ -204,5 +212,26 @@ public class UserChatMessagesServiceImpl extends ServiceImpl<UserChatMessagesMap
                         record -> true,
                         (existing, replacement) -> existing
                 ));
+    }
+
+    /**
+     * 如果需要，更新会话的最后消息信息
+     */
+    private void updateConversationLastMessageIfNeeded(String conversationId, Long deletedMessageId) {
+        // 查询会话当前的最后消息ID
+        LambdaQueryWrapper<UserChatMessages> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserChatMessages::getConversationId, conversationId)
+               .eq(UserChatMessages::getStatus, 1)
+               .orderByDesc(UserChatMessages::getCreateTime)
+               .last("LIMIT 1");
+
+        UserChatMessages lastMessage = getOne(wrapper);
+        if (lastMessage != null) {
+            // 更新会话的最后消息信息
+            userConversationsService.updateLastMessage(conversationId, lastMessage.getId(), lastMessage.getCreateTime());
+        } else {
+            // 如果没有消息了，清空最后消息信息
+            userConversationsService.updateLastMessage(conversationId, null, null);
+        }
     }
 }

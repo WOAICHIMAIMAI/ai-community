@@ -365,7 +365,7 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         // 获取用户信息
         Users user = usersService.getById(post.getUserId());
         if (user != null) {
-            postVO.setUsername(user.getUsername());
+            postVO.setNickname(user.getNickname());
             postVO.setAvatar(user.getAvatarUrl());
         }
         
@@ -454,8 +454,9 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
             // 设置用户信息
             Users user = finalUserMap.get(post.getUserId());
             if (user != null) {
-                postVO.setUsername(user.getUsername());
+                postVO.setNickname(user.getNickname());
                 postVO.setAvatar(user.getAvatarUrl());
+                postVO.setUsername(user.getUsername()); // 保留用户名作为备用
             }
             
             // 设置点赞和收藏状态
@@ -641,8 +642,39 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         // 物理删除帖子
         return this.removeById(postId);
     }
+
+    @Override
+    public PageResult getUserPostsByUserId(Long userId, PostPageQuery query) {
+        // 构建查询条件
+        LambdaQueryWrapper<CommunityPosts> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(CommunityPosts::getUserId, userId);
+        
+        // 只显示已发布的帖子（状态为1）
+        queryWrapper.eq(CommunityPosts::getStatus, 1);
+        
+        // 根据分类过滤
+        if (StringUtils.hasText(query.getCategory()) && !"全部".equals(query.getCategory())) {
+            queryWrapper.eq(CommunityPosts::getCategory, query.getCategory());
+        }
+        
+        // 关键字条件
+        if (StringUtils.hasText(query.getKeyword())) {
+            queryWrapper.and(wrapper -> wrapper.like(CommunityPosts::getTitle, query.getKeyword())
+                    .or()
+                    .like(CommunityPosts::getContent, query.getKeyword()));
+        }
+        
+        // 排序：按创建时间倒序
+        queryWrapper.orderByDesc(CommunityPosts::getCreateTime);
+        
+        // 分页查询 - 修复参数顺序
+        Page<CommunityPosts> page = new Page<>(query.getPage(), query.getPageSize());
+        Page<CommunityPosts> pageResult = this.page(page, queryWrapper);
+        
+        // 转换为VO
+        List<PostVO> postVOList = convertToPostVOList(pageResult.getRecords());
+        
+        // 修复PageResult构造方式
+        return new PageResult(pageResult.getTotal(), postVOList);
+    }
 }
-
-
-
-

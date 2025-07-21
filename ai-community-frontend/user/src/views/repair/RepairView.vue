@@ -137,11 +137,7 @@
     </div>
     
     <!-- 底部导航 -->
-    <van-tabbar route v-if="authStore.isLoggedIn">
-      <van-tabbar-item replace to="/" icon="home-o">首页</van-tabbar-item>
-      <van-tabbar-item replace to="/community" icon="friends-o">社区</van-tabbar-item>
-      <van-tabbar-item replace to="/profile" icon="user-o">我的</van-tabbar-item>
-    </van-tabbar>
+    <BottomTabbar />
 
     <!-- 报修指南弹窗 -->
     <van-popup

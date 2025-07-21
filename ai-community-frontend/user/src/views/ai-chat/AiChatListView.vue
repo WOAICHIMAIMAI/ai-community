@@ -4,7 +4,7 @@
       title="AI聊天记录" 
       left-text="返回" 
       left-arrow 
-      @click-left="$router.back()"
+      @click-left="handleBack"
       fixed
     />
     
@@ -86,6 +86,13 @@ const loading = ref(false);
 // 路由和存储
 const router = useRouter();
 const authStore = useAuthStore();
+
+// 处理返回按钮
+const handleBack = () => {
+  console.log('AI聊天列表页面返回按钮被点击');
+  // 直接返回到主页
+  router.push('/');
+};
 
 // 获取聊天记录列表
 const fetchChatList = async () => {

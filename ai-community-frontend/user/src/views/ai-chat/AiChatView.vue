@@ -126,29 +126,41 @@ const authStore = useAuthStore();
 
 // 处理返回
 const handleBack = () => {
-  // 优先返回到聊天列表页面
-  if (route.query.from === 'list' || document.referrer.includes('/ai-chat-list')) {
+  console.log('点击返回按钮');
+  console.log('当前路由信息:', route);
+  console.log('来源参数:', route.query.from);
+  console.log('document.referrer:', document.referrer);
+  
+  try {
+    // 优先返回到聊天列表页面
+    if (route.query.from === 'list' || document.referrer.includes('/ai-chat-list')) {
+      console.log('返回到AI聊天列表页面');
+      router.push('/ai-chat-list');
+    } else {
+      // 如果是从其他页面进入，返回上一页
+      console.log('返回上一页');
+      router.back();
+    }
+  } catch (error) {
+    console.error('返回操作失败:', error);
+    // 如果返回失败，强制跳转到聊天列表
     router.push('/ai-chat-list');
-  } else {
-    // 如果是从其他页面进入，返回上一页
-    router.back();
   }
 };
 
 // 初始化聊天ID
 const initChatId = () => {
-  // 从路由参数获取chatId，如果没有则生成新的
+  // 从路由参数获取chatId，如果没有则重定向到列表页面
   const routeChatId = route.query.chatId as string;
   if (routeChatId) {
     chatId.value = routeChatId;
   } else {
-    chatId.value = uuidv4();
-    // 更新路由，添加chatId参数和新会话标识
-    router.replace({
-      path: route.path,
-      query: { ...route.query, chatId: chatId.value, isNew: 'true' }
-    });
+    // 没有chatId参数，重定向到AI聊天列表页面
+    console.log('没有chatId参数，重定向到AI聊天列表页面');
+    router.replace('/ai-chat-list');
+    return false; // 返回false表示不继续初始化
   }
+  return true; // 返回true表示可以继续初始化
 };
 
 // 滚动到底部
@@ -181,18 +193,23 @@ const handleSend = async () => {
   const content = inputContent.value.trim();
   if (!content || isLoading.value) return;
 
-  // 添加用户消息
+  // 添加用户消息到界面
   messageList.value.push({
     role: 'user',
     content
   });
+  
+  // 清空输入框
   inputContent.value = '';
   isLoading.value = true;
   scrollToBottom();
 
   try {
-    // 调用API获取AI回复
+    console.log('发送消息:', content, 'chatId:', chatId.value);
+    
+    // 调用API发送用户的实际消息内容
     const response = await aiChatApi.sendMessage(content, chatId.value);
+    
     if (response.code === 200) {
       // 添加AI回复
       messageList.value.push({
@@ -219,10 +236,12 @@ const handleSend = async () => {
   }
 };
 
-// 发送隐式自我介绍请求
+// 修改自我介绍函数，确保只在新会话时调用一次
 const sendIntroductionPrompt = async () => {
   try {
     const introPrompt = "请简单介绍一下你自己，包括你的名字、身份以及你能为社区居民提供哪些服务和帮助。请用温馨友好的语气，控制在100字以内。";
+    
+    console.log('发送自我介绍提示:', introPrompt);
     
     const response = await aiChatApi.sendMessage(introPrompt, chatId.value);
     if (response.code === 200) {
@@ -244,7 +263,7 @@ const sendIntroductionPrompt = async () => {
   }
 };
 
-// 组件挂载
+// 组件挂载时的逻辑
 onMounted(async () => {
   // 检查登录状态
   if (!authStore.isLoggedIn) {
@@ -253,8 +272,13 @@ onMounted(async () => {
     return;
   }
 
-  // 初始化聊天ID
-  initChatId();
+  // 初始化聊天ID，如果没有chatId则重定向
+  if (!initChatId()) {
+    return; // 已重定向，不继续执行
+  }
+  
+  console.log('初始化聊天，chatId:', chatId.value);
+  console.log('路由查询参数:', route.query);
   
   // 加载聊天记录
   await loadChatHistory();
@@ -262,7 +286,10 @@ onMounted(async () => {
   // 判断是否为新会话（没有历史记录或者有isNew标识）
   const isNewSession = messageList.value.length === 0 || route.query.isNew === 'true';
   
+  console.log('是否为新会话:', isNewSession, '消息数量:', messageList.value.length, 'isNew标识:', route.query.isNew);
+  
   if (isNewSession) {
+    console.log('新会话，发送自我介绍');
     // 发送隐式自我介绍请求
     await sendIntroductionPrompt();
     
@@ -273,6 +300,8 @@ onMounted(async () => {
         query: { ...route.query, isNew: undefined }
       });
     }
+  } else {
+    console.log('已有会话，不发送自我介绍');
   }
 });
 </script>
@@ -301,12 +330,17 @@ onMounted(async () => {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border-bottom: 1px solid rgba(79, 192, 141, 0.1);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000; /* 确保导航栏在最上层 */
 }
 
 .chat-content {
   flex: 1;
   overflow-y: auto;
-  padding: 70px 16px 90px;
+  padding: 80px 16px 100px; /* 增加顶部padding，确保不被导航栏遮挡 */
   position: relative;
   z-index: 1;
 }
@@ -410,7 +444,7 @@ onMounted(async () => {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  z-index: 100;
+  z-index: 999; /* 确保输入区域在导航栏下方但在内容上方 */
   box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.06);
 }
 

@@ -68,6 +68,9 @@
     <div class="logout-btn">
       <van-button block round type="danger" @click="handleLogout">退出登录</van-button>
     </div>
+    
+    <!-- 添加底部导航栏 -->
+    <BottomTabbar />
   </div>
 </template>
 
@@ -78,6 +81,7 @@ import { showSuccessToast, showLoadingToast, closeToast, showConfirmDialog } fro
 import { getUserInfo } from '@/api/user'
 import { useAuthStore } from '@/store/auth'
 import type { UserInfo } from '@/api/user'
+import BottomTabbar from '@/components/BottomTabbar.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -159,7 +163,8 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .profile-index {
-  padding-bottom: 20px;
+  padding-bottom: 70px; // 为底部导航栏留出空间
+  min-height: 100vh;
 
   .user-info-card {
     background: linear-gradient(to right, #4fc08d, #42b983);
@@ -241,6 +246,7 @@ onMounted(() => {
   .logout-btn {
     padding: 16px;
     margin-top: 20px;
+    margin-bottom: 20px; // 增加底部间距
   }
 }
 </style> 

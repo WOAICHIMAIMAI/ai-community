@@ -26,4 +26,12 @@ public interface UsersService extends IService<Users> {
     void updateUserInfo(UserInfoDTO userInfoDTO);
 
     void changePassword(String oldPassword, String newPassword);
+
+    /**
+     * 根据用户ID获取用户信息
+     *
+     * @param userId 用户ID
+     * @return 用户信息
+     */
+    UserInfoDTO getUserInfoById(Long userId);
 }

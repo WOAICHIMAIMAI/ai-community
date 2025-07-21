@@ -87,4 +87,13 @@ public interface CommunityPostsService extends IService<CommunityPosts> {
      * @return 是否删除成功
      */
     boolean adminDeletePost(Long postId);
+    
+    /**
+     * 根据用户ID获取用户发布的帖子列表
+     * 
+     * @param userId 用户ID
+     * @param query 分页查询参数
+     * @return 帖子列表
+     */
+    PageResult getUserPostsByUserId(Long userId, PostPageQuery query);
 }

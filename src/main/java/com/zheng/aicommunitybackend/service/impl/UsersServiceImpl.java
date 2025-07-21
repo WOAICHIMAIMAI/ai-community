@@ -15,6 +15,7 @@ import com.zheng.aicommunitybackend.domain.entity.Users;
 import com.zheng.aicommunitybackend.util.DigestUtil;
 import com.zheng.aicommunitybackend.util.JwtUtil;
 import lombok.AllArgsConstructor;
+import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
@@ -103,8 +104,19 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users>
         userDB.setPassword(DigestUtil.md5Hex(newPassword));
         updateById(userDB);
     }
+
+    @Override
+    public UserInfoDTO getUserInfoById(Long userId) {
+        // 根据用户ID查询用户信息
+        Users user = this.getById(userId);
+        if (user == null) {
+            throw new BaseException("用户不存在");
+        }
+        
+        // 转换为DTO
+        UserInfoDTO userInfoDTO = new UserInfoDTO();
+        BeanUtil.copyProperties(user, userInfoDTO);
+        
+        return userInfoDTO;
+    }
 }
-
-
-
-

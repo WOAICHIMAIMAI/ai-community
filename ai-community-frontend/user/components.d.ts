@@ -7,9 +7,12 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    BottomTabbar: typeof import('./src/components/BottomTabbar.vue')['default']
     DatePicker: typeof import('./src/components/DatePicker.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    VanActionSheet: typeof import('vant/es')['ActionSheet']
+    VanBadge: typeof import('vant/es')['Badge']
     VanButton: typeof import('vant/es')['Button']
     VanCard: typeof import('vant/es')['Card']
     VanCell: typeof import('vant/es')['Cell']
@@ -35,6 +38,8 @@ declare module 'vue' {
     VanPicker: typeof import('vant/es')['Picker']
     VanPopup: typeof import('vant/es')['Popup']
     VanPullRefresh: typeof import('vant/es')['PullRefresh']
+    VanRadio: typeof import('vant/es')['Radio']
+    VanRadioGroup: typeof import('vant/es')['RadioGroup']
     VanRate: typeof import('vant/es')['Rate']
     VanSearch: typeof import('vant/es')['Search']
     VanSkeleton: typeof import('vant/es')['Skeleton']

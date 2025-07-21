@@ -58,6 +58,17 @@ public class UserConversationController {
     }
 
     /**
+     * 查找或创建私聊会话
+     */
+    @PostMapping("/private/{targetUserId}")
+    @Operation(summary = "查找或创建私聊会话", description = "查找与指定用户的私聊会话，如果不存在则创建")
+    public Result<String> findOrCreatePrivateConversation(@PathVariable Long targetUserId) {
+        Long userId = UserContext.getUserId();
+        String conversationId = userConversationsService.findOrCreatePrivateConversation(userId, targetUserId);
+        return Result.success(conversationId);
+    }
+
+    /**
      * 删除会话
      */
     @DeleteMapping("/{conversationId}")

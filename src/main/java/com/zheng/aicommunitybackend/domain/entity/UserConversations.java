@@ -24,6 +24,11 @@ public class UserConversations {
     private Integer conversationType;
 
     /**
+     * 会话名称
+     */
+    private String conversationName;
+
+    /**
      * 会话标题(群聊时使用)
      */
     private String title;

@@ -30,7 +30,6 @@ public class UserController {
         return Result.success(usersService.getCurrentUserInfo());
     }
 
-
     /**
      * 更新用户信息
      *
@@ -55,4 +54,15 @@ public class UserController {
         usersService.changePassword(oldPassword, newPassword);
         return Result.success();
     }
-} 
+
+    /**
+     * 根据用户ID获取用户信息
+     *
+     * @param userId 用户ID
+     * @return 用户信息
+     */
+    @GetMapping("/info/{userId}")
+    public Result<UserInfoDTO> getUserInfoById(@PathVariable Long userId) {
+        return Result.success(usersService.getUserInfoById(userId));
+    }
+}

@@ -14,7 +14,7 @@
       
       <template v-else-if="post">
         <div class="post-header">
-          <div class="user-info">
+          <div class="user-info" @click="goToUserProfile(post.userId?.toString() || '')" style="cursor: pointer;">
             <van-image
               :src="post.avatar || 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
               class="user-avatar"
@@ -22,7 +22,7 @@
               fit="cover"
             />
             <div>
-              <div class="username">{{ post.username }}</div>
+              <div class="username">{{ post.nickname || post.username }}</div>
               <div class="post-time">{{ formatDate(post.createdTime) }}</div>
             </div>
           </div>
@@ -82,6 +82,7 @@
                   class="comment-avatar"
                   round
                   fit="cover"
+                  @click="goToUserProfile(comment.userId?.toString() || '')"
                 />
                 <div>
                   <div class="comment-username">
@@ -211,6 +212,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast, showImagePreview } from 'vant'
 import { getPostDetail, getComments, likeOrUnlike } from '@/api/post'
+// 暂时移除 getUserPosts 的导入
 
 const route = useRoute()
 const router = useRouter()
@@ -234,64 +236,85 @@ const showReply = ref(false)
 const replyContent = ref('')
 const currentComment = ref<any>(null)
 
-// 获取帖子详情
+// 移除测试点击方法
+// const testClick = () => {
+//   console.log('测试点击被触发了！')
+//   alert('点击事件触发了！')
+// }
+
+// 跳转到用户个人主页
+const goToUserProfile = (userId: string) => {
+  console.log('=== goToUserProfile被调用 ===')
+  console.log('传入的userId:', userId)
+  console.log('userId类型:', typeof userId)
+  
+  if (!userId || userId === 'undefined' || userId === 'null') {
+    console.log('userId为空')
+    showToast('无法获取用户信息')
+    return
+  }
+  
+  console.log('准备跳转到:', `/user/${userId}`)
+  
+  try {
+    router.push(`/user/${userId}`)
+    console.log('路由跳转成功')
+  } catch (error) {
+    console.error('路由跳转失败:', error)
+    showToast('跳转失败')
+  }
+}
+
+// 获取帖子详情 - 使用真实API数据
 const fetchPostDetail = async () => {
   loading.value = true
   try {
     const res = await getPostDetail(postId.value)
-    console.log('Post detail response:', res)
+    console.log('=== 帖子详情API响应 ===')
+    console.log('完整响应:', res)
     
     if (res.code === 200 && res.data) {
       post.value = res.data
+      console.log('=== 帖子数据分析 ===')
+      console.log('帖子ID:', post.value.id)
+      console.log('用户ID字段:', {
+        userId: post.value.userId,
+        authorId: post.value.authorId,
+        createBy: post.value.createBy,
+        user: post.value.user
+      })
+      console.log('用户名字段:', {
+        username: post.value.username,
+        nickname: post.value.nickname,
+        authorName: post.value.authorName
+      })
+      
+      // 确保有userId字段，尝试从不同字段获取
+      if (!post.value.userId) {
+        const fallbackUserId = post.value.authorId || post.value.user?.id || post.value.createBy
+        console.log('userId为空，使用备用字段:', fallbackUserId)
+        post.value.userId = fallbackUserId
+      }
       
       // 处理图片数组
       if (post.value.images && typeof post.value.images === 'string') {
         post.value.images = post.value.images.split(',').filter((img: string) => img)
-      } else {
+      } else if (!post.value.images) {
         post.value.images = []
       }
     } else {
-      // 使用模拟数据
-      console.warn('使用模拟数据显示帖子详情')
-      post.value = {
-        id: postId.value,
-        title: '模拟帖子标题',
-        content: '这是一个模拟的帖子内容，用于测试显示效果。当API未返回正确数据时，将显示此模拟数据。',
-        username: '测试用户',
-        avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
-        createdTime: new Date().toISOString(),
-        category: '讨论',
-        viewCount: 100,
-        likeCount: 20,
-        commentCount: 5,
-        hasLiked: false,
-        images: []
-      }
+      console.error('获取帖子详情失败:', res.message || '未知错误')
+      showToast('获取帖子详情失败')
     }
   } catch (error) {
     console.error('获取帖子详情失败:', error)
-    // 使用模拟数据
-    console.warn('使用模拟数据显示帖子详情')
-    post.value = {
-      id: postId.value,
-      title: '模拟帖子标题',
-      content: '这是一个模拟的帖子内容，用于测试显示效果。当API未返回正确数据时，将显示此模拟数据。',
-      username: '测试用户',
-      avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
-      createdTime: new Date().toISOString(),
-      category: '讨论',
-      viewCount: 100,
-      likeCount: 20,
-      commentCount: 5,
-      hasLiked: false,
-      images: []
-    }
+    showToast('获取帖子详情失败，请稍后重试')
   } finally {
     loading.value = false
   }
 }
 
-// 获取评论列表
+// 获取评论列表 - 使用真实API数据
 const fetchComments = async (append = false) => {
   commentsLoading.value = !append
   try {
@@ -311,88 +334,17 @@ const fetchComments = async (append = false) => {
       }
       commentTotal.value = res.data.total || 0
     } else {
-      // 使用模拟数据
-      console.warn('使用模拟数据显示评论')
+      console.error('获取评论失败:', res.message || '未知错误')
       if (!append) {
-        comments.value = [
-          {
-            id: 1,
-            content: '这是一条模拟评论，用于测试显示效果。',
-            nickname: '评论用户1',
-            avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
-            createTime: new Date().toISOString(),
-            likeCount: 5,
-            hasLiked: false,
-            isAuthor: true,
-            replyCount: 2,
-            replies: [
-              {
-                id: 101,
-                content: '这是一条回复评论',
-                nickname: '回复用户1',
-                avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
-                createTime: new Date().toISOString(),
-                isAuthor: false
-              }
-            ]
-          },
-          {
-            id: 2,
-            content: '这是另一条模拟评论。',
-            nickname: '评论用户2',
-            avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
-            createTime: new Date().toISOString(),
-            likeCount: 3,
-            hasLiked: false,
-            isAuthor: false,
-            replyCount: 0,
-            replies: []
-          }
-        ]
-        commentTotal.value = 2
+        comments.value = []
+        commentTotal.value = 0
       }
     }
   } catch (error) {
     console.error('获取评论失败:', error)
-    // 使用模拟数据
-    console.warn('使用模拟数据显示评论')
     if (!append) {
-      comments.value = [
-        {
-          id: 1,
-          content: '这是一条模拟评论，用于测试显示效果。',
-          nickname: '评论用户1',
-          avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
-          createTime: new Date().toISOString(),
-          likeCount: 5,
-          hasLiked: false,
-          isAuthor: true,
-          replyCount: 2,
-          replies: [
-            {
-              id: 101,
-              content: '这是一条回复评论',
-              nickname: '回复用户1',
-              avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
-              createTime: new Date().toISOString(),
-              isAuthor: false
-            }
-          ]
-        },
-        {
-          id: 2,
-          content: '这是另一条模拟评论。',
-          nickname: '评论用户2',
-          avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
-          createTime: new Date().toISOString(),
-          likeCount: 3,
-          hasLiked: false,
-          isAuthor: false,
-          replyCount: 0,
-          replies: []
-        }
-      ]
-      commentTotal.value = 2
+      comments.value = []
+      commentTotal.value = 0
     }
   } finally {
     commentsLoading.value = false
@@ -531,9 +483,12 @@ const onCommentFocus = () => {
 }
 
 onMounted(async () => {
+  // 滚动到页面顶部
+  window.scrollTo(0, 0)
+  
   await fetchPostDetail()
   await fetchComments()
-})
+}) 
 </script>
 
 <style scoped>

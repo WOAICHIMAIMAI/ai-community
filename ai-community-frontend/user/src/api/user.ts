@@ -66,4 +66,22 @@ export function changePassword(params: ChangePasswordParams): Promise<{ code: nu
  */
 export function getVerificationInfo(): Promise<{ code: number, data: VerificationInfo, message: string }> {
   return get<{ code: number, data: VerificationInfo, message: string }>('/user/verification/info')
-} 
+}
+
+// 获取指定用户信息（通过用户ID）
+export const getUserInfoById = (userId: string | number) => {
+  // 确保userId是字符串，避免大数精度丢失
+  const userIdStr = String(userId)
+  return get(`/user/user/info/${userIdStr}`)
+}
+
+// 获取用户帖子列表
+export const getUserPosts = (userId: string | number, params?: {
+  page?: number
+  pageSize?: number
+  category?: string
+  keyword?: string
+}) => {
+  const userIdStr = String(userId)
+  return get(`/user/posts/user/${userIdStr}`, params || { page: 1, pageSize: 20 })
+}

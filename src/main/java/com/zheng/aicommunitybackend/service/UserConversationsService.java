@@ -34,4 +34,14 @@ public interface UserConversationsService {
      * 验证用户是否为会话成员
      */
     boolean isConversationMember(String conversationId, Long userId);
+
+    /**
+     * 更新会话的最后消息信息
+     */
+    void updateLastMessage(String conversationId, Long messageId, java.util.Date messageTime);
+
+    /**
+     * 查找或创建私聊会话
+     */
+    String findOrCreatePrivateConversation(Long userId1, Long userId2);
 }

@@ -110,4 +110,21 @@ public class CommunityPostsController {
         PageResult pageResult = communityPostsService.listUserPosts(query);
         return Result.success(pageResult);
     }
+
+    /**
+     * 根据用户ID获取用户发布的帖子
+     *
+     * @param userId 用户ID
+     * @param query 分页查询参数
+     * @return 帖子列表
+     */
+    @GetMapping("/user/{userId}")
+    @Operation(summary = "获取指定用户的帖子", description = "根据用户ID获取该用户发布的帖子列表")
+    public Result<PageResult> getUserPosts(
+            @PathVariable @Parameter(description = "用户ID") Long userId,
+            PostPageQuery query) {
+        log.info("获取用户{}的帖子列表: {}", userId, query);
+        PageResult pageResult = communityPostsService.getUserPostsByUserId(userId, query);
+        return Result.success(pageResult);
+    }
 }

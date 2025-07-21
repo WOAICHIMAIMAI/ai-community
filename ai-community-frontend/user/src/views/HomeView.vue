@@ -20,9 +20,10 @@
           <van-grid :column-num="4" :border="false">
             <van-grid-item icon="service-o" text="在线报修" to="/repair" />
             <van-grid-item icon="comment-o" text="社区互动" to="/community" />
+            <van-grid-item icon="chat-o" text="聊天消息" @click="goToChat" />
             <van-grid-item icon="newspaper-o" text="通知公告" @click="goToAnnouncementList" />
             <van-grid-item icon="user-o" text="个人中心" to="/profile" />
-            <van-grid-item icon="comment-o" text="AI聊天" @click="goToAiChat" />
+            <van-grid-item icon="robot" text="AI聊天" @click="goToAiChat" />
           </van-grid>
         </div>
 
@@ -99,8 +100,21 @@
                 </template>
                 <template #footer>
                   <div class="post-footer">
-                    <span class="post-author">{{ getAuthorName(post) }}</span>
-                    <span class="post-date">{{ formatDate(getPostDate(post)) }}</span>
+                    <div class="post-author">
+                      <van-image
+                        :src="post.avatar || 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
+                        round
+                        width="32"
+                        height="32"
+                        class="author-avatar"
+                        @click.stop="goToUserProfile(post.userId || post.authorId || post.createBy)"
+                        style="cursor: pointer;"
+                      />
+                      <div class="author-info">
+                        <span class="author-name">{{ post.nickname || post.username || '匿名用户' }}</span>
+                        <span class="post-time">{{ formatDate(post.createTime || post.createdTime) }}</span>
+                      </div>
+                    </div>
                   </div>
                 </template>
               </van-card>
@@ -114,6 +128,7 @@
     <van-tabbar route v-if="authStore.isLoggedIn">
       <van-tabbar-item replace to="/" icon="home-o">首页</van-tabbar-item>
       <van-tabbar-item replace to="/community" icon="friends-o">社区</van-tabbar-item>
+      <van-tabbar-item replace to="/chat-list" icon="chat-o">消息</van-tabbar-item>
       <van-tabbar-item replace to="/profile" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
   </div>
@@ -125,15 +140,25 @@ import { useRouter } from 'vue-router'
 import { showToast, showFailToast } from 'vant'
 import { useAuthStore } from '@/store/auth'
 import { getAnnouncements, getCommunityUpdates, getAllPosts } from '@/api/post'
+import { handleUserAvatarClick } from '@/utils/userUtils'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const goToAiChat = () => {
-  console.log('[AI聊天导航] 按钮被点击，跳转到聊天记录列表');
+  console.log('[AI聊天导航] 按钮被点击，跳转到AI聊天列表');
   try {
-    router.push('/ai-chat-list');
+    // 跳转到AI聊天列表页面
+    router.push('/ai-chat');
   } catch (error) {
     console.error('[AI聊天导航] 路由跳转异常:', error);
+  }
+}
+const goToChat = () => {
+  console.log('[聊天导航] 按钮被点击，跳转到聊天列表');
+  try {
+    router.push('/chat-list');
+  } catch (error) {
+    console.error('[聊天导航] 路由跳转异常:', error);
   }
 }
 const refreshing = ref(false)
@@ -368,6 +393,13 @@ const getAuthorName = (post) => {
 // 获取帖子日期
 const getPostDate = (post) => {
   return post.createTime || post.createdTime || post.createDate || new Date().toISOString()
+}
+
+// 跳转到用户个人主页
+const goToUserProfile = (userId: number) => {
+  if (userId) {
+    router.push(`/user/${userId}`)
+  }
 }
 
 onMounted(() => {

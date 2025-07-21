@@ -70,7 +70,7 @@
                       fit="cover"
                     />
                     <div class="user-name-time">
-                      <span class="username">{{ post.username }}</span>
+                      <span class="username">{{ post.nickname || post.username || '匿名用户' }}</span>
                       <span class="time">{{ formatDate(post.createdTime) }}</span>
                     </div>
                   </div>
@@ -135,11 +135,7 @@
     </div>
 
     <!-- 底部导航 -->
-    <van-tabbar route v-if="authStore.isLoggedIn">
-      <van-tabbar-item replace to="/" icon="home-o">首页</van-tabbar-item>
-      <van-tabbar-item replace to="/community" icon="friends-o">社区</van-tabbar-item>
-      <van-tabbar-item replace to="/profile" icon="user-o">我的</van-tabbar-item>
-    </van-tabbar>
+    <BottomTabbar />
     
     <!-- 搜索弹窗 -->
     <van-popup v-model:show="showSearch" position="top" :style="{ height: '100%' }">
@@ -182,7 +178,7 @@
             <div class="result-title">{{ post.title }}</div>
             <div class="result-content">{{ truncateContent(post.content) }}</div>
             <div class="result-meta">
-              <span>{{ post.username }}</span>
+              <span>{{ post.nickname || post.username || '匿名用户' }}</span>
               <span>{{ formatDate(post.createdTime) }}</span>
             </div>
           </div>

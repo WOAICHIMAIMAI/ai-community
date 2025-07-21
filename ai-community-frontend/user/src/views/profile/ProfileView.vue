@@ -15,18 +15,15 @@
       </router-view>
     </div>
     
-    <van-tabbar route fixed v-if="authStore.isLoggedIn">
-      <van-tabbar-item icon="home-o" to="/">首页</van-tabbar-item>
-      <van-tabbar-item icon="edit" to="/post-publish">发布</van-tabbar-item>
-      <van-tabbar-item icon="user-o" to="/profile">我的</van-tabbar-item>
-    </van-tabbar>
+    <BottomTabbar />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect, onMounted } from 'vue'
+import { ref, onMounted, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
+import BottomTabbar from '@/components/BottomTabbar.vue'
 
 const router = useRouter()
 const route = useRoute()
