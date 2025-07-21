@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zheng.aicommunitybackend.common.Result;
 import com.zheng.aicommunitybackend.domain.entity.HotNews;
 import com.zheng.aicommunitybackend.mapper.HotNewsMapper;
+import com.zheng.aicommunitybackend.service.HotNewsService;
 import com.zheng.aicommunitybackend.task.NewsSpiderTask;
+import com.zheng.aicommunitybackend.utils.RedisUtils;
+import com.zheng.aicommunitybackend.constant.CacheConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +26,15 @@ public class AdminHotNewsController {
 
     @Autowired
     private NewsSpiderTask newsSpiderTask;
-    
+
     @Autowired
     private HotNewsMapper hotNewsMapper;
+
+    @Autowired
+    private HotNewsService hotNewsService;
+
+    @Autowired
+    private RedisUtils redisUtils;
 
     /**
      * 手动触发爬虫任务
@@ -35,11 +44,16 @@ public class AdminHotNewsController {
     public Result<Map<String, Object>> crawlNews() {
         log.info("手动触发新闻爬取任务");
         int addedCount = newsSpiderTask.crawlAndCleanAllNews();
-        
+
+        // 如果有新增新闻，清空相关缓存
+        if (addedCount > 0) {
+            clearNewsCache();
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("addedCount", addedCount);
         result.put("totalCount", hotNewsMapper.selectCount(null));
-        
+
         return Result.success("新闻爬取任务执行完成", result);
     }
     
@@ -51,11 +65,16 @@ public class AdminHotNewsController {
     public Result<Map<String, Object>> cleanInvalidNews() {
         log.info("手动触发无效新闻清理任务");
         int cleanedCount = newsSpiderTask.cleanInvalidNewsRecords();
-        
+
+        // 如果有清理记录，清空相关缓存
+        if (cleanedCount > 0) {
+            clearNewsCache();
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("cleanedCount", cleanedCount);
         result.put("remainingCount", hotNewsMapper.selectCount(null));
-        
+
         return Result.success("无效新闻清理任务执行完成", result);
     }
     
@@ -117,7 +136,11 @@ public class AdminHotNewsController {
         
         news.setStatus(status);
         hotNewsMapper.updateById(news);
-        
+
+        // 清空相关缓存
+        clearNewsCache();
+        redisUtils.delete(CacheConstants.buildNewsDetailKey(id));
+
         return Result.success("更新成功");
     }
     
@@ -138,7 +161,11 @@ public class AdminHotNewsController {
         
         news.setIsHot(isHot);
         hotNewsMapper.updateById(news);
-        
+
+        // 清空相关缓存
+        clearNewsCache();
+        redisUtils.delete(CacheConstants.buildNewsDetailKey(id));
+
         return Result.success("更新成功");
     }
     
@@ -159,7 +186,11 @@ public class AdminHotNewsController {
         
         news.setIsTop(isTop);
         hotNewsMapper.updateById(news);
-        
+
+        // 清空相关缓存
+        clearNewsCache();
+        redisUtils.delete(CacheConstants.buildNewsDetailKey(id));
+
         return Result.success("更新成功");
     }
     
@@ -178,7 +209,23 @@ public class AdminHotNewsController {
         }
         
         hotNewsMapper.deleteById(id);
-        
+
+        // 清空相关缓存
+        clearNewsCache();
+        redisUtils.delete(CacheConstants.buildNewsDetailKey(id));
+
         return Result.success("删除成功");
     }
-} 
+
+    /**
+     * 清空新闻相关缓存
+     */
+    private void clearNewsCache() {
+        // 清空新闻列表缓存
+        redisUtils.deleteByPattern(CacheConstants.NEWS_PAGE_PREFIX + "*");
+        // 清空热点新闻缓存
+        redisUtils.deleteByPattern(CacheConstants.HOT_NEWS_PREFIX + "*");
+        // 清空新闻详情缓存
+        redisUtils.deleteByPattern(CacheConstants.NEWS_DETAIL_PREFIX + "*");
+    }
+}

@@ -325,7 +325,7 @@ const onSubmit = async () => {
 
 // 返回
 const onClickLeft = () => {
-  router.back()
+  router.replace('/repair')
 }
 </script>
 

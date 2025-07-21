@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zheng.aicommunitybackend.common.Result;
 import com.zheng.aicommunitybackend.domain.entity.HotNews;
-import com.zheng.aicommunitybackend.mapper.HotNewsMapper;
+import com.zheng.aicommunitybackend.service.HotNewsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 用户端热点新闻控制器
@@ -18,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserHotNewsController {
 
     @Autowired
-    private HotNewsMapper hotNewsMapper;
+    private HotNewsService hotNewsService;
 
     /**
      * 分页查询热点新闻
@@ -33,25 +35,12 @@ public class UserHotNewsController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String category) {
         
-        log.info("用户分页查询热点新闻：page={}, pageSize={}, category={}", 
+        log.info("用户分页查询热点新闻：page={}, pageSize={}, category={}",
                 page, pageSize, category);
-        
-        // 构建查询条件
-        LambdaQueryWrapper<HotNews> queryWrapper = new LambdaQueryWrapper<>();
-        // 只查询已发布的新闻
-        queryWrapper.eq(HotNews::getStatus, 1);
-        
-        if (category != null && !category.isEmpty()) {
-            queryWrapper.eq(HotNews::getCategory, category);
-        }
-        
-        // 先按置顶排序，再按发布时间降序排序
-        queryWrapper.orderByDesc(HotNews::getIsTop)
-                   .orderByDesc(HotNews::getPublishTime);
-        
-        // 分页查询
-        Page<HotNews> pageResult = hotNewsMapper.selectPage(new Page<>(page, pageSize), queryWrapper);
-        
+
+        // 使用Service层方法，自动应用缓存
+        Page<HotNews> pageResult = hotNewsService.getHotNewsByPage(new Page<>(page, pageSize), category);
+
         return Result.success(pageResult);
     }
     
@@ -63,16 +52,13 @@ public class UserHotNewsController {
     @GetMapping("/{id}")
     public Result<HotNews> getById(@PathVariable Long id) {
         log.info("查询热点新闻详情：id={}", id);
-        
-        HotNews news = hotNewsMapper.selectById(id);
+
+        // 使用Service层方法，自动应用缓存
+        HotNews news = hotNewsService.getNewsDetail(id);
         if (news == null) {
             return Result.error("新闻不存在");
         }
-        
-        // 更新浏览次数
-        news.setViewCount(news.getViewCount() + 1);
-        hotNewsMapper.updateById(news);
-        
+
         return Result.success(news);
     }
     
@@ -82,19 +68,12 @@ public class UserHotNewsController {
      * @return 热点新闻列表
      */
     @GetMapping("/hot")
-    public Result<Page<HotNews>> getHotNews(@RequestParam(defaultValue = "5") Integer limit) {
+    public Result<List<HotNews>> getHotNews(@RequestParam(defaultValue = "5") Integer limit) {
         log.info("查询热点新闻列表：limit={}", limit);
-        
-        // 构建查询条件
-        LambdaQueryWrapper<HotNews> queryWrapper = new LambdaQueryWrapper<>();
-        // 只查询已发布且标记为热点的新闻
-        queryWrapper.eq(HotNews::getStatus, 1)
-                   .eq(HotNews::getIsHot, 1)
-                   .orderByDesc(HotNews::getPublishTime);
-        
-        // 分页查询
-        Page<HotNews> pageResult = hotNewsMapper.selectPage(new Page<>(1, limit), queryWrapper);
-        
-        return Result.success(pageResult);
+
+        // 使用Service层方法，自动应用缓存
+        List<HotNews> hotNewsList = hotNewsService.getLatestHotNews(limit, null);
+
+        return Result.success(hotNewsList);
     }
 } 

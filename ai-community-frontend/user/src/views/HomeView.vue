@@ -22,6 +22,7 @@
             <van-grid-item icon="comment-o" text="社区互动" to="/community" />
             <van-grid-item icon="chat-o" text="聊天消息" @click="goToChat" />
             <van-grid-item icon="newspaper-o" text="新闻资讯" to="/news" />
+            <van-grid-item icon="question-o" text="常见问题" to="/common-problems" />
             <van-grid-item icon="bullhorn-o" text="通知公告" @click="goToAnnouncementList" />
             <van-grid-item icon="user-o" text="个人中心" to="/profile" />
             <van-grid-item icon="wechat-o" text="AI聊天" @click="goToAiChat" />

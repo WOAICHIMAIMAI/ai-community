@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.CommonProblemsMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.CommonProblems">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="problem" column="problem" jdbcType="VARCHAR"/>
+            <result property="answer" column="answer" jdbcType="VARCHAR"/>
+            <result property="type" column="type" jdbcType="INTEGER"/>
+            <result property="priority" column="priority" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,problem,answer,type,priority
+    </sql>
+</mapper>

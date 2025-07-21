@@ -117,8 +117,8 @@ export default {
     },
     // 返回上一页
     onClickLeft() {
-      console.log('返回上一页')
-      this.$router.back()
+      console.log('返回报修列表')
+      this.$router.replace('/repair/list')
     },
     // 日期格式化
     formatDate(dateString) {

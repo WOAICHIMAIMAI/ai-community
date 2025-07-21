@@ -124,6 +124,36 @@ const routes = [
     meta: { title: '在线报修' }
   },
   {
+    path: '/repair/create',
+    name: 'RepairCreate',
+    component: () => import('@/views/repair/RepairCreateView.vue'),
+    meta: { title: '新增报修' }
+  },
+  {
+    path: '/repair/list',
+    name: 'RepairList',
+    component: () => import('@/views/repair/RepairListView.vue'),
+    meta: { title: '我的报修' }
+  },
+  {
+    path: '/repair/detail/:id',
+    name: 'RepairDetail',
+    component: () => import('@/views/repair/RepairDetailView.vue'),
+    meta: { title: '报修详情' }
+  },
+  {
+    path: '/common-problems',
+    name: 'CommonProblems',
+    component: () => import('@/views/common-problems/CommonProblemsView.vue'),
+    meta: { title: '常见问题' }
+  },
+  {
+    path: '/common-problems/detail/:id',
+    name: 'CommonProblemDetail',
+    component: () => import('@/views/common-problems/ProblemDetailView.vue'),
+    meta: { title: '问题详情' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFoundView.vue')

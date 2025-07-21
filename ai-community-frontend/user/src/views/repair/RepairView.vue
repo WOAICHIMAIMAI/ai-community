@@ -53,14 +53,14 @@
         </div>
         
         <div class="workers-list">
-          <van-swipe :show-indicators="false" :width="280" :loop="false">
-            <van-swipe-item v-for="worker in workersList" :key="worker.id">
+          <van-swipe :show-indicators="false" :loop="false" class="workers-swipe">
+            <van-swipe-item v-for="worker in workersList" :key="worker.id" class="worker-swipe-item">
               <div class="worker-card" @click="onViewWorker(worker.id)">
                 <div class="worker-avatar">
                   <van-image
                     round
-                    width="60"
-                    height="60"
+                    width="50"
+                    height="50"
                     :src="worker.avatarUrl || 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
                     fit="cover"
                   />
@@ -326,7 +326,16 @@ export default {
       ],
       
       // 维修师傅列表
-      workersList: [],
+      workersList: [
+        {
+          id: 1,
+          name: '李师傅',
+          serviceType: '家电维修',
+          rating: 4.9,
+          serviceCount: 98,
+          avatarUrl: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
+        }
+      ],
       allWorkers: [],
       workerType: '全部',
       workerTypes: [
@@ -376,15 +385,16 @@ export default {
     }
   },
   created() {
-    // 检查登录状态
-    if (!this.authStore.isLoggedIn) {
-      showToast('请先登录')
-      this.$router.push('/login')
-      return
-    }
-    
+    // 先加载基础数据，确保页面有内容显示
+    this.useBackupWorkerData()
+
+    // 尝试获取最新数据（不管是否登录都显示基础信息）
     this.fetchWorkers()
-    this.fetchRecentRepairs()
+
+    // 检查登录状态，只影响报修相关功能
+    if (this.authStore.isLoggedIn) {
+      this.fetchRecentRepairs()
+    }
   },
   methods: {
     // 获取维修工列表
@@ -508,11 +518,21 @@ export default {
     
     // 创建报修
     onCreateRepair() {
+      if (!this.authStore.isLoggedIn) {
+        showToast('请先登录')
+        this.$router.push('/login')
+        return
+      }
       this.$router.replace('/repair/create')
     },
-    
+
     // 查看我的报修列表
     onMyRepairList() {
+      if (!this.authStore.isLoggedIn) {
+        showToast('请先登录')
+        this.$router.push('/login')
+        return
+      }
       this.$router.replace('/repair/list')
     },
     
@@ -810,55 +830,65 @@ export default {
   
   .workers-list {
     padding: 0 16px 16px;
-    
+
+    .workers-swipe {
+      .worker-swipe-item {
+        width: 280px;
+        padding: 0 10px;
+      }
+    }
+
     .worker-card {
-      width: 260px;
+      width: 100%;
       height: 180px;
       background-color: #f7f8fa;
       border-radius: 8px;
-      padding: 16px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      
+      justify-content: space-between;
+
       .worker-avatar {
-        margin-bottom: 8px;
-      }
-      
-      .worker-name {
-        font-size: 16px;
-        font-weight: 500;
         margin-bottom: 4px;
       }
-      
-      .worker-type {
-        font-size: 12px;
-        color: #666;
-        margin-bottom: 8px;
+
+      .worker-name {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 2px;
+        text-align: center;
       }
-      
+
+      .worker-type {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 4px;
+        text-align: center;
+      }
+
       .worker-rating {
         display: flex;
         align-items: center;
-        margin-bottom: 4px;
-        
+        margin-bottom: 2px;
+
         span {
-          margin-left: 4px;
-          font-size: 12px;
+          margin-left: 2px;
+          font-size: 11px;
           color: #ff9900;
         }
       }
-      
+
       .worker-count {
-        font-size: 12px;
+        font-size: 11px;
         color: #999;
-        margin-bottom: 10px; /* 增加底部外边距，确保预约按钮有足够空间 */
+        margin-bottom: 6px;
+        text-align: center;
       }
 
       .worker-action {
-        margin-top: 10px;
-        margin-bottom: 5px; /* 增加底部外边距 */
+        margin-top: 0;
+        margin-bottom: 0;
       }
     }
   }

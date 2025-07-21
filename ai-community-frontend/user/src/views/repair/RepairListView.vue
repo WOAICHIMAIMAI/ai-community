@@ -146,8 +146,8 @@ export default {
     },
     // 返回上一页
     onClickLeft() {
-      console.log('返回上一页')
-      this.$router.back()
+      console.log('返回报修页面')
+      this.$router.replace('/repair')
     }
   }
 }

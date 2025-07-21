@@ -20,6 +20,8 @@ import com.zheng.aicommunitybackend.service.CommunityPostsService;
 import com.zheng.aicommunitybackend.service.FavoriteRecordsService;
 import com.zheng.aicommunitybackend.service.LikeRecordsService;
 import com.zheng.aicommunitybackend.service.UsersService;
+import com.zheng.aicommunitybackend.utils.RedisUtils;
+import com.zheng.aicommunitybackend.constant.CacheConstants;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,13 +45,16 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
     private final UsersService usersService;
     private final LikeRecordsService likeRecordsService;
     private final FavoriteRecordsService favoriteRecordsService;
+    private final RedisUtils redisUtils;
 
-    public CommunityPostsServiceImpl(UsersService usersService, 
-                                   LikeRecordsService likeRecordsService, 
-                                   FavoriteRecordsService favoriteRecordsService) {
+    public CommunityPostsServiceImpl(UsersService usersService,
+                                   LikeRecordsService likeRecordsService,
+                                   FavoriteRecordsService favoriteRecordsService,
+                                   RedisUtils redisUtils) {
         this.usersService = usersService;
         this.likeRecordsService = likeRecordsService;
         this.favoriteRecordsService = favoriteRecordsService;
+        this.redisUtils = redisUtils;
     }
 
     @Override
@@ -97,7 +102,10 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         
         // 保存到数据库
         this.save(post);
-        
+
+        // 清空帖子相关缓存
+        clearPostCache();
+
         return post.getId();
     }
 
@@ -147,9 +155,18 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         }
         
         post.setUpdateTime(new Date());
-        
+
         // 更新到数据库
-        return this.updateById(post);
+        boolean result = this.updateById(post);
+
+        // 清空帖子相关缓存
+        if (result) {
+            clearPostCache();
+            // 清空特定帖子详情缓存
+            redisUtils.delete(CacheConstants.buildPostDetailKey(postDTO.getId()));
+        }
+
+        return result;
     }
 
     @Override
@@ -178,8 +195,17 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         // 逻辑删除
         post.setStatus(2); // 已删除状态
         post.setUpdateTime(new Date());
-        
-        return this.updateById(post);
+
+        boolean result = this.updateById(post);
+
+        // 清空帖子相关缓存
+        if (result) {
+            clearPostCache();
+            // 清空特定帖子详情缓存
+            redisUtils.delete(CacheConstants.buildPostDetailKey(postId));
+        }
+
+        return result;
     }
 
     @Override
@@ -187,17 +213,26 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         if (postId == null) {
             throw new BaseException("帖子ID不能为空");
         }
-        
+
+        // 先尝试从缓存获取
+        String cacheKey = CacheConstants.buildPostDetailKey(postId);
+        PostVO cachedPost = (PostVO) redisUtils.get(cacheKey);
+        if (cachedPost != null) {
+            // 更新浏览量（异步更新数据库，不影响缓存）
+            updateViewCountAsync(postId);
+            return cachedPost;
+        }
+
         // 查询帖子
         CommunityPosts post = this.getById(postId);
         if (post == null || post.getStatus() == 2) { // 帖子不存在或已删除
             throw new BaseException("帖子不存在或已删除");
         }
-        
+
         // 更新浏览量
         post.setViewCount(post.getViewCount() + 1);
         this.updateById(post);
-        
+
         // 转换为VO
         PostVO postVO = convertToPostVO(post);
         
@@ -223,12 +258,23 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
             postVO.setHasLiked(false);
             postVO.setHasFavorited(false);
         }
-        
+
+        // 缓存帖子详情
+        redisUtils.set(cacheKey, postVO, CacheConstants.DETAIL_EXPIRE_TIME);
+
         return postVO;
     }
 
     @Override
     public PageResult listPosts(PostPageQuery query) {
+        // 先尝试从缓存获取
+        String cacheKey = CacheConstants.buildPostPageKey(
+            query.getPage(), query.getPageSize(), query.getCategory());
+        PageResult cachedResult = (PageResult) redisUtils.get(cacheKey);
+        if (cachedResult != null) {
+            return cachedResult;
+        }
+
         // 构建查询条件
         LambdaQueryWrapper<CommunityPosts> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(query.getStatus() != null, CommunityPosts::getStatus, query.getStatus()); // 只查询已发布的帖子
@@ -279,9 +325,16 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         
         // 转换为VO列表
         List<PostVO> postVOList = convertToPostVOList(pageResult.getRecords());
-        
-        // 返回结果
-        return new PageResult(pageResult.getTotal(), postVOList);
+
+        // 构建返回结果
+        PageResult result = new PageResult(pageResult.getTotal(), postVOList);
+
+        // 缓存结果（只缓存无关键字搜索的结果）
+        if (!StringUtils.hasText(query.getKeyword())) {
+            redisUtils.set(cacheKey, result, CacheConstants.DEFAULT_EXPIRE_TIME);
+        }
+
+        return result;
     }
 
     @Override
@@ -614,9 +667,18 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         
         if (updated) {
             post.setUpdateTime(new Date());
-            return this.updateById(post);
+            boolean result = this.updateById(post);
+
+            // 清空帖子相关缓存
+            if (result) {
+                clearPostCache();
+                // 清空特定帖子详情缓存
+                redisUtils.delete(CacheConstants.buildPostDetailKey(postStatusDTO.getPostId()));
+            }
+
+            return result;
         }
-        
+
         return false;
     }
 
@@ -640,7 +702,16 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         }
         
         // 物理删除帖子
-        return this.removeById(postId);
+        boolean result = this.removeById(postId);
+
+        // 清空帖子相关缓存
+        if (result) {
+            clearPostCache();
+            // 清空特定帖子详情缓存
+            redisUtils.delete(CacheConstants.buildPostDetailKey(postId));
+        }
+
+        return result;
     }
 
     @Override
@@ -676,5 +747,28 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         
         // 修复PageResult构造方式
         return new PageResult(pageResult.getTotal(), postVOList);
+    }
+
+    /**
+     * 清空帖子相关缓存
+     */
+    private void clearPostCache() {
+        // 清空帖子列表缓存
+        redisUtils.deleteByPattern(CacheConstants.POST_PAGE_PREFIX + "*");
+        // 清空帖子详情缓存
+        redisUtils.deleteByPattern(CacheConstants.POST_DETAIL_PREFIX + "*");
+    }
+
+    /**
+     * 异步更新浏览量
+     */
+    private void updateViewCountAsync(Long postId) {
+        // 这里可以使用异步方式更新浏览量，避免影响查询性能
+        // 简单实现：直接更新数据库
+        CommunityPosts post = this.getById(postId);
+        if (post != null) {
+            post.setViewCount(post.getViewCount() + 1);
+            this.updateById(post);
+        }
     }
 }
