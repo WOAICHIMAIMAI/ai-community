@@ -8,7 +8,7 @@ export interface UserInfo {
   nickname: string
   phone: string
   email: string
-  avatar: string
+  avatarUrl: string
   gender: number
   status: number
   createdTime: string

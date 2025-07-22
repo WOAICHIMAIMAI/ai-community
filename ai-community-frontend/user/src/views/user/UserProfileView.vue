@@ -114,11 +114,14 @@
     </div>
 
     <!-- 更多操作弹窗 -->
-    <van-action-sheet 
-      v-model:show="showMoreActions" 
+    <van-action-sheet
+      v-model:show="showMoreActions"
       :actions="moreActions"
       @select="onSelectAction"
     />
+
+    <!-- 底部导航栏 -->
+    <BottomTabbar />
   </div>
 </template>
 
@@ -129,6 +132,7 @@ import { showToast, showFailToast, showLoadingToast } from 'vant'
 import { getUserInfo, getUserInfoById, getUserPosts } from '@/api/user'
 import { chatApi } from '@/api/chatApi'
 import { useAuthStore } from '@/store/auth'
+import BottomTabbar from '@/components/BottomTabbar.vue'
 
 const route = useRoute()
 const router = useRouter()

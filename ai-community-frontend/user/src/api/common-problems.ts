@@ -11,6 +11,7 @@ export interface ProblemCategory {
 export interface ProblemQueryParams {
   type?: number
   onlyPriority?: boolean
+  keyword?: string
   page?: number
   pageSize?: number
 }

@@ -166,7 +166,7 @@ public class LikeRecordsServiceImpl extends ServiceImpl<LikeRecordsMapper, LikeR
         
         // 5. 返回最新点赞状态
         int likeCount = getLikeCount(dto.getType(), dto.getTargetId());
-        return new LikeStatusVO(isLiked, likeCount);
+        return new LikeStatusVO(isLiked, isLiked? likeCount + 1 : likeCount - 1);
     }
 
     @Override

@@ -39,7 +39,7 @@ export interface RepairWorker {
   id: number
   name: string
   phone: string
-  avatar: string
+  avatarUrl: string
   skills: string[]
   status: number
   rating: number

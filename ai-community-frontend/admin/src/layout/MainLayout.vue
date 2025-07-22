@@ -64,7 +64,7 @@
         
         <div class="header-right">
           <div class="user-info" @click="toggleUserMenu">
-            <el-avatar :size="30" :src="authStore.userInfo?.avatar">
+            <el-avatar :size="30" :src="authStore.userInfo?.avatarUrl">
               {{ authStore.nickname?.substr(0, 1) }}
             </el-avatar>
             <span class="nickname">{{ authStore.nickname }}</span>
@@ -103,8 +103,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import {
-  HomeFilled, UserFilled, Check, Document, ChatDotRound, 
-  Tools, Avatar, Setting, ArrowDown, SwitchButton
+  HomeFilled, UserFilled, Check, Document, ChatDotRound,
+  Tools, Avatar, Setting, ArrowDown, SwitchButton, QuestionFilled, Monitor
 } from '@element-plus/icons-vue'
 import Breadcrumb from '@/components/common/Breadcrumb.vue'
 
@@ -158,6 +158,16 @@ const menuItems = [
         index: '/repair-workers'
       }
     ]
+  },
+  {
+    title: '常见问题',
+    icon: QuestionFilled,
+    index: '/common-problems'
+  },
+  {
+    title: '系统监控',
+    icon: Monitor,
+    index: '/news-deduplication'
   }
 ]
 

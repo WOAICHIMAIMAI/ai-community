@@ -84,6 +84,24 @@ const router = createRouter({
             title: '维修工管理',
             requiresAuth: true
           }
+        },
+        {
+          path: 'common-problems',
+          name: 'common-problems',
+          component: () => import('@/views/common-problems/ProblemListView.vue'),
+          meta: {
+            title: '常见问题管理',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'news-deduplication',
+          name: 'news-deduplication',
+          component: () => import('@/views/system/SimpleMonitor.vue'),
+          meta: {
+            title: '新闻去重监控',
+            requiresAuth: true
+          }
         }
       ]
     },

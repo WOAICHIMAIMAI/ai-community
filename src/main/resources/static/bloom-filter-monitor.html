@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>布隆过滤器监控面板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .usage-display {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .usage-percentage {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .usage-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .usage-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease, background-color 0.3s ease;
+        }
+
+        .status-normal { color: #28a745; }
+        .status-info { color: #17a2b8; }
+        .status-warning { color: #ffc107; }
+        .status-critical { color: #dc3545; }
+
+        .fill-normal { background: linear-gradient(90deg, #28a745, #20c997); }
+        .fill-info { background: linear-gradient(90deg, #17a2b8, #20c997); }
+        .fill-warning { background: linear-gradient(90deg, #ffc107, #fd7e14); }
+        .fill-critical { background: linear-gradient(90deg, #dc3545, #e83e8c); }
+
+        .alert-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .alert-content {
+            white-space: pre-line;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .last-update {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .updating {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 布隆过滤器监控面板</h1>
+            <p>实时监控新闻爬虫系统布隆过滤器状态</p>
+        </div>
+
+        <div class="monitor-grid">
+            <!-- 使用率卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon" id="status-icon">📊</span>
+                    <span class="card-title">使用率监控</span>
+                </div>
+                <div class="usage-display">
+                    <div class="usage-percentage" id="usage-percentage">--</div>
+                    <div class="usage-bar">
+                        <div class="usage-fill" id="usage-fill" style="width: 0%"></div>
+                    </div>
+                    <div id="usage-status">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 告警状态卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon" id="alert-icon">🔔</span>
+                    <span class="card-title">告警状态</span>
+                </div>
+                <div id="alert-level" class="usage-display">
+                    <div class="usage-percentage">--</div>
+                    <div id="alert-description">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 数据统计卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">📈</span>
+                    <span class="card-title">数据统计</span>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="loaded-count">--</div>
+                        <div class="stat-label">已加载URL</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-capacity">--</div>
+                        <div class="stat-label">总容量</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="retention-days">--</div>
+                        <div class="stat-label">保留天数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="false-positive">--</div>
+                        <div class="stat-label">误判率</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 告警建议面板 -->
+        <div class="alert-panel">
+            <div class="card-header">
+                <span class="card-icon">💡</span>
+                <span class="card-title">运维建议</span>
+            </div>
+            <div class="alert-content" id="alert-recommendation">
+                加载中...
+            </div>
+        </div>
+
+        <div class="last-update" id="last-update">
+            最后更新: --
+        </div>
+    </div>
+
+    <script>
+        class BloomFilterMonitor {
+            constructor() {
+                this.pollInterval = 5 * 60 * 1000; // 默认5分钟
+                this.currentAlertLevel = 'NORMAL';
+                this.isUpdating = false;
+                this.init();
+            }
+
+            init() {
+                this.updateData();
+                this.startPolling();
+            }
+
+            async updateData() {
+                if (this.isUpdating) return;
+                
+                this.isUpdating = true;
+                document.body.classList.add('updating');
+
+                try {
+                    const response = await fetch('/admin/news/bloom-filter/stats');
+                    if (!response.ok) throw new Error('API请求失败');
+                    
+                    const data = await response.json();
+                    if (data.code === 200) {
+                        this.renderData(data.data);
+                        this.updatePollInterval(data.data.alertLevel.name);
+                        this.hideError();
+                    } else {
+                        throw new Error(data.message || '数据获取失败');
+                    }
+                } catch (error) {
+                    this.showError('数据获取失败: ' + error.message);
+                } finally {
+                    this.isUpdating = false;
+                    document.body.classList.remove('updating');
+                    this.updateLastUpdateTime();
+                }
+            }
+
+            renderData(stats) {
+                // 使用率显示
+                const usageRatio = (stats.usageRatio * 100).toFixed(1);
+                document.getElementById('usage-percentage').textContent = usageRatio + '%';
+                
+                const usageFill = document.getElementById('usage-fill');
+                usageFill.style.width = usageRatio + '%';
+                
+                // 根据告警级别设置颜色
+                const alertLevel = stats.alertLevel.name;
+                const statusClass = this.getStatusClass(alertLevel);
+                
+                document.getElementById('usage-percentage').className = `usage-percentage ${statusClass}`;
+                usageFill.className = `usage-fill fill-${this.getStatusType(alertLevel)}`;
+                
+                // 状态图标和描述
+                document.getElementById('status-icon').textContent = this.getStatusIcon(alertLevel);
+                document.getElementById('usage-status').textContent = stats.alertLevel.description;
+                
+                // 告警状态
+                document.getElementById('alert-level').innerHTML = `
+                    <div class="usage-percentage ${statusClass}">${alertLevel}</div>
+                    <div id="alert-description">${stats.alertLevel.description}</div>
+                `;
+                document.getElementById('alert-icon').textContent = this.getAlertIcon(alertLevel);
+                
+                // 数据统计
+                document.getElementById('loaded-count').textContent = stats.loadedUrlCount.toLocaleString();
+                document.getElementById('total-capacity').textContent = stats.expectedInsertions.toLocaleString();
+                document.getElementById('retention-days').textContent = stats.dataRetentionDays + '天';
+                document.getElementById('false-positive').textContent = (stats.falsePositiveProbability * 100).toFixed(1) + '%';
+                
+                // 运维建议
+                document.getElementById('alert-recommendation').textContent = stats.alertRecommendation;
+                
+                this.currentAlertLevel = alertLevel;
+            }
+
+            getStatusClass(alertLevel) {
+                const mapping = {
+                    '正常': 'status-normal',
+                    '注意': 'status-info', 
+                    '警告': 'status-warning',
+                    '危险': 'status-critical'
+                };
+                return mapping[alertLevel] || 'status-normal';
+            }
+
+            getStatusType(alertLevel) {
+                const mapping = {
+                    '正常': 'normal',
+                    '注意': 'info',
+                    '警告': 'warning', 
+                    '危险': 'critical'
+                };
+                return mapping[alertLevel] || 'normal';
+            }
+
+            getStatusIcon(alertLevel) {
+                const mapping = {
+                    '正常': '✅',
+                    '注意': 'ℹ️',
+                    '警告': '⚠️',
+                    '危险': '🚨'
+                };
+                return mapping[alertLevel] || '📊';
+            }
+
+            getAlertIcon(alertLevel) {
+                const mapping = {
+                    '正常': '🔕',
+                    '注意': '🔔',
+                    '警告': '⚠️',
+                    '危险': '🚨'
+                };
+                return mapping[alertLevel] || '🔔';
+            }
+
+            updatePollInterval(alertLevel) {
+                let newInterval;
+                switch(alertLevel) {
+                    case '危险':
+                    case '警告':
+                        newInterval = 1 * 60 * 1000; // 1分钟
+                        break;
+                    case '注意':
+                        newInterval = 2 * 60 * 1000; // 2分钟
+                        break;
+                    default:
+                        newInterval = 5 * 60 * 1000; // 5分钟
+                }
+                
+                if (newInterval !== this.pollInterval) {
+                    this.pollInterval = newInterval;
+                    this.restartPolling();
+                    console.log(`轮询间隔调整为: ${newInterval/1000/60}分钟`);
+                }
+            }
+
+            startPolling() {
+                this.pollingTimer = setInterval(() => {
+                    this.updateData();
+                }, this.pollInterval);
+            }
+
+            restartPolling() {
+                if (this.pollingTimer) {
+                    clearInterval(this.pollingTimer);
+                }
+                this.startPolling();
+            }
+
+            updateLastUpdateTime() {
+                const now = new Date();
+                const timeStr = now.toLocaleString('zh-CN');
+                document.getElementById('last-update').textContent = `最后更新: ${timeStr}`;
+            }
+
+            showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = message;
+                document.querySelector('.container').insertBefore(errorDiv, document.querySelector('.monitor-grid'));
+            }
+
+            hideError() {
+                const errorDiv = document.querySelector('.error');
+                if (errorDiv) {
+                    errorDiv.remove();
+                }
+            }
+        }
+
+        // 页面加载完成后启动监控
+        document.addEventListener('DOMContentLoaded', () => {
+            new BloomFilterMonitor();
+        });
+    </script>
+</body>
+</html>

@@ -105,6 +105,9 @@
         </van-list>
       </div>
     </div>
+
+    <!-- 底部导航栏 -->
+    <BottomTabbar />
   </div>
 </template>
 
@@ -113,6 +116,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getProblemCategories, getProblemsPage, type ProblemCategory, type ProblemDetail } from '@/api/common-problems'
+import BottomTabbar from '@/components/BottomTabbar.vue'
 
 const router = useRouter()
 
@@ -178,21 +182,22 @@ const loadProblems = async (reset = false) => {
     const params = {
       page: reset ? 1 : currentPage.value,
       pageSize,
-      type: activeCategory.value === 'all' ? undefined : Number(activeCategory.value)
+      type: activeCategory.value === 'all' ? undefined : Number(activeCategory.value),
+      keyword: searchKeyword.value.trim() || undefined
     }
     
     const response = await getProblemsPage(params)
     if (response.code === 200) {
       const newProblems = response.data?.records || []
-      
+
       if (reset) {
         problemList.value = newProblems
-        currentPage.value = 1
+        currentPage.value = 2 // 下次加载第2页
       } else {
         problemList.value.push(...newProblems)
+        currentPage.value++
       }
-      
-      currentPage.value++
+
       finished.value = newProblems.length < pageSize
     }
   } catch (error) {
@@ -223,13 +228,28 @@ const selectCategory = (type: number) => {
 
 // 搜索
 const onSearch = () => {
-  // TODO: 实现搜索功能
-  showToast('搜索功能开发中')
+  if (!searchKeyword.value.trim()) {
+    showToast('请输入搜索关键词')
+    return
+  }
+
+  // 重置分类为全部
+  activeCategory.value = 'all'
+
+  // 重新加载数据
+  finished.value = false
+  currentPage.value = 1
+  loadProblems(true)
 }
 
 // 清除搜索
 const onClear = () => {
   searchKeyword.value = ''
+
+  // 重新加载数据
+  finished.value = false
+  currentPage.value = 1
+  loadProblems(true)
 }
 
 // 跳转到问题详情

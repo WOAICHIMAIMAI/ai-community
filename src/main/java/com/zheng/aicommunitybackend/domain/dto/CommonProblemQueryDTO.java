@@ -16,7 +16,12 @@ public class CommonProblemQueryDTO {
      * 是否只查询置顶问题 (priority=1)
      */
     private Boolean onlyPriority;
-    
+
+    /**
+     * 搜索关键词
+     */
+    private String keyword;
+
     /**
      * 页码
      */

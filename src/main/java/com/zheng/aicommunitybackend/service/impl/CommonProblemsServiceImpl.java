@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class CommonProblemsServiceImpl extends ServiceImpl<CommonProblemsMapper, CommonProblems>
-    implements CommonProblemsService{
+    implements CommonProblemsService {
 
     @Override
     public List<CommonProblemCategoryDTO> getProblemCategories() {
@@ -75,9 +75,17 @@ public class CommonProblemsServiceImpl extends ServiceImpl<CommonProblemsMapper,
             wrapper.eq(CommonProblems::getPriority, 1);
         }
 
+        // 关键词搜索
+        if (queryDTO.getKeyword() != null && !queryDTO.getKeyword().trim().isEmpty()) {
+            String keyword = queryDTO.getKeyword().trim();
+            wrapper.and(w -> w.like(CommonProblems::getProblem, keyword)
+                           .or()
+                           .like(CommonProblems::getAnswer, keyword));
+        }
+
         // 排序：置顶优先，然后按ID排序
         wrapper.orderByDesc(CommonProblems::getPriority)
-               .orderByAsc(CommonProblems::getId);
+                .orderByAsc(CommonProblems::getId);
 
         // 分页查询
         Page<CommonProblems> page = new Page<>(queryDTO.getPage(), queryDTO.getPageSize());
@@ -122,7 +130,7 @@ public class CommonProblemsServiceImpl extends ServiceImpl<CommonProblemsMapper,
 
         return vo;
     }
-
+}
 
 
 

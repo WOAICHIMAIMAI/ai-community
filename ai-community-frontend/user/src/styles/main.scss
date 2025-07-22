@@ -119,4 +119,25 @@ body {
 .van-toast--loading {
   color: #fff !important;
   background-color: rgba(0, 0, 0, 0.7) !important;
-} 
+}
+
+/* 通用section header样式 */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+
+    .van-icon {
+      margin-right: 6px;
+      color: var(--primary-color);
+    }
+  }
+}

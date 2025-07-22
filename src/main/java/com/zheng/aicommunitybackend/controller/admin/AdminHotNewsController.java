@@ -3,9 +3,11 @@ package com.zheng.aicommunitybackend.controller.admin;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zheng.aicommunitybackend.common.Result;
+import com.zheng.aicommunitybackend.config.BloomFilterConfig;
 import com.zheng.aicommunitybackend.domain.entity.HotNews;
 import com.zheng.aicommunitybackend.mapper.HotNewsMapper;
 import com.zheng.aicommunitybackend.service.HotNewsService;
+import com.zheng.aicommunitybackend.task.BloomFilterMonitorTask;
 import com.zheng.aicommunitybackend.task.NewsSpiderTask;
 import com.zheng.aicommunitybackend.utils.RedisUtils;
 import com.zheng.aicommunitybackend.constant.CacheConstants;
@@ -35,6 +37,12 @@ public class AdminHotNewsController {
 
     @Autowired
     private RedisUtils redisUtils;
+
+    @Autowired
+    private BloomFilterConfig bloomFilterConfig;
+
+    @Autowired
+    private BloomFilterMonitorTask bloomFilterMonitorTask;
 
     /**
      * 手动触发爬虫任务
@@ -215,6 +223,87 @@ public class AdminHotNewsController {
         redisUtils.delete(CacheConstants.buildNewsDetailKey(id));
 
         return Result.success("删除成功");
+    }
+
+    /**
+     * 获取布隆过滤器统计信息
+     * @return 统计信息
+     */
+    @GetMapping("/bloom-filter/stats")
+    public Result<BloomFilterConfig.BloomFilterStats> getBloomFilterStats() {
+        log.info("获取布隆过滤器统计信息");
+        BloomFilterConfig.BloomFilterStats stats = bloomFilterConfig.getStats();
+        return Result.success(stats);
+    }
+
+    /**
+     * 手动重建布隆过滤器
+     * @return 重建结果
+     */
+    @PostMapping("/bloom-filter/rebuild")
+    public Result<Map<String, Object>> rebuildBloomFilter() {
+        log.info("手动触发布隆过滤器重建");
+
+        try {
+            long loadedCount = bloomFilterConfig.rebuildBloomFilter();
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("loadedUrlCount", loadedCount);
+            result.put("rebuildTime", System.currentTimeMillis());
+
+            return Result.success("布隆过滤器重建完成", result);
+        } catch (Exception e) {
+            log.error("布隆过滤器重建失败", e);
+            return Result.error("布隆过滤器重建失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 手动检查布隆过滤器状态
+     * @return 详细状态信息
+     */
+    @GetMapping("/bloom-filter/check")
+    public Result<BloomFilterConfig.BloomFilterStats> checkBloomFilterStatus() {
+        log.info("手动检查布隆过滤器状态");
+        BloomFilterConfig.BloomFilterStats stats = bloomFilterMonitorTask.checkStatus();
+        return Result.success(stats);
+    }
+
+    /**
+     * 获取布隆过滤器监控配置
+     * @return 监控配置信息
+     */
+    @GetMapping("/bloom-filter/monitor-config")
+    public Result<String> getMonitorConfig() {
+        String config = bloomFilterMonitorTask.getMonitoringInfo();
+        return Result.success(config);
+    }
+
+    /**
+     * 获取布隆过滤器告警建议
+     * @return 告警建议
+     */
+    @GetMapping("/bloom-filter/alert-recommendation")
+    public Result<Map<String, Object>> getAlertRecommendation() {
+        BloomFilterConfig.BloomFilterStats stats = bloomFilterConfig.getStats();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("alertLevel", stats.getAlertLevel().getName());
+        result.put("alertDescription", stats.getAlertLevel().getDescription());
+        result.put("recommendation", stats.getAlertRecommendation());
+        result.put("needsImmediateAction", bloomFilterConfig.needsImmediateAction());
+        result.put("usageRatio", stats.getUsageRatio());
+
+        return Result.success(result);
+    }
+
+    /**
+     * 新闻去重系统监控页面
+     * @return 监控页面
+     */
+    @GetMapping("/deduplication-monitor")
+    public String deduplicationMonitorPage() {
+        return "redirect:/admin/news-deduplication-monitor.html";
     }
 
     /**

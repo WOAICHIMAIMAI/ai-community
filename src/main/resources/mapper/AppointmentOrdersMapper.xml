@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.AppointmentOrdersMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.AppointmentOrders">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="orderNo" column="order_no" jdbcType="VARCHAR"/>
+        <result property="userId" column="user_id" jdbcType="BIGINT"/>
+        <result property="serviceId" column="service_id" jdbcType="BIGINT"/>
+        <result property="serviceType" column="service_type" jdbcType="VARCHAR"/>
+        <result property="serviceName" column="service_name" jdbcType="VARCHAR"/>
+        <result property="workerId" column="worker_id" jdbcType="BIGINT"/>
+        <result property="workerName" column="worker_name" jdbcType="VARCHAR"/>
+        <result property="workerPhone" column="worker_phone" jdbcType="VARCHAR"/>
+        <result property="appointmentTime" column="appointment_time" jdbcType="TIMESTAMP"/>
+        <result property="address" column="address" jdbcType="VARCHAR"/>
+        <result property="contactName" column="contact_name" jdbcType="VARCHAR"/>
+        <result property="contactPhone" column="contact_phone" jdbcType="VARCHAR"/>
+        <result property="requirements" column="requirements" jdbcType="LONGVARCHAR"/>
+        <result property="estimatedPrice" column="estimated_price" jdbcType="DECIMAL"/>
+        <result property="actualPrice" column="actual_price" jdbcType="DECIMAL"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="cancelReason" column="cancel_reason" jdbcType="VARCHAR"/>
+        <result property="rating" column="rating" jdbcType="INTEGER"/>
+        <result property="comment" column="comment" jdbcType="LONGVARCHAR"/>
+        <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+        <result property="confirmTime" column="confirm_time" jdbcType="TIMESTAMP"/>
+        <result property="startTime" column="start_time" jdbcType="TIMESTAMP"/>
+        <result property="finishTime" column="finish_time" jdbcType="TIMESTAMP"/>
+        <result property="cancelTime" column="cancel_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,order_no,user_id,
+        service_id,service_type,service_name,
+        worker_id,worker_name,worker_phone,
+        appointment_time,address,contact_name,
+        contact_phone,requirements,estimated_price,
+        actual_price,status,cancel_reason,
+        rating,comment,create_time,
+        update_time,confirm_time,start_time,
+        finish_time,cancel_time
+    </sql>
+
+    <!-- 分页查询用户预约订单 -->
+    <select id="selectUserAppointmentPage" resultType="com.zheng.aicommunitybackend.domain.vo.AppointmentOrderVO">
+        SELECT 
+            ao.id,
+            ao.order_no AS orderNo,
+            ao.service_name AS serviceName,
+            ao.service_type AS serviceType,
+            ao.appointment_time AS appointmentTime,
+            ao.address,
+            ao.contact_name AS contactName,
+            ao.contact_phone AS contactPhone,
+            ao.requirements,
+            ao.estimated_price AS estimatedPrice,
+            ao.actual_price AS actualPrice,
+            ao.status,
+            ao.cancel_reason AS cancelReason,
+            ao.rating,
+            ao.comment,
+            ao.create_time AS createTime,
+            ao.confirm_time AS confirmTime,
+            ao.finish_time AS finishTime,
+            CASE 
+                WHEN ao.worker_id IS NOT NULL THEN JSON_OBJECT(
+                    'name', ao.worker_name,
+                    'phone', ao.worker_phone,
+                    'avatar', aw.avatar_url,
+                    'rating', aw.rating
+                )
+                ELSE NULL
+            END AS worker
+        FROM appointment_orders ao
+        LEFT JOIN appointment_workers aw ON ao.worker_id = aw.id
+        WHERE ao.user_id = #{userId}
+        <if test="query.serviceType != null and query.serviceType != ''">
+            AND ao.service_type = #{query.serviceType}
+        </if>
+        <if test="query.status != null">
+            AND ao.status = #{query.status}
+        </if>
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (ao.order_no LIKE CONCAT('%', #{query.keyword}, '%')
+                OR ao.service_name LIKE CONCAT('%', #{query.keyword}, '%')
+                OR ao.contact_name LIKE CONCAT('%', #{query.keyword}, '%'))
+        </if>
+        ORDER BY ao.create_time DESC
+    </select>
+
+    <!-- 根据ID查询预约订单详情 -->
+    <select id="selectAppointmentDetail" resultType="com.zheng.aicommunitybackend.domain.vo.AppointmentOrderVO">
+        SELECT 
+            ao.id,
+            ao.order_no AS orderNo,
+            ao.service_name AS serviceName,
+            ao.service_type AS serviceType,
+            ao.appointment_time AS appointmentTime,
+            ao.address,
+            ao.contact_name AS contactName,
+            ao.contact_phone AS contactPhone,
+            ao.requirements,
+            ao.estimated_price AS estimatedPrice,
+            ao.actual_price AS actualPrice,
+            ao.status,
+            ao.cancel_reason AS cancelReason,
+            ao.rating,
+            ao.comment,
+            ao.create_time AS createTime,
+            ao.confirm_time AS confirmTime,
+            ao.finish_time AS finishTime,
+            CASE 
+                WHEN ao.worker_id IS NOT NULL THEN JSON_OBJECT(
+                    'name', ao.worker_name,
+                    'phone', ao.worker_phone,
+                    'avatar', COALESCE(aw.avatar_url, 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'),
+                    'rating', COALESCE(aw.rating, 4.8)
+                )
+                ELSE NULL
+            END AS worker
+        FROM appointment_orders ao
+        LEFT JOIN appointment_workers aw ON ao.worker_id = aw.id
+        WHERE ao.id = #{id} AND ao.user_id = #{userId}
+    </select>
+
+    <!-- 查询用户最近预约记录 -->
+    <select id="selectRecentAppointments" resultType="com.zheng.aicommunitybackend.domain.vo.AppointmentOrderVO">
+        SELECT 
+            ao.id,
+            ao.order_no AS orderNo,
+            ao.service_name AS serviceName,
+            ao.service_type AS serviceType,
+            ao.appointment_time AS appointmentTime,
+            ao.status,
+            ao.rating,
+            ao.create_time AS createTime
+        FROM appointment_orders ao
+        WHERE ao.user_id = #{userId}
+        ORDER BY ao.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

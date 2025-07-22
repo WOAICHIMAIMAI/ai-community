@@ -96,7 +96,7 @@
         <el-table-column label="维修工" width="200">
           <template #default="{ row }">
             <div class="worker-avatar-info">
-              <el-avatar :size="36" :src="row.avatar">{{ row.name?.substr(0, 1) }}</el-avatar>
+              <el-avatar :size="36" :src="row.avatarUrl">{{ row.name?.substr(0, 1) }}</el-avatar>
               <div class="worker-basic-info">
                 <div class="name">{{ row.name }}</div>
                 <div class="phone">{{ row.phone }}</div>
@@ -285,7 +285,7 @@ const workerForm = reactive({
   id: 0,
   name: '',
   phone: '',
-  avatar: '',
+  avatarUrl: '',
   skills: [] as string[],
   status: 1
 })
@@ -440,7 +440,7 @@ const handleToggleStatus = (row: RepairWorker) => {
 const handleAvatarChange = (file: any) => {
   // 实际项目中应该上传到服务器
   avatarUrl.value = URL.createObjectURL(file.raw)
-  workerForm.avatar = avatarUrl.value
+  workerForm.avatarUrl = avatarUrl.value
 }
 
 // 提交表单

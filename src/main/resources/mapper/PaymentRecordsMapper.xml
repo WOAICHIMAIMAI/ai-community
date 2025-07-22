@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.PaymentRecordsMapper">
+
+    <!-- 分页查询缴费记录 -->
+    <select id="selectPaymentRecordPage" resultType="com.zheng.aicommunitybackend.domain.vo.PaymentRecordVO">
+        SELECT 
+            pr.id,
+            pr.bill_id,
+            pb.bill_title,
+            pb.bill_type,
+            pb.billing_period,
+            pr.payment_no,
+            pr.payment_amount,
+            pr.payment_method,
+            pr.transaction_id,
+            pr.payment_status,
+            pr.payment_time,
+            pr.remark,
+            pr.created_time
+        FROM payment_records pr
+        LEFT JOIN payment_bills pb ON pr.bill_id = pb.id
+        WHERE pr.user_id = #{userId}
+        <if test="query.billType != null">
+            AND pb.bill_type = #{query.billType}
+        </if>
+        <if test="query.status != null">
+            AND pr.payment_status = #{query.status}
+        </if>
+        <if test="query.year != null">
+            AND YEAR(pr.payment_time) = #{query.year}
+        </if>
+        <if test="query.month != null">
+            AND MONTH(pr.payment_time) = #{query.month}
+        </if>
+        ORDER BY pr.payment_time DESC, pr.created_time DESC
+    </select>
+
+    <!-- 查询用户缴费统计信息 -->
+    <select id="selectPaymentStatistics" resultType="com.zheng.aicommunitybackend.domain.vo.PaymentStatisticsVO">
+        SELECT 
+            COALESCE(SUM(CASE WHEN pr.payment_status = 1 THEN pr.payment_amount ELSE 0 END), 0) as totalAmount,
+            COUNT(CASE WHEN pr.payment_status = 1 THEN 1 END) as totalCount,
+            COALESCE(AVG(CASE WHEN pr.payment_status = 1 THEN pr.payment_amount END), 0) as avgAmount,
+            COALESCE(SUM(CASE WHEN pr.payment_status = 1 AND YEAR(pr.payment_time) = YEAR(NOW()) AND MONTH(pr.payment_time) = MONTH(NOW()) THEN pr.payment_amount ELSE 0 END), 0) as monthAmount,
+            COALESCE(SUM(CASE WHEN pr.payment_status = 1 AND YEAR(pr.payment_time) = YEAR(NOW()) THEN pr.payment_amount ELSE 0 END), 0) as yearAmount,
+            (SELECT COALESCE(SUM(amount), 0) FROM payment_bills WHERE user_id = #{userId} AND status IN (0, 2)) as pendingAmount,
+            (SELECT COUNT(*) FROM payment_bills WHERE user_id = #{userId} AND status IN (0, 2)) as pendingCount
+        FROM payment_records pr
+        WHERE pr.user_id = #{userId}
+        <if test="year != null">
+            AND YEAR(pr.payment_time) = #{year}
+        </if>
+    </select>
+
+    <!-- 根据账单ID查询缴费记录 -->
+    <select id="selectByBillId" resultType="com.zheng.aicommunitybackend.domain.vo.PaymentRecordVO">
+        SELECT 
+            pr.id,
+            pr.bill_id,
+            pb.bill_title,
+            pb.bill_type,
+            pb.billing_period,
+            pr.payment_no,
+            pr.payment_amount,
+            pr.payment_method,
+            pr.transaction_id,
+            pr.payment_status,
+            pr.payment_time,
+            pr.remark,
+            pr.created_time
+        FROM payment_records pr
+        LEFT JOIN payment_bills pb ON pr.bill_id = pb.id
+        WHERE pr.bill_id = #{billId} 
+        AND pr.user_id = #{userId}
+        AND pr.payment_status = 1
+        ORDER BY pr.payment_time DESC
+        LIMIT 1
+    </select>
+
+</mapper>

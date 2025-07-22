@@ -103,6 +103,9 @@
         </van-form>
       </div>
     </van-popup>
+
+    <!-- 底部导航栏 -->
+    <BottomTabbar />
   </div>
 </template>
 
@@ -112,6 +115,7 @@ import { useRouter } from 'vue-router';
 import { showToast, showFailToast } from 'vant';
 import { chatApi } from '@/api/chatApi';
 import { useAuthStore } from '@/store/auth';
+import BottomTabbar from '@/components/BottomTabbar.vue';
 
 // 类型定义
 interface Conversation {

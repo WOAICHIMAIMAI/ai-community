@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.PaymentBillsMapper">
+
+    <!-- 分页查询账单列表 -->
+    <select id="selectBillPage" resultType="com.zheng.aicommunitybackend.domain.vo.PaymentBillVO">
+        SELECT 
+            id,
+            bill_type,
+            bill_title,
+            bill_description,
+            amount,
+            billing_period,
+            due_date,
+            status,
+            created_time
+        FROM payment_bills
+        WHERE user_id = #{userId}
+        <if test="query.billType != null">
+            AND bill_type = #{query.billType}
+        </if>
+        <if test="query.status != null">
+            AND status = #{query.status}
+        </if>
+        <if test="query.billingPeriod != null and query.billingPeriod != ''">
+            AND billing_period = #{query.billingPeriod}
+        </if>
+        <if test="query.year != null">
+            AND YEAR(created_time) = #{query.year}
+        </if>
+        <if test="query.month != null">
+            AND MONTH(created_time) = #{query.month}
+        </if>
+        ORDER BY status ASC, due_date ASC, created_time DESC
+    </select>
+
+    <!-- 查询用户待缴费账单 -->
+    <select id="selectPendingBills" resultType="com.zheng.aicommunitybackend.domain.vo.PaymentBillVO">
+        SELECT 
+            id,
+            bill_type,
+            bill_title,
+            bill_description,
+            amount,
+            billing_period,
+            due_date,
+            status,
+            created_time
+        FROM payment_bills
+        WHERE user_id = #{userId} 
+        AND status IN (0, 2)
+        ORDER BY due_date ASC
+    </select>
+
+    <!-- 根据ID查询账单详情 -->
+    <select id="selectBillDetail" resultType="com.zheng.aicommunitybackend.domain.vo.PaymentBillVO">
+        SELECT 
+            id,
+            bill_type,
+            bill_title,
+            bill_description,
+            amount,
+            billing_period,
+            due_date,
+            status,
+            created_time
+        FROM payment_bills
+        WHERE id = #{billId} AND user_id = #{userId}
+    </select>
+
+    <!-- 计算用户待缴费总金额 -->
+    <select id="selectPendingAmount" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(amount), 0)
+        FROM payment_bills
+        WHERE user_id = #{userId} 
+        AND status IN (0, 2)
+    </select>
+
+    <!-- 批量更新账单状态 -->
+    <update id="updateBillStatus">
+        UPDATE payment_bills 
+        SET status = #{status}, updated_time = NOW()
+        WHERE id IN
+        <foreach collection="billIds" item="billId" open="(" separator="," close=")">
+            #{billId}
+        </foreach>
+    </update>
+
+</mapper>

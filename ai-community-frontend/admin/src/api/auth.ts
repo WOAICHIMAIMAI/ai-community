@@ -15,7 +15,7 @@ export interface LoginResult {
     userId: number
     username: string
     nickname: string
-    avatar: string
+    avatarUrl: string
     role: string
     permissions: string[]
   }
@@ -46,7 +46,7 @@ export interface UserInfoResult {
     id: number
     username: string
     nickname: string
-    avatar: string
+    avatarUrl: string
     gender: number
     email: string
     phone: string

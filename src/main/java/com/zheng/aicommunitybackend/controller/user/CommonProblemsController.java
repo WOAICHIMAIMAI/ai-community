@@ -42,19 +42,21 @@ public class CommonProblemsController {
      * 根据条件查询问题列表
      */
     @GetMapping("/list")
-    @Operation(summary = "查询问题列表", description = "根据分类和优先级查询问题列表")
+    @Operation(summary = "查询问题列表", description = "根据分类、优先级和关键词查询问题列表")
     public Result<IPage<CommonProblemVO>> getProblemsPage(
             @Parameter(description = "问题分类类型") @RequestParam(required = false) Integer type,
             @Parameter(description = "是否只查询置顶问题") @RequestParam(required = false) Boolean onlyPriority,
+            @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer page,
             @Parameter(description = "每页大小") @RequestParam(defaultValue = "10") Integer pageSize) {
-        
-        log.info("查询问题列表 - type: {}, onlyPriority: {}, page: {}, pageSize: {}", 
-                type, onlyPriority, page, pageSize);
-        
+
+        log.info("查询问题列表 - type: {}, onlyPriority: {}, keyword: {}, page: {}, pageSize: {}",
+                type, onlyPriority, keyword, page, pageSize);
+
         CommonProblemQueryDTO queryDTO = new CommonProblemQueryDTO();
         queryDTO.setType(type);
         queryDTO.setOnlyPriority(onlyPriority);
+        queryDTO.setKeyword(keyword);
         queryDTO.setPage(page);
         queryDTO.setPageSize(pageSize);
         

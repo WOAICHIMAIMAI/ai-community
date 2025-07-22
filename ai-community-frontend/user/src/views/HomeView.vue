@@ -20,6 +20,8 @@
           <van-grid :column-num="4" :border="false">
             <van-grid-item icon="service-o" text="在线报修" to="/repair" />
             <van-grid-item icon="comment-o" text="社区互动" to="/community" />
+            <van-grid-item icon="gold-coin-o" text="费用缴纳" to="/payment" />
+            <van-grid-item icon="calendar-o" text="预约服务" to="/appointment" />
             <van-grid-item icon="chat-o" text="聊天消息" @click="goToChat" />
             <van-grid-item icon="newspaper-o" text="新闻资讯" to="/news" />
             <van-grid-item icon="question-o" text="常见问题" to="/common-problems" />
@@ -33,7 +35,7 @@
         <div class="notice-section">
           <div class="section-header">
             <span class="section-title">社区公告</span>
-            <van-button type="text" class="more-btn" size="small" @click="goToAnnouncementList">更多</van-button>
+            <MoreButton text="更多" @click="goToAnnouncementList" />
           </div>
           <van-cell-group inset>
             <template v-if="loadingAnnouncements">
@@ -76,7 +78,7 @@
         <div class="news-section">
           <div class="section-header">
             <span class="section-title">热点新闻</span>
-            <van-button type="text" class="more-btn" size="small" @click="goToNewsList">更多</van-button>
+            <MoreButton text="更多" @click="goToNewsList" />
           </div>
           <van-cell-group inset>
             <template v-if="loadingNews">
@@ -120,7 +122,7 @@
         <div class="posts-section">
           <div class="section-header">
             <span class="section-title">社区动态</span>
-            <van-button type="text" class="more-btn" size="small" @click="goToCommunityUpdates">更多</van-button>
+            <MoreButton text="更多" @click="goToCommunityUpdates" />
           </div>
           <div class="posts-list">
             <template v-if="loadingUpdates">
@@ -171,12 +173,7 @@
     </div>
 
     <!-- 底部导航栏 -->
-    <van-tabbar route v-if="authStore.isLoggedIn">
-      <van-tabbar-item replace to="/" icon="home-o">首页</van-tabbar-item>
-      <van-tabbar-item replace to="/community" icon="friends-o">社区</van-tabbar-item>
-      <van-tabbar-item replace to="/chat-list" icon="chat-o">消息</van-tabbar-item>
-      <van-tabbar-item replace to="/profile" icon="user-o">我的</van-tabbar-item>
-    </van-tabbar>
+    <BottomTabbar />
   </div>
 </template>
 
@@ -188,6 +185,8 @@ import { useAuthStore } from '@/store/auth'
 import { getAnnouncements, getCommunityUpdates, getAllPosts } from '@/api/post'
 import { newsApi, type NewsItem } from '@/api/news'
 import { handleUserAvatarClick } from '@/utils/userUtils'
+import BottomTabbar from '@/components/BottomTabbar.vue'
+import MoreButton from '@/components/MoreButton.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -597,11 +596,6 @@ const onRefresh = async () => {
       background-color: var(--primary-color);
       border-radius: 3px;
     }
-  }
-  
-  .more-btn {
-    color: var(--text-color-light);
-    font-size: 12px;
   }
 }
 

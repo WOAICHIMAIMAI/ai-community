@@ -49,7 +49,7 @@
       <div class="workers-section" v-if="workersList.length > 0">
         <div class="section-header">
           <span>维修师傅</span>
-          <van-button type="text" size="small" @click="onShowAllWorkers">查看全部</van-button>
+          <MoreButton text="查看全部" @click="onShowAllWorkers" />
         </div>
         
         <div class="workers-list">
@@ -113,7 +113,7 @@
       <div class="recent-repair-section" v-if="recentRepairs.length > 0">
         <div class="section-header">
           <span>最近报修</span>
-          <van-button type="text" size="small" @click="onMyRepairList">查看全部</van-button>
+          <MoreButton text="查看全部" @click="onMyRepairList" />
         </div>
         
         <div class="repair-list">
@@ -313,9 +313,13 @@
 import { useAuthStore } from '@/store/auth'
 import { getAvailableWorkers, getWorkerDetail, getWorkerReviews, pageRepairOrders, bookWorker } from '@/api/repair'
 import { showToast, showLoadingToast, closeToast } from 'vant'
+import MoreButton from '@/components/MoreButton.vue'
 
 export default {
   name: 'RepairView',
+  components: {
+    MoreButton
+  },
   data() {
     return {
       // Banner轮播图

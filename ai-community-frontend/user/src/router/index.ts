@@ -154,6 +154,66 @@ const routes = [
     meta: { title: '问题详情' }
   },
   {
+    path: '/payment',
+    name: 'Payment',
+    component: () => import('@/views/payment/PaymentViewSimple.vue'),
+    meta: { title: '费用缴纳' }
+  },
+  {
+    path: '/payment/detail/:id',
+    name: 'PaymentDetail',
+    component: () => import('@/views/payment/PaymentDetailView.vue'),
+    meta: { title: '账单详情' }
+  },
+  {
+    path: '/payment/history',
+    name: 'PaymentHistory',
+    component: () => import('@/views/payment/PaymentHistoryView.vue'),
+    meta: { title: '缴费历史' }
+  },
+  {
+    path: '/appointment',
+    name: 'Appointment',
+    component: () => import('@/views/appointment/AppointmentHomeView.vue'),
+    meta: { title: '预约服务' }
+  },
+  {
+    path: '/appointment/services',
+    name: 'AppointmentServices',
+    component: () => import('@/views/appointment/AppointmentView.vue'),
+    meta: { title: '服务分类' }
+  },
+  {
+    path: '/appointment/booking',
+    name: 'AppointmentBooking',
+    component: () => import('@/views/appointment/BookingView.vue'),
+    meta: { title: '预约服务' }
+  },
+  {
+    path: '/appointment/list',
+    name: 'AppointmentList',
+    component: () => import('@/views/appointment/AppointmentListView.vue'),
+    meta: { title: '我的预约' }
+  },
+  {
+    path: '/appointment/detail/:id',
+    name: 'AppointmentDetail',
+    component: () => import('@/views/appointment/AppointmentDetailView.vue'),
+    meta: { title: '预约详情' }
+  },
+  {
+    path: '/test/api',
+    name: 'ApiTest',
+    component: () => import('@/views/test/ApiTestView.vue'),
+    meta: { title: 'API测试' }
+  },
+  {
+    path: '/test/buttons',
+    name: 'ButtonDemo',
+    component: () => import('@/views/test/ButtonDemoView.vue'),
+    meta: { title: '按钮样式演示' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFoundView.vue')

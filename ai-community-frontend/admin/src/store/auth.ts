@@ -6,7 +6,7 @@ export interface UserInfo {
   id: number
   username: string
   nickname: string
-  avatar: string
+  avatarUrl: string
   role: string
   permissions: string[]
 }
@@ -57,7 +57,7 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('userInfo', JSON.stringify({
         id: userInfo.id,
         nickname: userInfo.nickname,
-        avatar: userInfo.avatar,
+        avatarUrl: userInfo.avatarUrl,
         role: userInfo.role
       }))
     },
@@ -114,7 +114,7 @@ export const useAuthStore = defineStore('auth', {
               id: data.id,
               username: data.username,
               nickname: data.nickname,
-              avatar: data.avatar,
+              avatarUrl: data.avatarUrl,
               role: data.role,
               permissions: data.permissions
             })

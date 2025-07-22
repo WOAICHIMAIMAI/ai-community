@@ -54,7 +54,7 @@
         <el-table-column prop="nickname" label="昵称" min-width="120" show-overflow-tooltip />
         <el-table-column label="头像" width="80" align="center">
           <template #default="{ row }">
-            <el-avatar :size="40" :src="row.avatar || defaultAvatar">
+            <el-avatar :size="40" :src="row.avatarUrl || defaultAvatar">
               {{ row.nickname?.substr(0, 1) }}
             </el-avatar>
           </template>
@@ -112,7 +112,7 @@
     >
       <div class="user-detail" v-if="currentUser">
         <div class="user-avatar">
-          <el-avatar :size="80" :src="currentUser.avatar || defaultAvatar">
+          <el-avatar :size="80" :src="currentUser.avatarUrl || defaultAvatar">
             {{ currentUser.nickname?.substr(0, 1) }}
           </el-avatar>
           <h3>{{ currentUser.nickname }}</h3>
