@@ -220,17 +220,18 @@ const routes = [
     component: () => import('@/views/red-packet/RedPacketRecordsView.vue'),
     meta: { title: '我的红包' }
   },
+
   {
-    path: '/test/api',
-    name: 'ApiTest',
-    component: () => import('@/views/test/ApiTestView.vue'),
-    meta: { title: 'API测试' }
+    path: '/analytics',
+    name: 'Analytics',
+    component: () => import('@/views/analytics/AnalyticsHomeView.vue'),
+    meta: { title: '数据分析' }
   },
   {
-    path: '/test/buttons',
-    name: 'ButtonDemo',
-    component: () => import('@/views/test/ButtonDemoView.vue'),
-    meta: { title: '按钮样式演示' }
+    path: '/analytics/detail/:type',
+    name: 'AnalyticsDetail',
+    component: () => import('@/views/analytics/AnalyticsDetailView.vue'),
+    meta: { title: '详细分析' }
   },
   {
     path: '/:pathMatch(.*)*',

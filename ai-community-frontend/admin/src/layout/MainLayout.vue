@@ -104,7 +104,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import {
   HomeFilled, UserFilled, Check, Document, ChatDotRound,
-  Tools, Avatar, Setting, ArrowDown, SwitchButton, QuestionFilled, Monitor, Money
+  Tools, Avatar, Setting, ArrowDown, SwitchButton, QuestionFilled, Monitor, Money, TrendCharts, Calendar
 } from '@element-plus/icons-vue'
 import Breadcrumb from '@/components/common/Breadcrumb.vue'
 
@@ -170,9 +170,19 @@ const menuItems = [
     index: '/common-problems'
   },
   {
+    title: '预约服务',
+    icon: Calendar,
+    index: '/appointments'
+  },
+  {
     title: '系统监控',
     icon: Monitor,
     index: '/news-deduplication'
+  },
+  {
+    title: '数据分析',
+    icon: TrendCharts,
+    index: '/analytics'
   }
 ]
 

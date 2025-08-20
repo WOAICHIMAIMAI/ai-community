@@ -4,6 +4,7 @@ import com.zheng.aicommunitybackend.interceptor.JwtAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
@@ -24,7 +25,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/error"
+            "/error",
+            "/analytics/**"  // 允许数据分析API不需要认证
     );
 
     public WebMvcConfig(JwtAuthInterceptor jwtAuthInterceptor) {
@@ -45,5 +47,19 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("*")
                 .maxAge(3600);
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 明确配置静态资源路径，避免与API路径冲突
+        registry.addResourceHandler("/static/**")
+                .addResourceLocations("classpath:/static/");
+        
+        registry.addResourceHandler("/public/**")
+                .addResourceLocations("classpath:/public/");
+        
+        // 确保analytics路径不被当作静态资源处理
+        // Spring Boot默认的静态资源处理器会尝试处理所有未匹配的路径
+        // 我们需要确保API路径优先级更高
     }
 } 

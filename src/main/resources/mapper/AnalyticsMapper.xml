@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.AnalyticsMapper">
+
+    <!-- 获取保修类型分布 -->
+    <select id="getRepairTypeDistribution" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.RepairTypeDistributionDTO">
+        SELECT 
+            repair_type as repairType,
+            repair_type as repairTypeName,
+            COUNT(*) as orderCount,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM repair_orders 
+                                       WHERE create_time BETWEEN #{startDate} AND #{endDate}), 2) as percentage
+        FROM repair_orders 
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+        GROUP BY repair_type
+        ORDER BY orderCount DESC
+    </select>
+
+    <!-- 获取服务响应时间 -->
+    <select id="getServiceResponseTime" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.ServiceResponseTimeDTO">
+        SELECT 
+            service_type as serviceType,
+            AVG(TIMESTAMPDIFF(MINUTE, create_time, confirm_time)) as avgResponseTime,
+            MIN(TIMESTAMPDIFF(MINUTE, create_time, confirm_time)) as minResponseTime,
+            MAX(TIMESTAMPDIFF(MINUTE, create_time, confirm_time)) as maxResponseTime,
+            COUNT(*) as orderCount
+        FROM appointment_orders 
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+        AND confirm_time IS NOT NULL
+        <if test="serviceType != null and serviceType != ''">
+            AND service_type = #{serviceType}
+        </if>
+        GROUP BY service_type
+        ORDER BY avgResponseTime ASC
+    </select>
+
+    <!-- 获取用户活跃度统计 -->
+    <select id="getUserActivityStatistics" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.UserActivityDTO">
+        SELECT 
+            DATE(create_time) as date,
+            DATE_FORMAT(DATE(create_time), '%Y-%m-%d') as dateStr,
+            COUNT(DISTINCT user_id) as dailyActiveUsers,
+            COUNT(DISTINCT user_id) as orderUsers
+        FROM appointment_orders 
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+        GROUP BY DATE(create_time)
+        ORDER BY date ASC
+    </select>
+
+    <!-- 获取服务完成量统计 -->
+    <select id="getServiceCompletionStatistics" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.ServiceStatisticsDTO">
+        SELECT 
+            service_type as serviceType,
+            service_name as serviceName,
+            COUNT(*) as orderCount,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as completedCount,
+            ROUND(SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as completionRate
+        FROM appointment_orders 
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+        <if test="serviceType != null and serviceType != ''">
+            AND service_type = #{serviceType}
+        </if>
+        GROUP BY service_type, service_name
+        ORDER BY completionRate DESC
+    </select>
+
+    <!-- 获取满意度评分统计 -->
+    <select id="getSatisfactionScoreStatistics" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.ServiceStatisticsDTO">
+        SELECT 
+            service_type as serviceType,
+            service_name as serviceName,
+            COUNT(*) as orderCount,
+            AVG(rating) as avgRating
+        FROM appointment_orders 
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+        AND rating IS NOT NULL
+        <if test="serviceType != null and serviceType != ''">
+            AND service_type = #{serviceType}
+        </if>
+        GROUP BY service_type, service_name
+        ORDER BY avgRating DESC
+    </select>
+
+    <!-- 获取历史对比数据 -->
+    <select id="getHistoricalComparisonData" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.ServiceStatisticsDTO">
+        SELECT 
+            DATE_FORMAT(create_time, '%Y-%m') as period,
+            COUNT(*) as orderCount,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as completedCount,
+            AVG(CASE WHEN rating IS NOT NULL THEN rating END) as avgRating
+        FROM appointment_orders 
+        WHERE create_time >= DATE_SUB(#{endDate}, INTERVAL 12 MONTH)
+        AND create_time &lt;= #{endDate}
+        GROUP BY DATE_FORMAT(create_time, '%Y-%m')
+        ORDER BY period ASC
+    </select>
+
+    <!-- 获取数据摘要 -->
+    <select id="getDataAnalyticsSummary" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.AnalyticsSummaryDTO">
+        SELECT 
+            COUNT(*) as totalOrders,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as completedOrders,
+            COUNT(DISTINCT user_id) as activeUsers,
+            COALESCE(AVG(CASE WHEN rating IS NOT NULL THEN rating END), 0) as avgSatisfactionScore
+        FROM appointment_orders 
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+    </select>
+
+    <!-- 获取保修类型统计 -->
+    <select id="getRepairTypeStatistics" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.RepairTypeDistributionDTO">
+        SELECT 
+            repair_type as repairType,
+            repair_type as repairTypeName,
+            COUNT(*) as orderCount,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as completedCount,
+            AVG(CASE WHEN status = 3 AND completion_time IS NOT NULL 
+                     THEN TIMESTAMPDIFF(HOUR, create_time, completion_time) END) as avgCompletionHours
+        FROM repair_orders
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+        <if test="repairType != null and repairType != ''">
+            AND repair_type = #{repairType}
+        </if>
+        GROUP BY repair_type
+        ORDER BY orderCount DESC
+    </select>
+
+    <!-- 获取服务统计 -->
+    <select id="getServiceStatistics" resultType="com.zheng.aicommunitybackend.domain.dto.analytics.ServiceStatisticsDTO">
+        SELECT 
+            service_type as serviceType,
+            service_name as serviceName,
+            COUNT(*) as orderCount,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as completedCount,
+            ROUND(SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as completionRate,
+            AVG(CASE WHEN rating IS NOT NULL THEN rating END) as avgRating
+        FROM appointment_orders
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+        <if test="serviceType != null and serviceType != ''">
+            AND service_type = #{serviceType}
+        </if>
+        GROUP BY service_type, service_name
+        ORDER BY orderCount DESC
+    </select>
+
+</mapper>

@@ -171,7 +171,7 @@
       title="问题详情"
       width="700px"
     >
-      <problem-detail
+      <problem-detail-component
         v-if="viewDialogVisible"
         :problem="currentProblem"
       />
@@ -184,17 +184,12 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete, Search, Refresh } from '@element-plus/icons-vue'
 import {
-  getProblemCategories,
-  getProblemsPage,
-  deleteProblem,
-  batchDeleteProblems,
-  setProblemPriority,
   type ProblemDetail,
   type ProblemCategory,
   type ProblemQueryParams
 } from '@/api/common-problems'
 import ProblemForm from './components/ProblemForm.vue'
-import ProblemDetail from './components/ProblemDetail.vue'
+import ProblemDetailComponent from './components/ProblemDetail.vue'
 
 // 响应式数据
 const loading = ref(false)

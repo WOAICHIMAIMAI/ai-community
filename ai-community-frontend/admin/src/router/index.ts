@@ -95,6 +95,15 @@ const router = createRouter({
           }
         },
         {
+          path: 'appointments',
+          name: 'appointments',
+          component: () => import('@/views/appointments/AppointmentListView.vue'),
+          meta: {
+            title: '预约服务管理',
+            requiresAuth: true
+          }
+        },
+        {
           path: 'news-deduplication',
           name: 'news-deduplication',
           component: () => import('@/views/system/SimpleMonitor.vue'),
@@ -127,6 +136,24 @@ const router = createRouter({
           component: () => import('@/views/red-packet/RedPacketDetailView.vue'),
           meta: {
             title: '红包活动详情',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'analytics',
+          name: 'Analytics',
+          component: () => import('@/views/analytics/AnalyticsView.vue'),
+          meta: {
+            title: '数据分析',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'analytics/detail/:type',
+          name: 'AnalyticsDetail',
+          component: () => import('@/views/analytics/AnalyticsDetailView.vue'),
+          meta: {
+            title: '数据分析详情',
             requiresAuth: true
           }
         }

@@ -73,7 +73,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { createProblem, updateProblem, type ProblemForm, type ProblemCategory } from '@/api/common-problems'
+import { type ProblemForm, type ProblemCategory } from '@/api/common-problems'
 
 // Props
 interface Props {
