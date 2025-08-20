@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
@@ -34,10 +35,15 @@ public class RedisConfig {
         return template;  
     }  
   
-    @Bean  
+    @Bean
     public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
-        // 让 Spring Session 使用 JSON 方式存储  
+        // 让 Spring Session 使用 JSON 方式存储
         return new GenericJackson2JsonRedisSerializer();
-    }  
-  
+    }
+
+    @Bean
+    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+        return new StringRedisTemplate(connectionFactory);
+    }
+
 }

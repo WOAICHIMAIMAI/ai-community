@@ -102,6 +102,33 @@ const router = createRouter({
             title: '新闻去重监控',
             requiresAuth: true
           }
+        },
+        {
+          path: 'red-packet',
+          name: 'red-packet',
+          component: () => import('@/views/red-packet/RedPacketListView.vue'),
+          meta: {
+            title: '红包管理',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'red-packet/create',
+          name: 'red-packet-create',
+          component: () => import('@/views/red-packet/RedPacketCreateView.vue'),
+          meta: {
+            title: '创建红包活动',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'red-packet/:id',
+          name: 'red-packet-detail',
+          component: () => import('@/views/red-packet/RedPacketDetailView.vue'),
+          meta: {
+            title: '红包活动详情',
+            requiresAuth: true
+          }
         }
       ]
     },

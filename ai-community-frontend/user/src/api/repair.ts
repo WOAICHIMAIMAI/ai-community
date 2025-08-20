@@ -14,7 +14,7 @@ export const createRepairOrder = (data: {
   expectedTime?: string
 }) => {
   return request({
-    url: '/user/repair-orders',
+    url: '/api/user/repair-orders',
     method: 'post',
     data
   })
@@ -45,7 +45,7 @@ export const pageRepairOrders = (params: {
   keyword?: string
 }) => {
   return request({
-    url: '/user/repair-orders/page',
+    url: '/api/user/repair-orders/page',
     method: 'get',
     params
   })
@@ -72,7 +72,7 @@ export const submitFeedback = (data: {
   feedback?: string
 }) => {
   return request({
-    url: '/user/repair-orders/feedback',
+    url: '/api/user/repair-orders/feedback',
     method: 'post',
     data
   })
@@ -99,7 +99,7 @@ export const addRepairProgress = (data: {
   description: string
 }) => {
   return request({
-    url: '/user/repair-progress',
+    url: '/api/user/repair-progress',
     method: 'post',
     data
   })
@@ -111,7 +111,7 @@ export const addRepairProgress = (data: {
  */
 export const getAvailableWorkers = (serviceType?: string) => {
   return request({
-    url: '/user/workers/available',
+    url: '/api/user/workers/available',
     method: 'get',
     params: serviceType ? { serviceType } : {}
   })

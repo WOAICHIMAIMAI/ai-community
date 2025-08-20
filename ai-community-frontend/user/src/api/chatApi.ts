@@ -8,7 +8,7 @@ export const chatApi = {
    * 获取会话列表
    */
   getConversations: async () => {
-    return await get('/user/conversations');
+    return await get('/api/user/conversations');
   },
 
   /**
@@ -20,28 +20,28 @@ export const chatApi = {
     description?: string;
     memberIds?: number[];
   }) => {
-    return await post('/user/conversations', data);
+    return await post('/api/user/conversations', data);
   },
 
   /**
    * 获取会话详情
    */
   getConversationDetail: async (conversationId: string) => {
-    return await get(`/user/conversations/${conversationId}`);
+    return await get(`/api/user/conversations/${conversationId}`);
   },
 
   /**
    * 查找或创建私聊会话
    */
   findOrCreatePrivateConversation: async (targetUserId: number) => {
-    return await post(`/user/conversations/private/${targetUserId}`);
+    return await post(`/api/user/conversations/private/${targetUserId}`);
   },
 
   /**
    * 删除会话
    */
   deleteConversation: async (conversationId: string) => {
-    return await del(`/user/conversations/${conversationId}`);
+    return await del(`/api/user/conversations/${conversationId}`);
   },
 
   /**
@@ -52,14 +52,14 @@ export const chatApi = {
     messageType: string;
     metadata?: string;
   }) => {
-    return await post(`/user/conversations/${conversationId}/messages`, data);
+    return await post(`/api/user/conversations/${conversationId}/messages`, data);
   },
 
   /**
    * 获取会话消息
    */
   getMessages: async (conversationId: string, page = 1, size = 20) => {
-    return await get(`/user/conversations/${conversationId}/messages`, {
+    return await get(`/api/user/conversations/${conversationId}/messages`, {
       page,
       size
     });
@@ -69,21 +69,21 @@ export const chatApi = {
    * 标记消息已读
    */
   markMessageRead: async (messageId: number) => {
-    return await put(`/user/messages/${messageId}/read`);
+    return await put(`/api/user/messages/${messageId}/read`);
   },
 
   /**
    * 删除消息
    */
   deleteMessage: async (messageId: number) => {
-    return await del(`/user/messages/${messageId}`);
+    return await del(`/api/user/messages/${messageId}`);
   },
 
   /**
    * 获取聊天设置
    */
   getChatSettings: async () => {
-    return await get('/user/chat/settings');
+    return await get('/api/user/chat/settings');
   },
 
   /**
@@ -97,6 +97,6 @@ export const chatApi = {
     fontSize?: number;
     theme?: string;
   }) => {
-    return await put('/user/chat/settings', data);
+    return await put('/api/user/chat/settings', data);
   }
 };

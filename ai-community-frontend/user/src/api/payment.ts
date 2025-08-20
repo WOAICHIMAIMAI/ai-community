@@ -99,35 +99,35 @@ export interface PageResponse<T> {
  * 获取用户账户信息
  */
 export const getUserAccount = () => {
-  return request.get<UserAccount>('/user/payment/account')
+  return request.get<UserAccount>('/api/user/payment/account')
 }
 
 /**
  * 账户充值
  */
 export const rechargeAccount = (params: RechargeParams) => {
-  return request.post<boolean>('/user/payment/account/recharge', params)
+  return request.post<boolean>('/api/user/payment/account/recharge', params)
 }
 
 /**
  * 获取待缴费账单列表
  */
 export const getPendingBills = () => {
-  return request.get<PaymentBill[]>('/user/payment/bills/pending')
+  return request.get<PaymentBill[]>('/api/user/payment/bills/pending')
 }
 
 /**
  * 获取待缴费总金额
  */
 export const getPendingAmount = () => {
-  return request.get<number>('/user/payment/bills/pending/amount')
+  return request.get<number>('/api/user/payment/bills/pending/amount')
 }
 
 /**
  * 分页查询账单列表
  */
 export const getBillPage = (params: BillQueryParams) => {
-  return request.get<PageResponse<PaymentBill>>('/user/payment/bills', { params })
+  return request.get<PageResponse<PaymentBill>>('/api/user/payment/bills', { params })
 }
 
 /**
@@ -141,7 +141,7 @@ export const getBillDetail = (billId: number) => {
  * 创建缴费订单
  */
 export const createPaymentOrder = (params: PaymentCreateParams) => {
-  return request.post<PaymentRecord>('/user/payment/orders', params)
+  return request.post<PaymentRecord>('/api/user/payment/orders', params)
 }
 
 /**
@@ -157,14 +157,14 @@ export const confirmPayment = (recordId: number, transactionId: string) => {
  * 分页查询缴费记录
  */
 export const getPaymentRecordPage = (params: BillQueryParams) => {
-  return request.get<PageResponse<PaymentRecord>>('/user/payment/records', { params })
+  return request.get<PageResponse<PaymentRecord>>('/api/user/payment/records', { params })
 }
 
 /**
  * 获取缴费统计信息
  */
 export const getPaymentStatistics = (year?: number) => {
-  return request.get<PaymentStatistics>('/user/payment/statistics', {
+  return request.get<PaymentStatistics>('/api/user/payment/statistics', {
     params: { year }
   })
 }
@@ -195,5 +195,5 @@ export interface PaymentMethod {
  * 获取支付方式列表
  */
 export const getPaymentMethods = () => {
-  return request.get<PaymentMethod[]>('/user/payment/methods')
+  return request.get<PaymentMethod[]>('/api/user/payment/methods')
 }

@@ -104,7 +104,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import {
   HomeFilled, UserFilled, Check, Document, ChatDotRound,
-  Tools, Avatar, Setting, ArrowDown, SwitchButton, QuestionFilled, Monitor
+  Tools, Avatar, Setting, ArrowDown, SwitchButton, QuestionFilled, Monitor, Money
 } from '@element-plus/icons-vue'
 import Breadcrumb from '@/components/common/Breadcrumb.vue'
 
@@ -158,6 +158,11 @@ const menuItems = [
         index: '/repair-workers'
       }
     ]
+  },
+  {
+    title: '红包管理',
+    icon: Money,
+    index: '/red-packet'
   },
   {
     title: '常见问题',

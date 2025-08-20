@@ -12,7 +12,7 @@ export const listPosts = (params: {
   sortBy?: string
 }) => {
   return request({
-    url: '/user/posts/list',
+    url: '/api/user/posts/list',
     method: 'get',
     params
   })
@@ -34,7 +34,7 @@ export const getAnnouncements = (params: {
   pageSize?: number
 }) => {
   return request({
-    url: '/user/posts/list',
+    url: '/api/user/posts/list',
     method: 'get',
     params: {
       ...params,
@@ -53,7 +53,7 @@ export const getCommunityUpdates = (params: {
   pageSize?: number
 }) => {
   return request({
-    url: '/user/posts/list',
+    url: '/api/user/posts/list',
     method: 'get',
     params: {
       ...params,
@@ -72,7 +72,7 @@ export const getAllPosts = (params: {
   pageSize?: number
 }) => {
   return request({
-    url: '/user/posts/list',
+    url: '/api/user/posts/list',
     method: 'get',
     params: {
       ...params,
@@ -90,7 +90,7 @@ export const getHotPosts = (params: {
   pageSize?: number
 }) => {
   return request({
-    url: '/user/posts/list',
+    url: '/api/user/posts/list',
     method: 'get',
     params: {
       ...params,
@@ -108,7 +108,7 @@ export const getEssencePosts = (params: {
   pageSize?: number
 }) => {
   return request({
-    url: '/user/posts/list',
+    url: '/api/user/posts/list',
     method: 'get',
     params: {
       ...params,
@@ -139,7 +139,7 @@ export const createPost = (data: {
   images?: string[]
 }) => {
   return request({
-    url: '/user/posts',
+    url: '/api/user/posts',
     method: 'post',
     data
   })
@@ -155,7 +155,7 @@ export const getComments = (params: {
   pageSize: number
 }) => {
   return request({
-    url: '/user/comments/page',
+    url: '/api/user/comments/page',
     method: 'get',
     params
   })
@@ -170,7 +170,7 @@ export const likeOrUnlike = (data: {
   targetId: number
 }) => {
   return request({
-    url: '/user/likes',
+    url: '/api/user/likes',
     method: 'post',
     data
   })
@@ -183,7 +183,7 @@ export const likeOrUnlike = (data: {
  */
 export const getLikeStatus = (type: number, targetId: number) => {
   return request({
-    url: '/user/likes/status',
+    url: '/api/user/likes/status',
     method: 'get',
     params: { type, targetId }
   })
@@ -199,7 +199,7 @@ export const getMyPosts = (params: {
   category?: string
 }) => {
   return request({
-    url: '/user/posts/my',
+    url: '/api/user/posts/my',
     method: 'get',
     params
   })

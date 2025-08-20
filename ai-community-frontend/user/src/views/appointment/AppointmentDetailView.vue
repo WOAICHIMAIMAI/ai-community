@@ -264,7 +264,7 @@ const rateService = () => {
 }
 
 const bookAgain = () => {
-  router.push(`/appointment/booking?type=${appointment.value.serviceType}`)
+  router.push(`/appointment/booking/${appointment.value.serviceType}`)
 }
 
 const callWorker = () => {

@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/auth'
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: '/api', // 添加API前缀
+  baseURL: '', // 移除API前缀，避免与后端context-path重复
   timeout: 15000, // 请求超时时间
 })
 

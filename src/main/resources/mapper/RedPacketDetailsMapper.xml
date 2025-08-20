@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.RedPacketDetailsMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.RedPacketDetails">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="activityId" column="activity_id" jdbcType="BIGINT"/>
+        <result property="packetIndex" column="packet_index" jdbcType="INTEGER"/>
+        <result property="amount" column="amount" jdbcType="BIGINT"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="userId" column="user_id" jdbcType="BIGINT"/>
+        <result property="grabTime" column="grab_time" jdbcType="TIMESTAMP"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, activity_id, packet_index, amount, status,
+        user_id, grab_time, created_time
+    </sql>
+
+    <!-- 批量插入红包详情 -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO red_packet_details (activity_id, packet_index, amount, status, created_time)
+        VALUES
+        <foreach collection="details" item="detail" separator=",">
+            (#{detail.activityId}, #{detail.packetIndex}, #{detail.amount}, 0, #{detail.createdTime})
+        </foreach>
+    </insert>
+
+    <!-- 查询活动的可抢红包ID列表 -->
+    <select id="selectAvailablePacketIds" resultType="java.lang.Long">
+        SELECT id
+        FROM red_packet_details
+        WHERE activity_id = #{activityId}
+          AND status = 0
+        ORDER BY packet_index
+    </select>
+
+    <!-- 查询活动的红包统计信息 -->
+    <select id="selectActivityStats" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS total_count,
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS grabbed_count,
+            SUM(amount) AS total_amount,
+            SUM(CASE WHEN status = 1 THEN amount ELSE 0 END) AS grabbed_amount
+        FROM red_packet_details
+        WHERE activity_id = #{activityId}
+    </select>
+
+    <!-- 查询用户在某活动中抢到的红包 -->
+    <select id="selectUserGrabbedPacket" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM red_packet_details
+        WHERE activity_id = #{activityId}
+          AND user_id = #{userId}
+          AND status = 1
+        LIMIT 1
+    </select>
+
+    <!-- 查询活动的红包分配情况 -->
+    <select id="selectActivityPackets" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM red_packet_details
+        WHERE activity_id = #{activityId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY packet_index
+    </select>
+
+</mapper>

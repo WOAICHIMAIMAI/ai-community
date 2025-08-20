@@ -40,19 +40,19 @@ export interface PageResponse<T> {
  * 获取问题分类列表
  */
 export const getProblemCategories = () => {
-  return request.get<ProblemCategory[]>('/user/common-problems/categories')
+  return request.get<ProblemCategory[]>('/api/user/common-problems/categories')
 }
 
 /**
  * 根据条件查询问题列表
  */
 export const getProblemsPage = (params: ProblemQueryParams) => {
-  return request.get<PageResponse<ProblemDetail>>('/user/common-problems/list', { params })
+  return request.get<PageResponse<ProblemDetail>>('/api/user/common-problems/list', { params })
 }
 
 /**
  * 根据问题ID查询问题详情
  */
 export const getProblemDetail = (id: number) => {
-  return request.get<ProblemDetail>(`/user/common-problems/${id}`)
+  return request.get<ProblemDetail>(`/api/user/common-problems/${id}`)
 }

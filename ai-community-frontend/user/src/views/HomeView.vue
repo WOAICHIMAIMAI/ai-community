@@ -22,6 +22,7 @@
             <van-grid-item icon="comment-o" text="社区互动" to="/community" />
             <van-grid-item icon="gold-coin-o" text="费用缴纳" to="/payment" />
             <van-grid-item icon="calendar-o" text="预约服务" to="/appointment" />
+            <van-grid-item icon="gift-o" text="红包活动" to="/red-packet" />
             <van-grid-item icon="chat-o" text="聊天消息" @click="goToChat" />
             <van-grid-item icon="newspaper-o" text="新闻资讯" to="/news" />
             <van-grid-item icon="question-o" text="常见问题" to="/common-problems" />

@@ -405,7 +405,7 @@ public class BloomFilterConfig {
         private final AlertLevel alertLevel;
         private final String alertRecommendation;
 
-        private BloomFilterStats(int expectedInsertions, double falsePositiveProbability,
+        public BloomFilterStats(int expectedInsertions, double falsePositiveProbability,
                                long loadedUrlCount, LocalDateTime lastRebuildTime, int dataRetentionDays,
                                AlertLevel alertLevel, String alertRecommendation) {
             this.expectedInsertions = expectedInsertions;

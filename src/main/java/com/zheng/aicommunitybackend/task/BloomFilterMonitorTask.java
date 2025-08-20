@@ -1,8 +1,9 @@
 package com.zheng.aicommunitybackend.task;
 
 import com.zheng.aicommunitybackend.config.BloomFilterConfig;
+import com.zheng.aicommunitybackend.service.AlertService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -14,11 +15,12 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 @ConditionalOnProperty(name = "bloom-filter.monitoring.enabled", havingValue = "true", matchIfMissing = true)
 public class BloomFilterMonitorTask {
 
-    @Autowired
-    private BloomFilterConfig bloomFilterConfig;
+    private final BloomFilterConfig bloomFilterConfig;
+    private final AlertService alertService;
 
     /**
      * 监控检查间隔（分钟）
@@ -33,8 +35,38 @@ public class BloomFilterMonitorTask {
     private boolean emailAlertEnabled;
 
     /**
+     * 是否启用钉钉告警
+     */
+    @Value("${bloom-filter.monitoring.dingtalk-alert-enabled:false}")
+    private boolean dingtalkAlertEnabled;
+
+    /**
+     * 钉钉机器人Webhook URL
+     */
+    @Value("${bloom-filter.monitoring.dingtalk-webhook-url:}")
+    private String dingtalkWebhookUrl;
+
+    /**
+     * 是否启用企业微信告警
+     */
+    @Value("${bloom-filter.monitoring.wechat-alert-enabled:false}")
+    private boolean wechatAlertEnabled;
+
+    /**
+     * 企业微信机器人Webhook URL
+     */
+    @Value("${bloom-filter.monitoring.wechat-webhook-url:}")
+    private String wechatWebhookUrl;
+
+    /**
+     * 是否启用Prometheus指标
+     */
+    @Value("${bloom-filter.monitoring.prometheus-enabled:false}")
+    private boolean prometheusEnabled;
+
+    /**
      * 定期监控布隆过滤器状态
-     * 默认每30分钟检查一次
+     * 默认每15分钟检查一次
      */
     @Scheduled(fixedRateString = "#{${bloom-filter.monitoring.check-interval-minutes:30} * 60 * 1000}")
     public void monitorBloomFilterStatus() {
@@ -98,10 +130,8 @@ public class BloomFilterMonitorTask {
             log.warn("   建议: {}", stats.getAlertRecommendation());
         }
         
-        // 发送邮件告警（如果启用）
-        if (emailAlertEnabled) {
-            sendEmailAlert(stats);
-        }
+        // 发送各种告警（如果启用）
+        sendAlerts(stats);
     }
 
     /**
@@ -121,7 +151,7 @@ public class BloomFilterMonitorTask {
             if (stats.getUsageRatio() > 0.95) {
                 log.warn("考虑在非高峰期自动重建（7天周期重建影响较小）");
                 // 可选：在凌晨时段自动重建
-                // autoRebuildIfSafe();
+                 autoRebuildIfSafe();
             }
         }
     }
@@ -147,34 +177,40 @@ public class BloomFilterMonitorTask {
     }
 
     /**
-     * 发送邮件告警
+     * 发送所有类型的告警
      */
-    private void sendEmailAlert(BloomFilterConfig.BloomFilterStats stats) {
-        // 这里可以集成邮件服务
-        log.info("📧 发送邮件告警 - 布隆过滤器状态: {}", stats.getAlertLevel().getName());
-        
-        // 示例邮件内容
-        String subject = String.format("布隆过滤器告警 - %s", stats.getAlertLevel().getName());
-        String content = String.format(
-                "布隆过滤器状态告警\n\n" +
-                "告警级别: %s\n" +
-                "使用率: %.1f%%\n" +
-                "已加载URL数量: %d\n" +
-                "预期容量: %d\n" +
-                "数据保留天数: %d\n" +
-                "最后重建时间: %s\n\n" +
-                "建议操作:\n%s",
-                stats.getAlertLevel().getName(),
-                stats.getUsageRatio() * 100,
-                stats.getLoadedUrlCount(),
-                stats.getExpectedInsertions(),
-                stats.getDataRetentionDays(),
-                stats.getLastRebuildTime(),
-                stats.getAlertRecommendation()
-        );
-        
-        // TODO: 实际的邮件发送逻辑
-        log.debug("邮件内容: {}", content);
+    private void sendAlerts(BloomFilterConfig.BloomFilterStats stats) {
+        try {
+            // 邮件告警
+            if (emailAlertEnabled) {
+                alertService.sendEmailAlert(stats);
+            }
+
+            // 钉钉告警
+            if (dingtalkAlertEnabled && !dingtalkWebhookUrl.isEmpty()) {
+                alertService.sendDingtalkAlert(stats);
+            }
+
+            // 企业微信告警
+            if (wechatAlertEnabled && !wechatWebhookUrl.isEmpty()) {
+                alertService.sendWechatAlert(stats);
+            }
+
+            // 记录告警发送状态
+            log.info("📢 告警发送完成 - 邮件: {}, 钉钉: {}, 企业微信: {}",
+                    emailAlertEnabled, dingtalkAlertEnabled, wechatAlertEnabled);
+
+        } catch (Exception e) {
+            log.error("❌ 告警发送过程中出现异常", e);
+        }
+    }
+
+    /**
+     * 发送测试告警
+     */
+    public void sendTestAlert() {
+        log.info("🧪 发送测试告警");
+        alertService.sendTestAlert();
     }
 
     /**

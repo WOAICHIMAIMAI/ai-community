@@ -11,7 +11,7 @@ export const aiChatApi = {
    * @returns AI回复内容
    */
   sendMessage: async (userContent: string, chatId: string) => {
-    return await get('/user/ai/chat', {
+    return await get('/api/user/ai/chat', {
       userContent,
       chatId
     });
@@ -22,7 +22,7 @@ export const aiChatApi = {
    * @returns 聊天会话ID列表
    */
   getChatIds: async () => {
-    return await get('/user/ai');
+    return await get('/api/user/ai');
   },
 
   /**
@@ -32,7 +32,7 @@ export const aiChatApi = {
    * @returns 聊天记录列表
    */
   getChatMessages: async (chatId: string, lastK: number = 10) => {
-    return await get(`/user/ai/${chatId}`, {
+    return await get(`/api/user/ai/${chatId}`, {
       lastK
     });
   }

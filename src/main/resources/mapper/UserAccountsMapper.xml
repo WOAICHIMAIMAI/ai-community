@@ -18,14 +18,17 @@
 
     <!-- 更新账户余额 -->
     <update id="updateBalance">
-        UPDATE user_accounts 
-        SET 
+        UPDATE user_accounts
+        SET
             balance = balance + #{amount},
             <if test="type == 'recharge'">
                 total_recharge = total_recharge + #{amount},
             </if>
             <if test="type == 'consume'">
                 total_consumption = total_consumption + ABS(#{amount}),
+            </if>
+            <if test="type == 'red_packet' or type == 'red_packet_compensation'">
+                total_recharge = total_recharge + #{amount},
             </if>
             updated_time = NOW()
         WHERE user_id = #{userId}

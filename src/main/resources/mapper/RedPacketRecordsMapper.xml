@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.RedPacketRecordsMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.RedPacketRecords">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="activityId" column="activity_id" jdbcType="BIGINT"/>
+        <result property="userId" column="user_id" jdbcType="BIGINT"/>
+        <result property="packetDetailId" column="packet_detail_id" jdbcType="BIGINT"/>
+        <result property="amount" column="amount" jdbcType="BIGINT"/>
+        <result property="transactionNo" column="transaction_no" jdbcType="VARCHAR"/>
+        <result property="grabTime" column="grab_time" jdbcType="TIMESTAMP"/>
+        <result property="accountUpdated" column="account_updated" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, activity_id, user_id, packet_detail_id, amount,
+        transaction_no, grab_time, account_updated, created_time
+    </sql>
+
+    <!-- 分页查询用户抢红包记录 -->
+    <select id="selectUserRecordPage" resultType="com.zheng.aicommunitybackend.domain.vo.RedPacketRecordVO">
+        SELECT
+            r.id,
+            r.activity_id AS activityId,
+            a.activity_name AS activityName,
+            r.user_id AS userId,
+            u.nickname,
+            u.avatar_url AS avatar,
+            r.packet_detail_id AS packetDetailId,
+            r.amount,
+            r.transaction_no AS transactionNo,
+            r.grab_time AS grabTime,
+            r.account_updated AS accountUpdated,
+            r.created_time AS createdTime,
+            d.packet_index AS packetIndex
+        FROM red_packet_records r
+        LEFT JOIN red_packet_activities a ON r.activity_id = a.id
+        LEFT JOIN users u ON r.user_id = u.id
+        LEFT JOIN red_packet_details d ON r.packet_detail_id = d.id
+        WHERE r.user_id = #{userId}
+        <if test="activityId != null">
+            AND r.activity_id = #{activityId}
+        </if>
+        ORDER BY r.grab_time DESC
+    </select>
+
+    <!-- 分页查询活动的抢红包记录 -->
+    <select id="selectActivityRecordPage" resultType="com.zheng.aicommunitybackend.domain.vo.RedPacketRecordVO">
+        SELECT
+            r.id,
+            r.activity_id AS activityId,
+            a.activity_name AS activityName,
+            r.user_id AS userId,
+            u.nickname,
+            u.avatar_url AS avatar,
+            r.packet_detail_id AS packetDetailId,
+            r.amount,
+            r.transaction_no AS transactionNo,
+            r.grab_time AS grabTime,
+            r.account_updated AS accountUpdated,
+            r.created_time AS createdTime,
+            d.packet_index AS packetIndex,
+            ROW_NUMBER() OVER (ORDER BY r.grab_time ASC) AS ranking
+        FROM red_packet_records r
+        LEFT JOIN red_packet_activities a ON r.activity_id = a.id
+        LEFT JOIN users u ON r.user_id = u.id
+        LEFT JOIN red_packet_details d ON r.packet_detail_id = d.id
+        WHERE r.activity_id = #{activityId}
+        ORDER BY r.grab_time ASC
+    </select>
+
+    <!-- 查询用户在某活动中的抢红包记录 -->
+    <select id="selectUserActivityRecord" resultType="com.zheng.aicommunitybackend.domain.vo.RedPacketRecordVO">
+        SELECT
+            r.id,
+            r.activity_id AS activityId,
+            a.activity_name AS activityName,
+            r.user_id AS userId,
+            u.nickname,
+            u.avatar_url AS avatar,
+            r.packet_detail_id AS packetDetailId,
+            r.amount,
+            r.transaction_no AS transactionNo,
+            r.grab_time AS grabTime,
+            r.account_updated AS accountUpdated,
+            r.created_time AS createdTime,
+            d.packet_index AS packetIndex
+        FROM red_packet_records r
+        LEFT JOIN red_packet_activities a ON r.activity_id = a.id
+        LEFT JOIN users u ON r.user_id = u.id
+        LEFT JOIN red_packet_details d ON r.packet_detail_id = d.id
+        WHERE r.user_id = #{userId} AND r.activity_id = #{activityId}
+        LIMIT 1
+    </select>
+
+    <!-- 查询未更新账户的记录 -->
+    <select id="selectUnprocessedRecords" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM red_packet_records
+        WHERE account_updated = 0
+        ORDER BY created_time ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 查询活动的抢红包统计 -->
+    <select id="selectActivityRecordStats" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS totalRecords,
+            COUNT(DISTINCT user_id) AS uniqueUsers,
+            SUM(amount) AS totalAmount,
+            AVG(amount) AS avgAmount,
+            MIN(amount) AS minAmount,
+            MAX(amount) AS maxAmount,
+            MIN(grab_time) AS firstGrabTime,
+            MAX(grab_time) AS lastGrabTime
+        FROM red_packet_records
+        WHERE activity_id = #{activityId}
+    </select>
+
+    <!-- 查询用户的抢红包统计 -->
+    <select id="selectUserRecordStats" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS totalRecords,
+            COUNT(DISTINCT activity_id) AS participatedActivities,
+            SUM(amount) AS totalAmount,
+            AVG(amount) AS avgAmount,
+            MIN(amount) AS minAmount,
+            MAX(amount) AS maxAmount,
+            MIN(grab_time) AS firstGrabTime,
+            MAX(grab_time) AS lastGrabTime
+        FROM red_packet_records
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

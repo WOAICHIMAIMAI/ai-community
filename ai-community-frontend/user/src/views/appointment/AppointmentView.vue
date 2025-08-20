@@ -45,7 +45,7 @@
             <template #text>
               <div class="service-info">
                 <div class="service-name">{{ service.name }}</div>
-                <div class="service-price">¥{{ service.price }}/次起</div>
+                <div class="service-price">¥{{ service.price }}/{{ service.unit || '次' }}起</div>
                 <div class="service-desc">{{ service.description }}</div>
               </div>
             </template>
@@ -154,6 +154,8 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import BottomTabbar from '@/components/BottomTabbar.vue'
 import MoreButton from '@/components/MoreButton.vue'
+import { getServiceTypes, getRecentAppointments } from '@/api/appointment'
+import type { AppointmentService, AppointmentRecord } from '@/api/appointment'
 
 const router = useRouter()
 
@@ -176,74 +178,38 @@ const bannerList = ref([
   }
 ])
 
-// 模拟数据 - 服务类型
-const serviceTypes = ref([
-  {
-    type: 'cleaning',
-    name: '家政保洁',
-    icon: 'brush-o',
-    price: '80',
-    description: '深度清洁，专业保洁'
-  },
-  {
-    type: 'repair',
-    name: '维修服务',
-    icon: 'setting-o',
-    price: '50',
-    description: '水电维修，家具安装'
-  },
-  {
-    type: 'moving',
-    name: '搬家服务',
-    icon: 'logistics',
-    price: '200',
-    description: '专业搬家，安全可靠'
-  },
-  {
-    type: 'appliance',
-    name: '家电维修',
-    icon: 'tv-o',
-    price: '60',
-    description: '家电故障，快速维修'
-  },
-  {
-    type: 'gardening',
-    name: '园艺服务',
-    icon: 'flower-o',
-    price: '100',
-    description: '花草养护，园艺设计'
-  },
-  {
-    type: 'pest',
-    name: '除虫服务',
-    icon: 'delete-o',
-    price: '120',
-    description: '专业除虫，安全环保'
-  }
-])
+// 服务类型数据
+const serviceTypes = ref<AppointmentService[]>([])
 
-// 模拟数据 - 最近预约
-const recentAppointments = ref([
-  {
-    id: 1,
-    serviceName: '家政保洁',
-    serviceType: 'cleaning',
-    appointmentTime: '2024-01-25T14:00:00',
-    status: 'confirmed'
-  },
-  {
-    id: 2,
-    serviceName: '水龙头维修',
-    serviceType: 'repair',
-    appointmentTime: '2024-01-23T10:00:00',
-    status: 'completed'
-  }
-])
+// 最近预约数据
+const recentAppointments = ref<AppointmentRecord[]>([])
 
 // 页面初始化
-onMounted(() => {
-  // 这里可以加载数据
+onMounted(async () => {
+  await loadData()
 })
+
+// 加载数据
+const loadData = async () => {
+  try {
+    // 并行加载服务类型和最近预约数据
+    const [servicesRes, appointmentsRes] = await Promise.all([
+      getServiceTypes(),
+      getRecentAppointments(2)
+    ])
+    
+    if (servicesRes.code === 200) {
+      serviceTypes.value = servicesRes.data
+    }
+    
+    if (appointmentsRes.code === 200) {
+      recentAppointments.value = appointmentsRes.data
+    }
+  } catch (error) {
+    console.error('加载数据失败:', error)
+    showToast('加载数据失败，请稍后重试')
+  }
+}
 
 // 返回上一页
 const onClickLeft = () => {
@@ -262,7 +228,7 @@ const goToAppointmentList = () => {
 
 // 跳转到预约详情
 const goToAppointmentDetail = (id: number) => {
-  showToast('预约详情功能开发中')
+  router.push(`/appointment/detail/${id}`)
 }
 
 // 获取服务图标

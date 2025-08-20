@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.RedPacketActivityConfigMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.RedPacketActivityConfig">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="activityId" column="activity_id" jdbcType="BIGINT"/>
+        <result property="configKey" column="config_key" jdbcType="VARCHAR"/>
+        <result property="configValue" column="config_value" jdbcType="VARCHAR"/>
+        <result property="configDesc" column="config_desc" jdbcType="VARCHAR"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, activity_id, config_key, config_value, config_desc, created_time
+    </sql>
+
+    <!-- 查询活动的所有配置 -->
+    <select id="selectByActivityId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM red_packet_activity_config
+        WHERE activity_id = #{activityId}
+        ORDER BY config_key
+    </select>
+
+    <!-- 查询活动的配置Map -->
+    <select id="selectConfigMap" resultType="java.util.Map">
+        SELECT config_key, config_value
+        FROM red_packet_activity_config
+        WHERE activity_id = #{activityId}
+    </select>
+
+    <!-- 查询活动的特定配置值 -->
+    <select id="selectConfigValue" resultType="java.lang.String">
+        SELECT config_value
+        FROM red_packet_activity_config
+        WHERE activity_id = #{activityId} AND config_key = #{configKey}
+        LIMIT 1
+    </select>
+
+    <!-- 批量插入配置 -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO red_packet_activity_config (activity_id, config_key, config_value, config_desc, created_time)
+        VALUES
+        <foreach collection="configs" item="config" separator=",">
+            (#{config.activityId}, #{config.configKey}, #{config.configValue}, #{config.configDesc}, #{config.createdTime})
+        </foreach>
+    </insert>
+
+    <!-- 删除活动的所有配置 -->
+    <delete id="deleteByActivityId">
+        DELETE FROM red_packet_activity_config
+        WHERE activity_id = #{activityId}
+    </delete>
+
+</mapper>

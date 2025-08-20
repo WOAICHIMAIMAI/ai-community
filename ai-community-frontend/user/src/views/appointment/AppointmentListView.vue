@@ -42,8 +42,8 @@
                   <p>预约单号：{{ appointment.orderNo }}</p>
                 </div>
               </div>
-              <van-tag :type="getStatusTagType(appointment.status)" size="large">
-                {{ getStatusText(appointment.status) }}
+              <van-tag :type="getStatusTagType(getStatusKey(appointment.status))" size="large">
+                {{ getStatusText(getStatusKey(appointment.status)) }}
               </van-tag>
             </div>
 
@@ -93,7 +93,7 @@
 
             <!-- 操作按钮 -->
             <div class="card-actions">
-              <template v-if="appointment.status === 'pending'">
+              <template v-if="getStatusKey(appointment.status) === 'pending'">
                 <van-button
                   size="small"
                   @click="cancelAppointment(appointment.id)"
@@ -109,7 +109,7 @@
                 </van-button>
               </template>
               
-              <template v-else-if="appointment.status === 'confirmed'">
+              <template v-else-if="getStatusKey(appointment.status) === 'confirmed'">
                 <van-button
                   size="small"
                   @click="cancelAppointment(appointment.id)"
@@ -125,7 +125,7 @@
                 </van-button>
               </template>
               
-              <template v-else-if="appointment.status === 'completed'">
+              <template v-else-if="getStatusKey(appointment.status) === 'completed'">
                 <van-button
                   size="small"
                   @click="rateService(appointment.id)"
@@ -217,6 +217,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showSuccessToast, showConfirmDialog } from 'vant'
 import BottomTabbar from '@/components/BottomTabbar.vue'
+import { getAppointmentList, cancelAppointment } from '@/api/appointment'
+import type { AppointmentRecord, AppointmentPageQuery } from '@/api/appointment'
 
 const router = useRouter()
 
@@ -233,72 +235,35 @@ const cancelNote = ref('')
 const cancelling = ref(false)
 const currentCancelId = ref(0)
 
-// 模拟数据 - 预约列表
-const appointmentList = ref([
-  {
-    id: 1,
-    orderNo: 'APT202401250001',
-    serviceName: '家政保洁',
-    serviceType: 'cleaning',
-    appointmentTime: '2024-01-25T14:00:00',
-    address: '阳光小区1号楼1单元101室',
-    contactName: '张先生',
-    contactPhone: '138****8888',
-    requirements: '需要深度清洁厨房和卫生间',
-    status: 'confirmed',
-    worker: {
-      name: '李阿姨',
-      phone: '139****9999',
-      avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
-    },
-    rated: false
-  },
-  {
-    id: 2,
-    orderNo: 'APT202401230002',
-    serviceName: '水龙头维修',
-    serviceType: 'repair',
-    appointmentTime: '2024-01-23T10:00:00',
-    address: '阳光小区1号楼1单元101室',
-    contactName: '张先生',
-    contactPhone: '138****8888',
-    requirements: '厨房水龙头漏水',
-    status: 'completed',
-    worker: {
-      name: '王师傅',
-      phone: '137****7777',
-      avatar: 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
-    },
-    rated: true
-  },
-  {
-    id: 3,
-    orderNo: 'APT202401220003',
-    serviceName: '搬家服务',
-    serviceType: 'moving',
-    appointmentTime: '2024-01-22T09:00:00',
-    address: '阳光小区1号楼1单元101室',
-    contactName: '张先生',
-    contactPhone: '138****8888',
-    requirements: '搬到新小区，物品较多',
-    status: 'pending',
-    worker: null,
-    rated: false
-  }
-])
+// 预约列表数据
+const appointmentList = ref<AppointmentRecord[]>([])
 
 // 计算属性
 const filteredAppointments = computed(() => {
   if (activeStatus.value === 'all') {
     return appointmentList.value
   }
-  return appointmentList.value.filter(item => item.status === activeStatus.value)
+  return appointmentList.value.filter(item => getStatusKey(item.status) === activeStatus.value)
 })
+
+// 状态映射函数
+const getStatusKey = (status: number | string) => {
+  if (typeof status === 'number') {
+    switch (status) {
+      case 0: return 'pending'
+      case 1: return 'confirmed'
+      case 2: return 'inProgress'
+      case 3: return 'completed'
+      case 4: return 'cancelled'
+      default: return 'pending'
+    }
+  }
+  return status
+}
 
 // 页面初始化
 onMounted(() => {
-  // 这里可以加载数据
-  finished.value = true // 模拟数据已全部加载
+  loadAppointments()
 })
 
 // 返回上一页
@@ -306,18 +271,59 @@ const onClickLeft = () => {
   router.back()
 }
 
+// 加载预约列表
+const loadAppointments = async (reset = true) => {
+  if (loading.value) return
+  
+  loading.value = true
+  
+  try {
+    if (reset) {
+      currentPage.value = 1
+      appointmentList.value = []
+      finished.value = false
+    }
+    
+    const params: AppointmentPageQuery = {
+      page: currentPage.value,
+      pageSize: pageSize,
+      status: activeStatus.value === 'all' ? undefined : activeStatus.value
+    }
+    
+    const response = await getAppointmentList(params)
+    
+    if (response.code === 200) {
+      const newData = response.data.records || []
+      
+      if (reset) {
+        appointmentList.value = newData
+      } else {
+        appointmentList.value = [...appointmentList.value, ...newData]
+      }
+      
+      // 判断是否还有更多数据
+      if (newData.length < pageSize) {
+        finished.value = true
+      } else {
+        currentPage.value++
+      }
+    }
+  } catch (error) {
+    console.error('加载预约列表失败:', error)
+    showToast('加载失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 状态切换
 const onStatusChange = () => {
-  // 重新加载数据
+  loadAppointments(true)
 }
 
 // 加载更多
 const onLoad = () => {
-  // 模拟加载更多数据
-  setTimeout(() => {
-    loading.value = false
-    finished.value = true
-  }, 1000)
+  loadAppointments(false)
 }
 
 // 获取服务图标
@@ -390,23 +396,22 @@ const confirmCancel = async () => {
   cancelling.value = true
   
   try {
-    // 模拟取消过程
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const response = await cancelAppointment(currentCancelId.value)
     
-    // 更新状态
-    const appointment = appointmentList.value.find(item => item.id === currentCancelId.value)
-    if (appointment) {
-      appointment.status = 'cancelled'
+    if (response.code === 200) {
+      // 重新加载列表
+      await loadAppointments(true)
+      showSuccessToast('预约已取消')
     }
-    
-    showSuccessToast('预约已取消')
+  } catch (error) {
+    console.error('取消预约失败:', error)
+    showToast('取消失败，请稍后重试')
+  } finally {
+    cancelling.value = false
     showCancelPopup.value = false
     cancelReason.value = ''
     cancelNote.value = ''
-  } catch (error) {
-    showToast('取消失败，请重试')
-  } finally {
-    cancelling.value = false
+    currentCancelId.value = 0
   }
 }
 

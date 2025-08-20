@@ -37,7 +37,7 @@ export interface ChangePasswordParams {
  * @returns 用户信息
  */
 export function getUserInfo(): Promise<{ code: number, data: UserInfo, message: string }> {
-  return get<{ code: number, data: UserInfo, message: string }>('/user/user/info')
+  return get<{ code: number, data: UserInfo, message: string }>('/api/user/user/info')
 }
 
 /**
@@ -46,7 +46,7 @@ export function getUserInfo(): Promise<{ code: number, data: UserInfo, message: 
  * @returns 更新结果
  */
 export function updateUserInfo(userInfo: Partial<UserInfo>): Promise<{ code: number, message: string }> {
-  return put<{ code: number, message: string }>('/user/user/info', userInfo)
+  return put<{ code: number, message: string }>('/api/user/user/info', userInfo)
 }
 
 /**
@@ -55,7 +55,7 @@ export function updateUserInfo(userInfo: Partial<UserInfo>): Promise<{ code: num
  * @returns 修改结果
  */
 export function changePassword(params: ChangePasswordParams): Promise<{ code: number, message: string }> {
-  return post<{ code: number, message: string }>('/user/user/change-password', null, {
+  return post<{ code: number, message: string }>('/api/user/user/change-password', null, {
     params
   })
 }
@@ -65,14 +65,14 @@ export function changePassword(params: ChangePasswordParams): Promise<{ code: nu
  * @returns 认证信息
  */
 export function getVerificationInfo(): Promise<{ code: number, data: VerificationInfo, message: string }> {
-  return get<{ code: number, data: VerificationInfo, message: string }>('/user/verification/info')
+  return get<{ code: number, data: VerificationInfo, message: string }>('/api/user/verification/info')
 }
 
 // 获取指定用户信息（通过用户ID）
 export const getUserInfoById = (userId: string | number) => {
   // 确保userId是字符串，避免大数精度丢失
   const userIdStr = String(userId)
-  return get(`/user/user/info/${userIdStr}`)
+  return get(`/api/user/user/info/${userIdStr}`)
 }
 
 // 获取用户帖子列表
@@ -83,5 +83,5 @@ export const getUserPosts = (userId: string | number, params?: {
   keyword?: string
 }) => {
   const userIdStr = String(userId)
-  return get(`/user/posts/user/${userIdStr}`, params || { page: 1, pageSize: 20 })
+  return get(`/api/user/posts/user/${userIdStr}`, params || { page: 1, pageSize: 20 })
 }

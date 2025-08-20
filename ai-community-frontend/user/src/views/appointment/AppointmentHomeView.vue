@@ -215,69 +215,8 @@ const quickServices = ref([
   }
 ])
 
-// 全部服务
-const allServices = ref([
-  {
-    type: 'cleaning',
-    name: '家政保洁',
-    icon: 'brush-o',
-    description: '深度清洁，专业保洁团队',
-    price: '80',
-    rating: '4.8',
-    isHot: true,
-    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-  },
-  {
-    type: 'repair',
-    name: '维修服务',
-    icon: 'setting-o',
-    description: '水电维修，家具安装',
-    price: '50',
-    rating: '4.9',
-    isHot: true,
-    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-  },
-  {
-    type: 'appliance',
-    name: '家电维修',
-    icon: 'tv-o',
-    description: '家电故障，快速维修',
-    price: '60',
-    rating: '4.7',
-    isHot: false,
-    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-  },
-  {
-    type: 'moving',
-    name: '搬家服务',
-    icon: 'logistics',
-    description: '专业搬家，安全可靠',
-    price: '200',
-    rating: '4.6',
-    isHot: false,
-    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-  },
-  {
-    type: 'gardening',
-    name: '园艺服务',
-    icon: 'flower-o',
-    description: '花草养护，园艺设计',
-    price: '100',
-    rating: '4.5',
-    isHot: false,
-    gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
-  },
-  {
-    type: 'pest',
-    name: '除虫服务',
-    icon: 'delete-o',
-    description: '专业除虫，安全环保',
-    price: '120',
-    rating: '4.4',
-    isHot: false,
-    gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
-  }
-])
+// 全部服务 - 从API加载
+const allServices = ref([])
 
 // 最近预约记录
 const recentAppointments = ref([
@@ -342,11 +281,11 @@ const onRefresh = async () => {
 }
 
 const quickBook = (service: any) => {
-  router.push(`/appointment/booking?type=${service.type}`)
+  router.push(`/appointment/booking/${service.type}`)
 }
 
 const bookService = (service: any) => {
-  router.push(`/appointment/booking?type=${service.type}`)
+  router.push(`/appointment/booking/${service.type}`)
 }
 
 const goToAppointmentList = () => {
@@ -406,27 +345,113 @@ const getStatusText = (status: string) => {
   return textMap[status] || '未知'
 }
 
+// 根据服务类型获取样式配置
+const getServiceStyleConfig = (serviceType: string) => {
+  const styleConfigs: Record<string, any> = {
+    'cleaning': {
+      icon: 'brush-o',
+      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    'repair': {
+      icon: 'setting-o',
+      color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    'appliance': {
+      icon: 'tv-o',
+      color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    },
+    'moving': {
+      icon: 'logistics',
+      color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    },
+    'tutoring': {
+      icon: 'friends-o',
+      color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+    },
+    'gardening': {
+      icon: 'flower-o',
+      color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+    },
+    'pest': {
+      icon: 'delete-o',
+      color: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
+    }
+  }
+  
+  return styleConfigs[serviceType] || {
+    icon: 'service',
+    color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  }
+}
+
 // 数据加载函数
 const loadServiceData = async () => {
   try {
     // 并行加载各种数据
-    const [hotServicesRes, recommendRes, recentRes] = await Promise.allSettled([
+    const [allServicesRes, hotServicesRes, recommendRes, recentRes] = await Promise.allSettled([
+      appointmentApi.getServiceTypes(),
       appointmentApi.getHotServices(),
       appointmentApi.getRecommendServices(),
       appointmentApi.getRecentAppointments(3)
     ])
 
+    // 处理全部服务数据
+    if (allServicesRes.status === 'fulfilled' && allServicesRes.value?.code === 200) {
+      const allData = allServicesRes.value.data
+      if (allData && allData.length > 0) {
+        console.log('全部服务数据:', allData)
+        
+        // 将API数据转换为前端需要的格式，并添加样式配置
+        allServices.value = allData.map((service: any) => {
+          const styleConfig = getServiceStyleConfig(service.type)
+          return {
+            id: service.id,
+            type: service.type,
+            name: service.name,
+            description: service.description,
+            price: service.price,
+            rating: service.rating || '4.8',
+            unit: service.unit || '次',
+            isHot: service.isHot || false,
+            ...styleConfig
+          }
+        })
+      }
+    }
+
     // 处理热门服务数据
     if (hotServicesRes.status === 'fulfilled' && hotServicesRes.value?.code === 200) {
       const hotData = hotServicesRes.value.data
       if (hotData && hotData.length > 0) {
-        // 更新快速预约服务
-        quickServices.value = hotData.slice(0, 4)
-        // 更新全部服务（标记热门）
-        allServices.value = allServices.value.map(service => ({
-          ...service,
-          isHot: hotData.some((hot: any) => hot.type === service.type)
-        }))
+        console.log('热门服务数据:', hotData)
+        
+        // 为快速预约服务添加样式配置
+        const quickServicesWithStyle = hotData.slice(0, 4).map((service: any) => {
+          // 根据服务类型匹配样式
+          const styleConfig = getServiceStyleConfig(service.type)
+          return {
+            ...service,
+            ...styleConfig
+          }
+        })
+        quickServices.value = quickServicesWithStyle
+        
+        // 更新全部服务的热门标记
+        allServices.value = allServices.value.map(service => {
+          const isHot = hotData.some((hot: any) => hot.type === service.type)
+          return {
+            ...service,
+            isHot
+          }
+        })
       }
     }
 

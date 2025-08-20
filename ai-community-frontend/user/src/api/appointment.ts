@@ -56,7 +56,7 @@ export interface AppointmentPageQuery {
  */
 export const getServiceTypes = () => {
   return request({
-    url: '/user/appointment/services',
+    url: '/api/user/appointment/services',
     method: 'get'
   })
 }
@@ -66,7 +66,7 @@ export const getServiceTypes = () => {
  */
 export const getHotServices = () => {
   return request({
-    url: '/user/appointment/services/hot',
+    url: '/api/user/appointment/services/hot',
     method: 'get'
   })
 }
@@ -76,7 +76,7 @@ export const getHotServices = () => {
  */
 export const getRecommendServices = () => {
   return request({
-    url: '/user/appointment/services/recommend',
+    url: '/api/user/appointment/services/recommend',
     method: 'get'
   })
 }
@@ -86,7 +86,7 @@ export const getRecommendServices = () => {
  */
 export const createAppointment = (data: AppointmentCreateData) => {
   return request({
-    url: '/user/appointment',
+    url: '/api/user/appointment',
     method: 'post',
     data
   })
@@ -97,7 +97,7 @@ export const createAppointment = (data: AppointmentCreateData) => {
  */
 export const getAppointmentList = (params: AppointmentPageQuery) => {
   return request({
-    url: '/user/appointment/list',
+    url: '/api/user/appointment/list',
     method: 'get',
     params
   })
@@ -108,7 +108,7 @@ export const getAppointmentList = (params: AppointmentPageQuery) => {
  */
 export const getAppointmentDetail = (id: number) => {
   return request({
-    url: `/user/appointment/${id}`,
+    url: `/api/user/appointment/${id}`,
     method: 'get'
   })
 }
@@ -118,7 +118,7 @@ export const getAppointmentDetail = (id: number) => {
  */
 export const cancelAppointment = (id: number) => {
   return request({
-    url: `/user/appointment/${id}/cancel`,
+    url: `/api/user/appointment/${id}/cancel`,
     method: 'put'
   })
 }
@@ -128,7 +128,7 @@ export const cancelAppointment = (id: number) => {
  */
 export const rescheduleAppointment = (id: number, appointmentTime: string) => {
   return request({
-    url: `/user/appointment/${id}/reschedule`,
+    url: `/api/user/appointment/${id}/reschedule`,
     method: 'put',
     data: { appointmentTime }
   })
@@ -143,7 +143,7 @@ export const rateAppointment = (data: {
   comment?: string
 }) => {
   return request({
-    url: '/user/appointment/rate',
+    url: '/api/user/appointment/rate',
     method: 'post',
     data
   })
@@ -157,7 +157,7 @@ export const getAvailableTimeSlots = (params: {
   date: string
 }) => {
   return request({
-    url: '/user/appointment/time-slots',
+    url: '/api/user/appointment/time-slots',
     method: 'get',
     params
   })
@@ -168,7 +168,7 @@ export const getAvailableTimeSlots = (params: {
  */
 export const getServiceWorkers = (serviceType: string) => {
   return request({
-    url: '/user/appointment/workers',
+    url: '/api/user/appointment/workers',
     method: 'get',
     params: { serviceType }
   })
@@ -179,7 +179,7 @@ export const getServiceWorkers = (serviceType: string) => {
  */
 export const getRecentAppointments = (limit: number = 3) => {
   return request({
-    url: '/user/appointment/recent',
+    url: '/api/user/appointment/recent',
     method: 'get',
     params: { limit }
   })
@@ -190,7 +190,7 @@ export const getRecentAppointments = (limit: number = 3) => {
  */
 export const getAppointmentStats = () => {
   return request({
-    url: '/user/appointment/stats',
+    url: '/api/user/appointment/stats',
     method: 'get'
   })
 }

@@ -41,7 +41,7 @@ export interface RegisterResult {
  * @returns 登录结果
  */
 export function login(params: LoginParams): Promise<LoginResult> {
-  return post<LoginResult>('/auth/login', params)
+  return post<LoginResult>('/api/auth/login', params)
 }
 
 /**
@@ -50,5 +50,5 @@ export function login(params: LoginParams): Promise<LoginResult> {
  * @returns 注册结果
  */
 export function register(params: RegisterParams): Promise<RegisterResult> {
-  return post<RegisterResult>('/auth/register', params)
-} 
+  return post<RegisterResult>('/api/auth/register', params)
+}

@@ -45,21 +45,21 @@ export const newsApi = {
     pageSize?: number;
     category?: string;
   }) => {
-    return await get('/user/news/page', params);
+    return await get('/api/user/news/page', params);
   },
 
   /**
    * 获取新闻详情
    */
   getNewsDetail: async (id: number) => {
-    return await get(`/user/news/${id}`);
+    return await get(`/api/user/news/${id}`);
   },
 
   /**
    * 获取热点新闻
    */
   getHotNews: async (limit: number = 5) => {
-    return await get('/user/news/hot', { limit });
+    return await get('/api/user/news/hot', { limit });
   },
 
   /**
@@ -69,7 +69,7 @@ export const newsApi = {
     limit?: number;
     category?: string;
   }) => {
-    return await get('/news/latest', params);
+    return await get('/api/news/latest', params);
   }
 };
 

@@ -184,7 +184,7 @@ const routes = [
     meta: { title: '服务分类' }
   },
   {
-    path: '/appointment/booking',
+    path: '/appointment/booking/:serviceType',
     name: 'AppointmentBooking',
     component: () => import('@/views/appointment/BookingView.vue'),
     meta: { title: '预约服务' }
@@ -200,6 +200,25 @@ const routes = [
     name: 'AppointmentDetail',
     component: () => import('@/views/appointment/AppointmentDetailView.vue'),
     meta: { title: '预约详情' }
+  },
+  // 红包相关路由
+  {
+    path: '/red-packet',
+    name: 'RedPacketList',
+    component: () => import('@/views/red-packet/RedPacketListView.vue'),
+    meta: { title: '红包活动' }
+  },
+  {
+    path: '/red-packet/:id',
+    name: 'RedPacketDetail',
+    component: () => import('@/views/red-packet/RedPacketDetailView.vue'),
+    meta: { title: '红包详情' }
+  },
+  {
+    path: '/red-packet/records',
+    name: 'RedPacketRecords',
+    component: () => import('@/views/red-packet/RedPacketRecordsView.vue'),
+    meta: { title: '我的红包' }
   },
   {
     path: '/test/api',

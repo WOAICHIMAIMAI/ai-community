@@ -1,0 +1,134 @@
+# 监控系统配置示例
+# 复制此配置到 application.yml 或 application-prod.yml 中
+
+spring:
+  profiles: monitoring
+
+# 布隆过滤器监控配置
+bloom-filter:
+  monitoring:
+    # 基础监控配置
+    enabled: true
+    check-interval-minutes: 15  # 检查间隔（分钟）
+    
+    # 邮件告警配置
+    email-alert-enabled: false
+    # 如果启用邮件告警，需要配置 Spring Mail
+    # spring.mail.host, spring.mail.username, spring.mail.password 等
+    
+    # 钉钉告警配置
+    dingtalk-alert-enabled: true
+    dingtalk-webhook-url: "https://oapi.dingtalk.com/robot/send?access_token=YOUR_ACCESS_TOKEN"
+    # 获取钉钉机器人Webhook URL的步骤：
+    # 1. 在钉钉群中添加"自定义机器人"
+    # 2. 选择"加签"安全设置
+    # 3. 复制Webhook URL
+    
+    # 企业微信告警配置
+    wechat-alert-enabled: true
+    wechat-webhook-url: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_KEY"
+    # 获取企业微信机器人Webhook URL的步骤：
+    # 1. 在企业微信群中添加"群机器人"
+    # 2. 选择"Webhook机器人"
+    # 3. 复制Webhook URL
+    
+    # Prometheus指标配置（可选）
+    prometheus-enabled: false
+
+# 日志配置优化
+logging:
+  level:
+    root: info
+    com.zheng.aicommunitybackend.task.BloomFilterMonitorTask: info
+    com.zheng.aicommunitybackend.service.AlertService: info
+    com.zheng.aicommunitybackend.config.BloomFilterConfig: info
+  
+  # 日志文件配置（生产环境推荐）
+  file:
+    name: logs/ai-community-backend.log
+    max-size: 100MB
+    max-history: 30
+  
+  # 日志格式配置
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# 邮件服务配置示例（如果启用邮件告警）
+spring:
+  mail:
+    host: smtp.qq.com  # 邮件服务器
+    port: 587
+    username: your-email@qq.com  # 发送邮箱
+    password: your-email-password  # 邮箱密码或授权码
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+# 监控告警配置说明
+monitoring:
+  alert:
+    # 告警级别说明
+    levels:
+      normal: "正常状态，使用率 < 50%"
+      info: "需要关注，使用率 50% - 70%"
+      warning: "警告状态，使用率 70% - 90%"
+      critical: "危险状态，使用率 >= 90%"
+    
+    # 告警频率控制
+    frequency:
+      normal: "不发送告警"
+      info: "每小时最多1次"
+      warning: "每30分钟最多1次"
+      critical: "每15分钟最多1次"
+    
+    # 告警渠道优先级
+    channels:
+      - name: "钉钉"
+        priority: 1
+        description: "实时通知，适合日常监控"
+      - name: "企业微信"
+        priority: 2
+        description: "实时通知，适合团队协作"
+      - name: "邮件"
+        priority: 3
+        description: "详细报告，适合存档记录"
+
+# 性能监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: ${bloom-filter.monitoring.prometheus-enabled:false}
+
+# 告警配置最佳实践
+best-practices:
+  configuration:
+    - "生产环境建议启用钉钉或企业微信告警"
+    - "测试环境可以只启用日志告警"
+    - "邮件告警适合重要告警的存档"
+    - "检查间隔不要设置太短，避免频繁告警"
+  
+  webhook-security:
+    - "定期更换Webhook URL的access_token"
+    - "使用加签验证确保安全性"
+    - "限制机器人的权限范围"
+  
+  monitoring-strategy:
+    - "正常状态：5分钟检查一次"
+    - "警告状态：2分钟检查一次"
+    - "危险状态：1分钟检查一次"
+    - "设置告警静默期，避免告警风暴"

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zheng.aicommunitybackend.mapper.RedPacketActivitiesMapper">
+
+    <resultMap id="BaseResultMap" type="com.zheng.aicommunitybackend.domain.entity.RedPacketActivities">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="activityName" column="activity_name" jdbcType="VARCHAR"/>
+        <result property="activityDesc" column="activity_desc" jdbcType="VARCHAR"/>
+        <result property="totalAmount" column="total_amount" jdbcType="BIGINT"/>
+        <result property="totalCount" column="total_count" jdbcType="INTEGER"/>
+        <result property="grabbedCount" column="grabbed_count" jdbcType="INTEGER"/>
+        <result property="grabbedAmount" column="grabbed_amount" jdbcType="BIGINT"/>
+        <result property="startTime" column="start_time" jdbcType="TIMESTAMP"/>
+        <result property="endTime" column="end_time" jdbcType="TIMESTAMP"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="creatorId" column="creator_id" jdbcType="BIGINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="updatedTime" column="updated_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, activity_name, activity_desc, total_amount, total_count,
+        grabbed_count, grabbed_amount, start_time, end_time, status,
+        creator_id, created_time, updated_time
+    </sql>
+
+    <!-- 分页查询红包活动列表（管理端） -->
+    <select id="selectActivityPage" resultType="com.zheng.aicommunitybackend.domain.vo.RedPacketActivityVO">
+        SELECT
+            a.id,
+            a.activity_name AS activityName,
+            a.activity_desc AS activityDesc,
+            a.total_amount AS totalAmount,
+            a.total_count AS totalCount,
+            a.grabbed_count AS grabbedCount,
+            a.grabbed_amount AS grabbedAmount,
+            a.start_time AS startTime,
+            a.end_time AS endTime,
+            a.status,
+            CASE a.status
+                WHEN 0 THEN '未开始'
+                WHEN 1 THEN '进行中'
+                WHEN 2 THEN '已结束'
+                WHEN 3 THEN '已取消'
+                ELSE '未知'
+            END AS statusName,
+            a.creator_id AS creatorId,
+            u.nickname AS creatorName,
+            a.created_time AS createdTime,
+            a.updated_time AS updatedTime,
+            ROUND(a.grabbed_count * 100.0 / a.total_count, 2) AS grabRate
+        FROM red_packet_activities a
+        LEFT JOIN users u ON a.creator_id = u.id
+        <where>
+            <if test="status != null">
+                AND a.status = #{status}
+            </if>
+            <if test="activityName != null and activityName != ''">
+                AND a.activity_name LIKE CONCAT('%', #{activityName}, '%')
+            </if>
+        </where>
+        ORDER BY a.created_time DESC
+    </select>
+
+    <!-- 查询进行中的活动列表（用户端） -->
+    <select id="selectActiveActivities" resultType="com.zheng.aicommunitybackend.domain.vo.RedPacketActivityVO">
+        SELECT
+            id,
+            activity_name AS activityName,
+            activity_desc AS activityDesc,
+            total_amount AS totalAmount,
+            total_count AS totalCount,
+            grabbed_count AS grabbedCount,
+            grabbed_amount AS grabbedAmount,
+            start_time AS startTime,
+            end_time AS endTime,
+            status,
+            '进行中' AS statusName,
+            ROUND(grabbed_count * 100.0 / total_count, 2) AS grabRate
+        FROM red_packet_activities
+        WHERE status = 1
+          AND start_time &lt;= NOW()
+          AND end_time &gt; NOW()
+        ORDER BY start_time DESC
+    </select>
+
+    <!-- 根据ID查询活动详情 -->
+    <select id="selectActivityDetail" resultType="com.zheng.aicommunitybackend.domain.vo.RedPacketActivityVO">
+        SELECT
+            a.id,
+            a.activity_name AS activityName,
+            a.activity_desc AS activityDesc,
+            a.total_amount AS totalAmount,
+            a.total_count AS totalCount,
+            a.grabbed_count AS grabbedCount,
+            a.grabbed_amount AS grabbedAmount,
+            a.start_time AS startTime,
+            a.end_time AS endTime,
+            a.status,
+            CASE a.status
+                WHEN 0 THEN '未开始'
+                WHEN 1 THEN '进行中'
+                WHEN 2 THEN '已结束'
+                WHEN 3 THEN '已取消'
+                ELSE '未知'
+            END AS statusName,
+            a.creator_id AS creatorId,
+            u.nickname AS creatorName,
+            a.created_time AS createdTime,
+            a.updated_time AS updatedTime,
+            ROUND(a.grabbed_count * 100.0 / a.total_count, 2) AS grabRate
+        FROM red_packet_activities a
+        LEFT JOIN users u ON a.creator_id = u.id
+        WHERE a.id = #{id}
+    </select>
+
+    <!-- 批量更新活动状态 -->
+    <update id="batchUpdateStatus">
+        UPDATE red_packet_activities
+        SET status = #{status}, updated_time = NOW()
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 查询需要开始的活动 -->
+    <select id="selectActivitiesToStart" resultType="java.lang.Long">
+        SELECT id
+        FROM red_packet_activities
+        WHERE status = 0
+          AND start_time &lt;= NOW()
+          AND end_time &gt; NOW()
+    </select>
+
+    <!-- 查询需要结束的活动 -->
+    <select id="selectActivitiesToEnd" resultType="java.lang.Long">
+        SELECT id
+        FROM red_packet_activities
+        WHERE status = 1
+          AND end_time &lt;= NOW()
+    </select>
+
+</mapper>
