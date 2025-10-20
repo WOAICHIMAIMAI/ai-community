@@ -60,7 +60,7 @@ public class RepairOrderCreateDTO {
     /**
      * 期望上门时间
      */
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
     @Schema(description = "期望上门时间")
     private Date expectedTime;
 } 

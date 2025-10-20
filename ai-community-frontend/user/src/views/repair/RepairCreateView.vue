@@ -57,10 +57,10 @@
 
           <!-- 报修地址 -->
           <van-field
-            v-model="formData.addressDetail"
+            v-model="formData.address"
             is-link
             readonly
-            name="addressDetail"
+            name="address"
             label="报修地址"
             placeholder="请选择报修地址"
             @click="goToAddressBook"
@@ -108,7 +108,7 @@
             :max-count="3"
             :max-size="5 * 1024 * 1024"
             @oversize="onOversize"
-            :before-read="beforeRead"
+            :after-read="afterRead"
             @delete="onDeleteImage"
           />
         </div>
@@ -131,6 +131,7 @@ import { showToast, showSuccessToast, showFailToast } from 'vant'
 import { createRepairOrder, getRepairTypes } from '@/api/repair'
 import { useAuthStore } from '@/store/auth'
 import { getAddressBookList, type AddressBook } from '@/api/addressBook'
+import { uploadFile } from '@/api/common'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -138,7 +139,7 @@ const authStore = useAuthStore()
 // 表单数据
 const formData = reactive({
   addressId: 0,
-  addressDetail: '',
+  address: '',
   repairType: '',
   title: '',
   description: '',
@@ -148,7 +149,7 @@ const formData = reactive({
 })
 
 // 图片上传
-const imageFiles = ref([])
+const imageFiles = ref<any[]>([])
 
 // 选择器
 const showTypePicker = ref(false)
@@ -164,50 +165,38 @@ const repairTypes = getRepairTypes().map(type => ({
 const minDate = new Date()
 const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30天后
 
-// 日期时间选择器列 - 生成从当前时间起每个小时的时间列表
+// 日期选择器列 - 生成未来30天的日期列表
 const datetimeColumns = computed(() => {
-  const timeColumn = [];
+  const dateColumn = [];
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
   
-  // 从下一个整点小时开始
-  let startHour = currentMinute >= 50 ? currentHour + 2 : currentHour + 1;
-  
-  // 生成未来48小时的每个小时时间段
-  for (let i = 0; i < 48; i++) {
-    const targetTime = new Date(now.getTime() + (startHour - currentHour + i) * 60 * 60 * 1000);
+  // 生成未来30天的日期
+  for (let i = 0; i < 30; i++) {
+    const targetDate = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
     
-    const year = targetTime.getFullYear();
-    const month = String(targetTime.getMonth() + 1).padStart(2, '0');
-    const day = String(targetTime.getDate()).padStart(2, '0');
-    const hour = targetTime.getHours();
-    const hourStr = String(hour).padStart(2, '0');
-    const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][targetTime.getDay()];
-    
-    // 判断是今天、明天还是具体日期
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const targetDate = new Date(targetTime);
-    targetDate.setHours(0, 0, 0, 0);
-    const diffDays = Math.floor((targetDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][targetDate.getDay()];
     
     let datePrefix = '';
-    if (diffDays === 0) {
+    if (i === 0) {
       datePrefix = '今天';
-    } else if (diffDays === 1) {
+    } else if (i === 1) {
       datePrefix = '明天';
+    } else if (i === 2) {
+      datePrefix = '后天';
     } else {
       datePrefix = `${month}月${day}日`;
     }
     
-    timeColumn.push({
-      text: `${datePrefix} ${hourStr}:00 (周${dayOfWeek})`,
-      value: `${year}-${month}-${day} ${hourStr}:00:00`
+    dateColumn.push({
+      text: `${datePrefix} (周${dayOfWeek})`,
+      value: `${year}-${month}-${day}`
     });
   }
   
-  return [timeColumn];
+  return [dateColumn];
 });
 
 // 提交状态
@@ -223,7 +212,7 @@ const loadDefaultAddress = async () => {
       
       if (defaultAddress) {
         formData.addressId = defaultAddress.id
-        formData.addressDetail = `${defaultAddress.province}${defaultAddress.city}${defaultAddress.district}${defaultAddress.detail}`
+        formData.address = `${defaultAddress.province}${defaultAddress.city}${defaultAddress.district}${defaultAddress.detail}`
         
         // 如果默认地址有联系电话，且表单中联系电话为空，则使用默认地址的电话
         if (defaultAddress.phone && !formData.contactPhone) {
@@ -246,13 +235,18 @@ onMounted(async () => {
     return
   }
   
-  // 获取用户手机号
-  if (authStore.userInfo?.phone) {
+  // 先尝试恢复保存的表单数据
+  restoreFormData()
+  
+  // 如果没有恢复的表单数据，则初始化
+  if (!formData.contactPhone && authStore.userInfo?.phone) {
     formData.contactPhone = authStore.userInfo.phone
   }
   
-  // 加载默认地址
-  await loadDefaultAddress()
+  // 如果没有地址，加载默认地址
+  if (!formData.address) {
+    await loadDefaultAddress()
+  }
   
   // 监听从地址簿返回后的地址选择
   checkSelectedAddress()
@@ -260,10 +254,41 @@ onMounted(async () => {
 
 // 跳转到地址簿选择地址
 const goToAddressBook = () => {
+  // 保存当前表单数据
+  saveFormData()
   router.push({ 
     path: '/address-book', 
     query: { select: 'true' } 
   })
+}
+
+// 保存表单数据到 sessionStorage
+const saveFormData = () => {
+  window.sessionStorage.setItem('repairFormData', JSON.stringify({
+    ...formData,
+    imageFiles: imageFiles.value
+  }))
+}
+
+// 恢复表单数据
+const restoreFormData = () => {
+  const savedDataStr = window.sessionStorage.getItem('repairFormData')
+  if (savedDataStr) {
+    try {
+      const savedData = JSON.parse(savedDataStr)
+      Object.assign(formData, savedData)
+      if (savedData.imageFiles) {
+        imageFiles.value = savedData.imageFiles
+      }
+    } catch (error) {
+      console.error('恢复表单数据失败:', error)
+    }
+  }
+}
+
+// 清除保存的表单数据
+const clearFormData = () => {
+  window.sessionStorage.removeItem('repairFormData')
 }
 
 // 检查是否从地址簿选择了地址
@@ -274,7 +299,7 @@ const checkSelectedAddress = () => {
       const selectedAddress = JSON.parse(selectedAddressStr)
       formData.addressId = selectedAddress.id
       // 格式化完整地址：省 + 市 + 区 + 详细地址
-      formData.addressDetail = `${selectedAddress.province}${selectedAddress.city}${selectedAddress.district}${selectedAddress.detail}`
+      formData.address = `${selectedAddress.province}${selectedAddress.city}${selectedAddress.district}${selectedAddress.detail}`
       // 清除缓存
       window.sessionStorage.removeItem('selectedAddress')
     } catch (error) {
@@ -285,6 +310,9 @@ const checkSelectedAddress = () => {
 
 // 监听页面显示事件，用于从地址簿返回时更新地址
 onActivated(() => {
+  // 恢复表单数据
+  restoreFormData()
+  // 检查是否选择了新地址
   checkSelectedAddress()
 })
 
@@ -294,7 +322,7 @@ const onTypeConfirm = ({ selectedOptions }: any) => {
   showTypePicker.value = false
 }
 
-// 日期时间选择确认
+// 日期选择确认
 const onDatetimeConfirm = ({ selectedOptions }: any) => {
   if (selectedOptions && selectedOptions.length === 1) {
     formData.expectedTime = selectedOptions[0].value
@@ -307,25 +335,56 @@ const onOversize = () => {
   showToast('图片大小不能超过5M')
 }
 
-// 图片验证
-const beforeRead = (file: File | File[]) => {
+// 图片上传后处理
+const afterRead = async (file: any) => {
   const validTypes = ['image/jpeg', 'image/png', 'image/gif']
   
-  // 处理单个文件
-  const validateFile = (f: File) => {
-    if (!validTypes.includes(f.type)) {
+  // 处理单个文件上传
+  const handleUpload = async (fileItem: any) => {
+    // 验证文件类型
+    if (!validTypes.includes(fileItem.file.type)) {
       showToast('请上传jpg、png、gif格式图片')
-      return false
+      // 从列表中移除
+      const index = imageFiles.value.indexOf(fileItem)
+      if (index > -1) {
+        imageFiles.value.splice(index, 1)
+      }
+      return
     }
-    return true
+    
+    // 设置上传状态
+    fileItem.status = 'uploading'
+    fileItem.message = '上传中...'
+    
+    try {
+      // 调用上传接口
+      const res: any = await uploadFile(fileItem.file)
+      if (res && res.code === 200 && res.data) {
+        // 上传成功，设置服务器返回的URL
+        fileItem.status = 'done'
+        fileItem.message = ''
+        fileItem.url = res.data
+        fileItem.content = res.data
+      } else {
+        // 上传失败
+        fileItem.status = 'failed'
+        fileItem.message = '上传失败'
+        showFailToast(res?.message || '图片上传失败')
+      }
+    } catch (error) {
+      console.error('图片上传失败:', error)
+      fileItem.status = 'failed'
+      fileItem.message = '上传失败'
+      showFailToast('图片上传失败，请重试')
+    }
   }
   
-  // 如果是数组，验证所有文件
+  // 如果是数组，上传所有文件
   if (Array.isArray(file)) {
-    return file.every(validateFile)
+    await Promise.all(file.map(handleUpload))
+  } else {
+    await handleUpload(file)
   }
-  
-  return validateFile(file)
 }
 
 // 删除图片
@@ -335,14 +394,14 @@ const onDeleteImage = () => {
 }
 
 // 更新images字段
-const updateImagesField = async () => {
-  // 在实际项目中，应该先上传图片到服务器，然后获取URL
-  // 这里模拟上传成功，直接使用本地URL
+const updateImagesField = () => {
+  // 从已上传的图片中提取URL
   const imageUrls = imageFiles.value.map((item: any) => {
+    // 优先使用url字段（上传成功后的服务器URL）
     if (item.url) return item.url
     if (item.content) return item.content
-    return 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
-  })
+    return ''
+  }).filter(url => url !== '')
   
   formData.images = imageUrls.join(',')
 }
@@ -350,7 +409,7 @@ const updateImagesField = async () => {
 // 表单提交
 const onSubmit = async () => {
   // 先处理图片
-  await updateImagesField()
+  updateImagesField()
   
   try {
     submitting.value = true
@@ -359,6 +418,9 @@ const onSubmit = async () => {
     
     if (res && res.code === 200) {
       showSuccessToast('报修提交成功')
+      
+      // 提交成功后清除保存的表单数据
+      clearFormData()
       
       // 跳转到报修详情页
       if (res.data) {
@@ -379,6 +441,8 @@ const onSubmit = async () => {
 
 // 返回
 const onClickLeft = () => {
+  // 返回时清除保存的表单数据
+  clearFormData()
   router.replace('/repair')
 }
 </script>

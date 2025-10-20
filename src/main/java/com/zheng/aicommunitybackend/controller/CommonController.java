@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/public")
+@RequestMapping("/common")
 @Slf4j
 public class CommonController {
 
