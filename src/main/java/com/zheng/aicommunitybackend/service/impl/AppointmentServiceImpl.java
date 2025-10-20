@@ -18,6 +18,7 @@ import com.zheng.aicommunitybackend.mapper.AppointmentOrdersMapper;
 import com.zheng.aicommunitybackend.mapper.AppointmentServicesMapper;
 import com.zheng.aicommunitybackend.mapper.AppointmentWorkersMapper;
 import com.zheng.aicommunitybackend.service.AppointmentService;
+import com.zheng.aicommunitybackend.util.ServiceTypeConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -141,9 +142,13 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public String createAppointment(AppointmentCreateDTO dto, Long userId) {
+        // 将中文服务类型转换为英文
+        String convertedType = ServiceTypeConverter.convertToEnglish(dto.getServiceType());
+        String serviceType = convertedType != null ? convertedType : dto.getServiceType();
+        
         // 查询服务信息
         LambdaQueryWrapper<AppointmentServices> serviceWrapper = new LambdaQueryWrapper<>();
-        serviceWrapper.eq(AppointmentServices::getServiceType, dto.getServiceType())
+        serviceWrapper.eq(AppointmentServices::getServiceType, serviceType)
                 .eq(AppointmentServices::getStatus, 1);
 
         AppointmentServices service = appointmentServicesMapper.selectOne(serviceWrapper);
@@ -332,9 +337,18 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     public List<Object> getServiceWorkers(String serviceType) {
         LambdaQueryWrapper<AppointmentWorkers> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AppointmentWorkers::getStatus, 1)
-                .like(AppointmentWorkers::getServiceTypes, serviceType)
-                .orderByDesc(AppointmentWorkers::getRating);
+        wrapper.eq(AppointmentWorkers::getStatus, 1);
+        
+        // 将中文服务类型转换为英文
+        if (StringUtils.hasText(serviceType)) {
+            String convertedType = ServiceTypeConverter.convertToEnglish(serviceType);
+            // 如果转换后不为null（即不是"全部"），则添加筛选条件
+            if (convertedType != null) {
+                wrapper.like(AppointmentWorkers::getServiceTypes, convertedType);
+            }
+        }
+        
+        wrapper.orderByDesc(AppointmentWorkers::getRating);
 
         List<AppointmentWorkers> workers = appointmentWorkersMapper.selectList(wrapper);
 

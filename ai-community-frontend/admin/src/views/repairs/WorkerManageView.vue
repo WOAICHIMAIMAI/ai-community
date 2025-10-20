@@ -15,7 +15,7 @@
           <el-empty v-if="workerStats.length === 0" description="暂无数据" />
           <div class="stats-item" v-for="worker in workerStats" :key="worker.id">
             <div class="worker-avatar">
-              <el-avatar :size="60" :src="worker.avatar">{{ worker.name?.substr(0, 1) }}</el-avatar>
+              <el-avatar :size="60" :src="worker.avatar">{{ worker.name?.charAt(0) }}</el-avatar>
             </div>
             <div class="worker-info">
               <h3 class="name">{{ worker.name }}</h3>
@@ -96,7 +96,7 @@
         <el-table-column label="维修工" width="200">
           <template #default="{ row }">
             <div class="worker-avatar-info">
-              <el-avatar :size="36" :src="row.avatarUrl">{{ row.name?.substr(0, 1) }}</el-avatar>
+              <el-avatar :size="36" :src="row.avatarUrl">{{ row.name?.charAt(0) }}</el-avatar>
               <div class="worker-basic-info">
                 <div class="name">{{ row.name }}</div>
                 <div class="phone">{{ row.phone }}</div>

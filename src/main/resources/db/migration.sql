@@ -3,6 +3,10 @@
 
 USE ai_community;
 
+-- 为 repair_orders 表添加 urgency_level 字段
+ALTER TABLE repair_orders 
+ADD COLUMN IF NOT EXISTS urgency_level TINYINT COMMENT '紧急程度：1-一般 2-紧急 3-非常紧急' AFTER expected_time;
+
 -- 检查并添加 conversation_name 字段
 ALTER TABLE user_conversations 
 ADD COLUMN IF NOT EXISTS conversation_name VARCHAR(50) COMMENT '会话名称';

@@ -377,15 +377,15 @@ export default {
     authStore() {
       return useAuthStore()
     },
-    // 过滤后的维修工列表
+    // 过滤后的维修工列表（直接返回allWorkers，因为已经是筛选后的结果）
     filteredWorkers() {
-      if (this.workerType === '全部') {
-        return this.allWorkers
-      } else {
-        return this.allWorkers.filter(worker => 
-          worker.serviceType && worker.serviceType.includes(this.workerType)
-        )
-      }
+      return this.allWorkers
+    }
+  },
+  watch: {
+    // 监听workerType变化，重新获取师傅列表
+    workerType(newType) {
+      this.fetchWorkersByType(newType)
     }
   },
   created() {
@@ -401,11 +401,11 @@ export default {
     }
   },
   methods: {
-    // 获取维修工列表
-    async fetchWorkers() {
+    // 获取维修工列表（支持按服务类型筛选）
+    async fetchWorkers(serviceType) {
       try {
         this.loading.workers = true
-        const res = await getAvailableWorkers()
+        const res = await getAvailableWorkers(serviceType)
         
         if (res && res.code === 200 && res.data) {
           // 处理返回的数据
@@ -420,6 +420,28 @@ export default {
         console.error('获取维修工列表失败:', error)
         showToast('获取维修工列表失败，使用备用数据')
         this.useBackupWorkerData()
+      } finally {
+        this.loading.workers = false
+      }
+    },
+    
+    // 按类型获取维修工列表（用于弹窗中的筛选）
+    async fetchWorkersByType(type) {
+      try {
+        this.loading.workers = true
+        // 如果是"全部"，不传serviceType参数
+        const serviceType = type === '全部' ? undefined : type
+        const res = await getAvailableWorkers(serviceType)
+        
+        if (res && res.code === 200 && res.data) {
+          this.allWorkers = res.data
+        } else {
+          console.warn('获取维修工列表API返回异常')
+          showToast('获取维修工列表失败')
+        }
+      } catch (error) {
+        console.error('获取维修工列表失败:', error)
+        showToast('获取维修工列表失败')
       } finally {
         this.loading.workers = false
       }
@@ -543,11 +565,17 @@ export default {
     // 显示维修工列表
     onShowWorkers() {
       this.showWorkersPopup = true
+      // 重置筛选条件并加载所有师傅
+      this.workerType = '全部'
+      this.fetchWorkersByType('全部')
     },
     
     // 查看所有维修工
     onShowAllWorkers() {
       this.showWorkersPopup = true
+      // 重置筛选条件并加载所有师傅
+      this.workerType = '全部'
+      this.fetchWorkersByType('全部')
     },
     
     // 查看报修指南
@@ -600,18 +628,18 @@ export default {
       }
     },
     
-    // 获取维修工评价列表
+    // 获取维修工评价列表（使用假数据）
     async fetchWorkerReviews(workerId) {
       try {
         this.loading.reviews = true
-        const res = await getWorkerReviews(workerId, { page: 1, pageSize: 5 })
+        // 直接使用假数据，不调用接口
+        // const res = await getWorkerReviews(workerId, { page: 1, pageSize: 5 })
         
-        if (res && res.code === 200 && res.data && res.data.records) {
-          this.workerReviews = res.data.records
-        } else {
-          // 使用备用评价数据
-          this.useBackupReviewData()
-        }
+        // 模拟异步加载
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        // 使用假数据
+        this.useBackupReviewData()
       } catch (error) {
         console.error('获取维修工评价失败:', error)
         this.useBackupReviewData()

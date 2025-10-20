@@ -16,6 +16,7 @@ import com.zheng.aicommunitybackend.exception.BaseException;
 import com.zheng.aicommunitybackend.mapper.RepairOrdersMapper;
 import com.zheng.aicommunitybackend.mapper.RepairWorkersMapper;
 import com.zheng.aicommunitybackend.service.RepairWorkersService;
+import com.zheng.aicommunitybackend.util.ServiceTypeConverter;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -64,7 +65,12 @@ public class RepairWorkersServiceImpl extends ServiceImpl<RepairWorkersMapper, R
         }
         
         if (StringUtils.hasText(query.getServiceType())) {
-            wrapper.like(RepairWorkers::getServiceType, query.getServiceType());
+            // 将中文服务类型转换为英文
+            String convertedType = ServiceTypeConverter.convertToEnglish(query.getServiceType());
+            // 如果转换后不为null（即不是"全部"），则添加筛选条件
+            if (convertedType != null) {
+                wrapper.like(RepairWorkers::getServiceType, convertedType);
+            }
         }
         
         if (query.getWorkStatus() != null) {
@@ -145,7 +151,12 @@ public class RepairWorkersServiceImpl extends ServiceImpl<RepairWorkersMapper, R
         
         // 3. 如果指定了服务类型，则筛选对应类型的维修工
         if (StringUtils.hasText(serviceType)) {
-            wrapper.like(RepairWorkers::getServiceType, serviceType);
+            // 将中文服务类型转换为英文
+            String convertedType = ServiceTypeConverter.convertToEnglish(serviceType);
+            // 如果转换后不为null（即不是"全部"），则添加筛选条件
+            if (convertedType != null) {
+                wrapper.like(RepairWorkers::getServiceType, convertedType);
+            }
         }
         
         // 4. 按评分降序排序

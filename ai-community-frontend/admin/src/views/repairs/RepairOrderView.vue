@@ -46,24 +46,54 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="工单号">
-          <el-input v-model="searchForm.orderId" placeholder="工单编号" clearable />
+          <el-input v-model="searchForm.orderNumber" placeholder="工单编号" clearable />
         </el-form-item>
         <el-form-item label="用户名">
-          <el-input v-model="searchForm.username" placeholder="用户名/手机号" clearable />
+          <el-input v-model="searchForm.keyword" placeholder="用户名/手机号" clearable />
         </el-form-item>
         <el-form-item label="报修类型">
-          <el-select v-model="searchForm.repairType" placeholder="全部" clearable>
-            <el-option v-for="item in repairTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+          <el-select 
+            v-model="searchForm.repairType" 
+            placeholder="全部" 
+            clearable 
+            style="width: 180px"
+          >
+            <el-option 
+              v-for="(item, index) in repairTypeOptions" 
+              :key="index" 
+              :label="item.label" 
+              :value="item.value" 
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+          <el-select 
+            v-model="searchForm.status" 
+            placeholder="全部" 
+            clearable 
+            style="width: 150px"
+          >
+            <el-option 
+              v-for="(item, index) in statusOptions" 
+              :key="index" 
+              :label="item.label" 
+              :value="item.value" 
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="紧急程度">
-          <el-select v-model="searchForm.urgencyLevel" placeholder="全部" clearable>
-            <el-option v-for="item in urgencyOptions" :key="item.value" :label="item.label" :value="item.value" />
+          <el-select 
+            v-model="searchForm.urgencyLevel" 
+            placeholder="全部" 
+            clearable 
+            style="width: 150px"
+          >
+            <el-option 
+              v-for="(item, index) in urgencyOptions" 
+              :key="index" 
+              :label="item.label" 
+              :value="item.value" 
+            />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -95,13 +125,21 @@
       >
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="id" label="工单号" width="80" />
-        <el-table-column prop="repairTypeName" label="报修类型" width="120" />
+        <el-table-column label="报修类型" width="120">
+          <template #default="{ row }">
+            {{ getRepairTypeName(row.repairType) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="description" label="问题描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="address" label="地址" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="addressDetail" label="地址" min-width="180" show-overflow-tooltip />
         <el-table-column label="用户信息" width="180">
           <template #default="{ row }">
-            {{ row.username }}<br />
-            {{ row.userPhone }}
+            <span v-if="row.userName">{{ row.userName }}</span>
+            <span v-else-if="row.userNickname">{{ row.userNickname }}</span>
+            <span v-else>-</span>
+            <br />
+            <span v-if="row.contactPhone">{{ row.contactPhone }}</span>
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column label="维修工" width="180">
@@ -130,7 +168,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdTime" label="创建时间" width="160" />
+        <el-table-column prop="createTime" label="创建时间" width="160" />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleViewDetail(row.id)">
@@ -180,42 +218,47 @@
       <div class="order-detail" v-if="currentOrder">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="工单号">{{ currentOrder.id }}</el-descriptions-item>
-          <el-descriptions-item label="报修类型">{{ currentOrder.repairTypeName }}</el-descriptions-item>
+          <el-descriptions-item label="报修类型">{{ getRepairTypeName(currentOrder.repairType) }}</el-descriptions-item>
           <el-descriptions-item label="用户信息">
-            {{ currentOrder.username }} ({{ currentOrder.userPhone }})
+            <span v-if="currentOrder.userName">{{ currentOrder.userName }}</span>
+            <span v-else-if="currentOrder.userNickname">{{ currentOrder.userNickname }}</span>
+            <span v-else>-</span>
+            (<span v-if="currentOrder.contactPhone">{{ currentOrder.contactPhone }}</span><span v-else>-</span>)
           </el-descriptions-item>
-          <el-descriptions-item label="报修地址">{{ currentOrder.address }}</el-descriptions-item>
+          <el-descriptions-item label="报修地址">{{ currentOrder.addressDetail || '-' }}</el-descriptions-item>
           <el-descriptions-item label="紧急程度">
             <el-tag 
+              v-if="currentOrder.urgencyLevel"
               :type="currentOrder.urgencyLevel === 3 ? 'danger' : currentOrder.urgencyLevel === 2 ? 'warning' : 'info'"
               :effect="currentOrder.urgencyLevel === 3 ? 'dark' : 'light'"
             >
               {{ getUrgencyText(currentOrder.urgencyLevel) }}
             </el-tag>
+            <span v-else>-</span>
           </el-descriptions-item>
           <el-descriptions-item label="维修工信息">
             <template v-if="currentOrder.workerId">
-              {{ currentOrder.workerName }} ({{ currentOrder.workerPhone }})
+              {{ currentOrder.workerName || '-' }} ({{ currentOrder.workerPhone || '-' }})
             </template>
             <el-tag v-else type="info" size="small">未分配</el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ currentOrder.createdTime }}</el-descriptions-item>
-          <el-descriptions-item label="期望上门时间">{{ currentOrder.expectedTime }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ currentOrder.createTime || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="期望上门时间">{{ currentOrder.expectedTime || '-' }}</el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="getStatusType(currentOrder.status)">
               {{ getStatusText(currentOrder.status) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="问题描述" :span="2">{{ currentOrder.description }}</el-descriptions-item>
+          <el-descriptions-item label="问题描述" :span="2">{{ currentOrder.description || '-' }}</el-descriptions-item>
         </el-descriptions>
         
         <div class="order-images" v-if="currentOrder.images && currentOrder.images.length > 0">
           <h4>问题图片</h4>
           <div class="image-list">
-            <div v-for="(image, index) in currentOrder.images" :key="index" class="image-item">
+            <div v-for="(image, index) in (typeof currentOrder.images === 'string' ? currentOrder.images.split(',') : currentOrder.images)" :key="index" class="image-item">
               <el-image
                 :src="image"
-                :preview-src-list="currentOrder.images"
+                :preview-src-list="typeof currentOrder.images === 'string' ? currentOrder.images.split(',') : currentOrder.images"
                 fit="cover"
               />
             </div>
@@ -270,26 +313,50 @@
               v-model="assignForm.workerId" 
               placeholder="请选择维修工" 
               filterable
+              popper-class="worker-select-dropdown"
+              size="large"
               style="width: 100%"
             >
               <el-option
                 v-for="worker in availableWorkers"
                 :key="worker.id"
-                :label="`${worker.name} (在接单数: ${worker.ongoingOrders})`"
+                :label="`${worker.name} - ${worker.phone}`"
                 :value="worker.id"
+                class="worker-select-option"
               >
                 <div class="worker-option">
-                  <el-avatar :size="24" :src="worker.avatar">{{ worker.name?.substr(0, 1) }}</el-avatar>
+                  <el-avatar :size="45" :src="worker.avatarUrl" class="worker-avatar">
+                    {{ worker.name?.charAt(0) }}
+                  </el-avatar>
                   <div class="worker-info">
-                    <div>{{ worker.name }} ({{ worker.phone }})</div>
-                    <div class="worker-skills">
-                      <el-tag v-for="(skill, index) in worker.skills" :key="index" size="small" type="success" effect="plain" class="skill-tag">
+                    <div class="worker-name">
+                      {{ worker.name }}
+                      <el-tag size="small" :type="worker.ongoingOrders >= 5 ? 'warning' : 'success'" effect="light" class="order-badge">
+                        {{ worker.ongoingOrders || 0 }}单
+                      </el-tag>
+                    </div>
+                    <div class="worker-phone">
+                      <el-icon><Phone /></el-icon>
+                      {{ worker.phone }}
+                    </div>
+                    <div class="worker-skills" v-if="worker.skills && worker.skills.length > 0">
+                      <el-tag 
+                        v-for="(skill, index) in worker.skills" 
+                        :key="index" 
+                        size="small" 
+                        type="primary" 
+                        effect="plain" 
+                        class="skill-tag"
+                      >
                         {{ skill }}
                       </el-tag>
                     </div>
                   </div>
-                  <div class="worker-rating">
-                    <el-rate v-model="worker.rating" disabled :colors="rateColors" />
+                  <div class="worker-rating" v-if="worker.rating">
+                    <div class="rating-score">
+                      <el-icon color="#fadb14"><Star /></el-icon>
+                      {{ worker.rating?.toFixed(1) }}
+                    </div>
                   </div>
                 </div>
               </el-option>
@@ -364,22 +431,23 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Search, RefreshRight, Plus } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Plus, Phone, Star } from '@element-plus/icons-vue'
 import { Check, SetUp, Finished, WarningFilled, CircleCheck } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { getRepairOrderList, getRepairOrderDetail, getRepairProgressList, assignRepairWorker, 
   addRepairProgress, getRepairWorkerList, getOrderStats } from '@/api/repair'
 import type { RepairOrder, RepairProgress, RepairWorker, OrderStatsVO } from '@/api/repair'
 
 // 报修类型选项
 const repairTypeOptions = ref([
-  { value: 1, label: '水电维修' },
-  { value: 2, label: '家具维修' },
-  { value: 3, label: '门窗维修' },
-  { value: 4, label: '墙面维修' },
-  { value: 5, label: '电器维修' },
-  { value: 6, label: '管道疏通' },
-  { value: 7, label: '其他' }
+  { value: 'water_electricity', label: '水电维修' },
+  { value: 'furniture', label: '家具维修' },
+  { value: 'door_window', label: '门窗维修' },
+  { value: 'wall', label: '墙面维修' },
+  { value: 'appliance', label: '电器维修' },
+  { value: 'plumbing', label: '管道疏通' },
+  { value: 'other', label: '其他' }
 ])
 
 // 状态选项
@@ -402,12 +470,18 @@ const urgencyOptions = [
 const rateColors = ['#99A9BF', '#F7BA2A', '#FF9900']
 
 // 搜索表单
-const searchForm = reactive({
-  orderId: '',
-  username: '',
-  repairType: null as number | null,
-  status: null as number | null,
-  urgencyLevel: null as number | null
+const searchForm = reactive<{
+  orderNumber: string
+  keyword: string
+  repairType: string
+  status: number | undefined
+  urgencyLevel: number | undefined
+}>({
+  orderNumber: '',
+  keyword: '',
+  repairType: '',
+  status: undefined,
+  urgencyLevel: undefined
 })
 
 // 表格数据
@@ -423,6 +497,13 @@ const total = ref(0)
 
 // 工单统计数据
 const orderStats = reactive<OrderStatsVO>({
+  totalCount: 0,
+  pendingCount: 0,
+  processingCount: 0,
+  completedCount: 0,
+  cancelledCount: 0,
+  todayCount: 0,
+  todayCompletedCount: 0,
   total: 0,
   pending: 0,
   processing: 0,
@@ -441,7 +522,7 @@ const progressList = ref<RepairProgress[]>([])
 const assignFormVisible = ref(false)
 const assignForm = reactive({
   orderId: 0,
-  workerId: null as number | null
+  workerId: undefined as number | undefined
 })
 const availableWorkers = ref<RepairWorker[]>([])
 
@@ -450,7 +531,7 @@ const progressFormRef = ref<FormInstance>()
 const progressFormVisible = ref(false)
 const progressForm = reactive({
   orderId: 0,
-  status: null as number | null,
+  status: undefined as number | undefined,
   remark: ''
 })
 const progressImageList = ref<any[]>([])
@@ -467,8 +548,27 @@ const progressRules: FormRules = {
 // 进度状态选项（会根据当前工单状态动态生成）
 const progressStatusOptions = ref<{value: number, label: string, disabled: boolean}[]>([])
 
+// 获取报修类型名称
+const getRepairTypeName = (type: string | undefined): string => {
+  if (!type) return '-'
+  
+  const typeMap: Record<string, string> = {
+    'water_electricity': '水电维修',
+    'furniture': '家具维修',
+    'door_window': '门窗维修',
+    'wall': '墙面维修',
+    'appliance': '电器维修',
+    'plumbing': '管道疏通',
+    'other': '其他'
+  }
+  
+  return typeMap[type] || type
+}
+
 // 获取紧急度文本
-const getUrgencyText = (urgency: number): string => {
+const getUrgencyText = (urgency: number | null | undefined): string => {
+  if (!urgency) return '-'
+  
   switch (urgency) {
     case 1:
       return '一般'
@@ -482,7 +582,7 @@ const getUrgencyText = (urgency: number): string => {
 }
 
 // 获取状态标签类型
-const getStatusType = (status: number): string => {
+const getStatusType = (status: number): 'primary' | 'success' | 'warning' | 'danger' | 'info' => {
   switch (status) {
     case 0:
       return 'info'
@@ -615,19 +715,19 @@ const getOperatorType = (type: number): string => {
 const loadOrderList = async () => {
   try {
     tableLoading.value = true
-    const params = {
+    const params: Record<string, any> = {
       ...pageParams,
       ...searchForm
     }
     
     // 移除空值参数
     Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null) {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
         delete params[key]
       }
     })
     
-    const res = await getRepairOrderList(params)
+    const res = await getRepairOrderList(params as any)
     
     if (res.code === 200) {
       tableData.value = res.data.records
@@ -676,11 +776,11 @@ const loadRepairTypeOptions = () => {
   // 这里通常应该从后端API获取报修类型选项
   // 如果没有对应API，可以使用静态数据
   repairTypeOptions.value = [
-    { value: 1, label: '水电维修' },
-    { value: 2, label: '家具维修' },
-    { value: 3, label: '门窗维修' },
-    { value: 4, label: '电器维修' },
-    { value: 5, label: '其他' }
+    { value: 'water_electricity', label: '水电维修' },
+    { value: 'furniture', label: '家具维修' },
+    { value: 'door_window', label: '门窗维修' },
+    { value: 'appliance', label: '电器维修' },
+    { value: 'other', label: '其他' }
   ]
 }
 
@@ -692,11 +792,11 @@ const handleSearch = () => {
 
 // 重置搜索条件
 const resetSearch = () => {
-  searchForm.orderId = ''
-  searchForm.username = ''
-  searchForm.repairType = null
-  searchForm.status = null
-  searchForm.urgencyLevel = null
+  searchForm.orderNumber = ''
+  searchForm.keyword = ''
+  searchForm.repairType = ''
+  searchForm.status = undefined
+  searchForm.urgencyLevel = undefined
   handleSearch()
 }
 
@@ -732,7 +832,7 @@ const handleViewDetail = async (orderId: number) => {
 const handleAssignWorker = async (orderId: number) => {
   try {
     assignForm.orderId = orderId
-    assignForm.workerId = null
+    assignForm.workerId = undefined
     
     // 获取可用维修工列表
     const res = await getRepairWorkerList({
@@ -797,7 +897,7 @@ const handleAddProgress = async (orderId: number) => {
     
     const order = res.data
     progressForm.orderId = orderId
-    progressForm.status = null
+    progressForm.status = undefined
     progressForm.remark = ''
     progressImageList.value = []
     
@@ -1051,21 +1151,135 @@ onMounted(() => {
   }
   
   .worker-assignment {
+    .el-select {
+      .el-input__wrapper {
+        padding: 8px 12px;
+      }
+    }
+    
     .worker-option {
       display: flex;
       align-items: center;
+      padding: 12px 0;
+      gap: 12px;
+      transition: all 0.3s ease;
+      
+      .worker-avatar {
+        flex-shrink: 0;
+        border: 2px solid #f0f0f0;
+        transition: all 0.3s ease;
+      }
       
       .worker-info {
         flex: 1;
-        margin: 0 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+        
+        .worker-name {
+          font-size: 15px;
+          font-weight: 600;
+          color: #303133;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          
+          .order-badge {
+            font-size: 12px;
+            padding: 0 8px;
+            height: 20px;
+            line-height: 20px;
+          }
+        }
+        
+        .worker-phone {
+          font-size: 13px;
+          color: #909399;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          
+          .el-icon {
+            font-size: 14px;
+          }
+        }
         
         .worker-skills {
-          margin-top: 4px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 2px;
           
           .skill-tag {
-            margin-right: 5px;
-            margin-bottom: 5px;
+            font-size: 12px;
+            padding: 0 8px;
+            height: 22px;
+            line-height: 22px;
+            border-radius: 4px;
           }
+        }
+      }
+      
+      .worker-rating {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        
+        .rating-score {
+          font-size: 16px;
+          font-weight: 600;
+          color: #303133;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 12px;
+          background: linear-gradient(135deg, #fff9e6 0%, #fff4d9 100%);
+          border-radius: 20px;
+          border: 1px solid #ffe7ba;
+          
+          .el-icon {
+            font-size: 16px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 下拉框全局样式
+:deep(.worker-select-dropdown) {
+  .el-select-dropdown__item {
+    height: auto;
+    padding: 8px 12px;
+    line-height: normal;
+    
+    &.worker-select-option {
+      border-bottom: 1px solid #f0f0f0;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      &:hover {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        
+        .worker-avatar {
+          border-color: #409EFF;
+          transform: scale(1.05);
+        }
+      }
+      
+      &.selected {
+        background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%);
+        font-weight: normal;
+        
+        .worker-avatar {
+          border-color: #409EFF;
+        }
+        
+        .worker-name {
+          color: #409EFF;
         }
       }
     }

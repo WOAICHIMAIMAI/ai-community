@@ -62,4 +62,10 @@ public class AdminRepairOrderPageQuery extends PageQuery {
      */
     @Schema(description = "关键词（标题或描述或用户联系方式）")
     private String keyword;
+    
+    /**
+     * 紧急程度：1-一般 2-紧急 3-非常紧急
+     */
+    @Schema(description = "紧急程度：1-一般 2-紧急 3-非常紧急")
+    private Integer urgencyLevel;
 } 

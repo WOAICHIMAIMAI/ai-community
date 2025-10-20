@@ -166,10 +166,5 @@ export const mockNewsData = {
 
 // 新闻分类配置
 export const newsCategories = [
-  { key: 'all', name: '全部', icon: 'apps-o' },
-  { key: '财经', name: '财经', icon: 'gold-coin-o' },
-  { key: '科技', name: '科技', icon: 'setting-o' },
-  { key: '体育', name: '体育', icon: 'medal-o' },
-  { key: '娱乐', name: '娱乐', icon: 'music-o' },
-  { key: '社会', name: '社会', icon: 'friends-o' }
+  { key: 'all', name: '全部', icon: 'apps-o' }
 ];

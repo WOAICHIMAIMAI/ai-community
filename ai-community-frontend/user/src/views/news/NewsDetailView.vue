@@ -123,7 +123,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showFailToast, showSuccessToast, showImagePreview } from 'vant'
-import { newsApi, mockNewsData, type NewsItem } from '@/api/news'
+import { newsApi, type NewsItem } from '@/api/news'
 
 const route = useRoute()
 const router = useRouter()
@@ -172,35 +172,13 @@ const fetchNewsDetail = async () => {
   try {
     loading.value = true
     
-    // 先尝试从真实API获取
-    if (newsId.value < 1000) {
-      const response = await newsApi.getNewsDetail(newsId.value)
-      if (response.code === 200 && response.data) {
-        newsDetail.value = response.data
-        return
-      }
-    }
-    
-    // 如果API没有数据，从虚拟数据中查找
-    const allMockData = [
-      ...mockNewsData.tech,
-      ...mockNewsData.sports,
-      ...mockNewsData.entertainment,
-      ...mockNewsData.society
-    ]
-    
-    const mockNews = allMockData.find(news => news.id === newsId.value)
-    if (mockNews) {
-      // 为虚拟数据添加完整的内容
-      newsDetail.value = {
-        ...mockNews,
-        content: generateMockContent(mockNews.title, mockNews.summary),
-        images: `https://picsum.photos/400/300?random=${newsId.value},https://picsum.photos/400/300?random=${newsId.value + 1}`,
-        tags: getMockTags(mockNews.category),
-        sourceUrl: `https://example.com/news/${newsId.value}`
-      } as NewsItem
+    // 调用真实API获取新闻详情
+    const response = await newsApi.getNewsDetail(newsId.value)
+    if (response.code === 200 && response.data) {
+      newsDetail.value = response.data
     } else {
       newsDetail.value = null
+      showFailToast('新闻不存在或已下线')
     }
   } catch (error) {
     console.error('获取新闻详情失败:', error)
@@ -209,41 +187,6 @@ const fetchNewsDetail = async () => {
   } finally {
     loading.value = false
   }
-}
-
-// 生成虚拟内容
-const generateMockContent = (title: string, summary: string) => {
-  return `
-    <p>${summary}</p>
-    
-    <p>据相关报道，${title.substring(0, 10)}相关事件引起了广泛关注。专家表示，这一发展趋势将对行业产生深远影响。</p>
-    
-    <p>**重要进展**</p>
-    <p>在最新的发展中，相关部门采取了一系列措施来推进这一进程。这些措施包括：</p>
-    <p>• 加强政策支持和引导</p>
-    <p>• 完善相关制度和标准</p>
-    <p>• 促进产业协调发展</p>
-    
-    <p>**专家观点**</p>
-    <p>业内专家认为，这一发展将带来新的机遇和挑战。相关企业和机构需要积极应对，抓住发展机遇。</p>
-    
-    <p>**未来展望**</p>
-    <p>展望未来，随着相关政策的进一步完善和技术的不断进步，预计将会有更多积极的变化。</p>
-    
-    <p>我们将持续关注相关进展，为读者提供最新的资讯和分析。</p>
-  `
-}
-
-// 获取虚拟标签
-const getMockTags = (category: string) => {
-  const tagMap: Record<string, string> = {
-    '科技': '人工智能,创新,技术',
-    '体育': '运动,健康,竞技',
-    '娱乐': '文化,艺术,影视',
-    '社会': '民生,社区,服务',
-    '财经': '经济,金融,投资'
-  }
-  return tagMap[category] || '热点,资讯'
 }
 
 // 点赞功能

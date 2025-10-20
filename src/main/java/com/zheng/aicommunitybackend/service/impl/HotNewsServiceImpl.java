@@ -9,6 +9,7 @@ import com.zheng.aicommunitybackend.service.HotNewsService;
 import com.zheng.aicommunitybackend.task.NewsSpiderTask;
 import com.zheng.aicommunitybackend.utils.RedisUtils;
 import com.zheng.aicommunitybackend.constant.CacheConstants;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.List;
 * @description 针对表【hot_news(热点新闻表)】的数据库操作Service实现
 * @createDate 2025-07-13 12:19:41
 */
+@Slf4j
 @Service
 public class HotNewsServiceImpl extends ServiceImpl<HotNewsMapper, HotNews>
     implements HotNewsService{
@@ -33,11 +35,14 @@ public class HotNewsServiceImpl extends ServiceImpl<HotNewsMapper, HotNews>
 
     @Override
     public Page<HotNews> getHotNewsByPage(Page<HotNews> page, String category) {
+        log.info("分页查询新闻：page={}, size={}, category={}", page.getCurrent(), page.getSize(), category);
+        
         // 先尝试从缓存获取
         String cacheKey = CacheConstants.buildNewsPageKey(
             (int) page.getCurrent(), (int) page.getSize(), category);
         Page<HotNews> cachedResult = (Page<HotNews>) redisUtils.get(cacheKey);
         if (cachedResult != null) {
+            log.info("从缓存获取新闻列表：total={}, records={}", cachedResult.getTotal(), cachedResult.getRecords().size());
             return cachedResult;
         }
 
@@ -57,6 +62,9 @@ public class HotNewsServiceImpl extends ServiceImpl<HotNewsMapper, HotNews>
         queryWrapper.orderByDesc(HotNews::getPublishTime);
 
         Page<HotNews> result = page(page, queryWrapper);
+        
+        log.info("查询新闻列表结果：total={}, records={}, current={}, size={}", 
+            result.getTotal(), result.getRecords().size(), result.getCurrent(), result.getSize());
 
         // 缓存结果
         redisUtils.set(cacheKey, result, CacheConstants.DEFAULT_EXPIRE_TIME);

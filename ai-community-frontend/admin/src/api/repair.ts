@@ -1,24 +1,34 @@
 import { get, post, put, del } from '@/utils/request'
 import type { PageParams, PageResult, ApiResult } from '@/types/common'
 
-// 报修工单数据接口
+// 报修工单数据接口（对应后端 AdminRepairOrderVO）
 export interface RepairOrder {
   id: number
+  orderNumber: string
   userId: number
-  username: string
-  userPhone: string
-  repairType: number
-  repairTypeName: string
-  address: string
+  userName: string | null
+  userNickname: string | null
+  addressId: number | null
+  addressDetail: string
+  repairType: string
+  title: string | null
   description: string
-  images: string[]
+  images: string
+  contactPhone: string
+  expectedTime: string | null
+  urgencyLevel: number | null
   status: number
-  createdTime: string
-  expectedTime: string
-  urgencyLevel: number
+  statusDesc: string
   workerId: number | null
   workerName: string | null
   workerPhone: string | null
+  workerAvatar: string | null
+  appointmentTime: string | null
+  completionTime: string | null
+  satisfactionLevel: number | null
+  feedback: string | null
+  createTime: string
+  updateTime: string
 }
 
 // 报修进度数据接口

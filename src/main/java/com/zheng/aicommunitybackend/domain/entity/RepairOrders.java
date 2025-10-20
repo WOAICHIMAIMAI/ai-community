@@ -67,6 +67,11 @@ public class RepairOrders implements Serializable {
     private Date expectedTime;
 
     /**
+     * 紧急程度：1-一般 2-紧急 3-非常紧急
+     */
+    private Integer urgencyLevel;
+
+    /**
      * 状态：0-待受理 1-已分配 2-处理中 3-已完成 4-已取消
      */
     private Integer status;

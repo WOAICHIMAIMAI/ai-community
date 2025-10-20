@@ -18,6 +18,7 @@ import com.zheng.aicommunitybackend.mapper.RepairWorkersMapper;
 import com.zheng.aicommunitybackend.mapper.UsersMapper;
 import com.zheng.aicommunitybackend.service.RepairOrdersService;
 import com.zheng.aicommunitybackend.service.RepairProgressService;
+import com.zheng.aicommunitybackend.util.ServiceTypeConverter;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -136,7 +137,12 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         }
         
         if (StringUtils.hasText(query.getRepairType())) {
-            wrapper.eq(RepairOrders::getRepairType, query.getRepairType());
+            // 将中文维修类型转换为英文
+            String convertedType = ServiceTypeConverter.convertToEnglish(query.getRepairType());
+            // 如果转换后不为null（即不是"全部"），则添加筛选条件
+            if (convertedType != null) {
+                wrapper.eq(RepairOrders::getRepairType, convertedType);
+            }
         }
         
         if (StringUtils.hasText(query.getKeyword())) {
@@ -264,7 +270,12 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         }
         
         if (StringUtils.hasText(query.getRepairType())) {
-            wrapper.eq(RepairOrders::getRepairType, query.getRepairType());
+            // 将中文维修类型转换为英文
+            String convertedType = ServiceTypeConverter.convertToEnglish(query.getRepairType());
+            // 如果转换后不为null（即不是"全部"），则添加筛选条件
+            if (convertedType != null) {
+                wrapper.eq(RepairOrders::getRepairType, convertedType);
+            }
         }
         
         if (query.getStatus() != null) {
@@ -273,6 +284,10 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         
         if (query.getWorkerId() != null) {
             wrapper.eq(RepairOrders::getWorkerId, query.getWorkerId());
+        }
+        
+        if (query.getUrgencyLevel() != null) {
+            wrapper.eq(RepairOrders::getUrgencyLevel, query.getUrgencyLevel());
         }
         
         if (query.getStartTime() != null && query.getEndTime() != null) {

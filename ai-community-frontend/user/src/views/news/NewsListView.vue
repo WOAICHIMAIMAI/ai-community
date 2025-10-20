@@ -8,59 +8,47 @@
     />
     
     <div class="content">
-      <!-- 分类标签 -->
-      <div class="category-tabs">
-        <van-tabs v-model:active="activeCategory" @change="onCategoryChange" sticky>
-          <van-tab 
-            v-for="category in newsCategories" 
-            :key="category.key"
-            :title="category.name"
-            :name="category.key"
-          >
-            <!-- 新闻列表 -->
-            <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-              <van-list
-                v-model:loading="loading"
-                :finished="finished"
-                finished-text="没有更多了"
-                @load="onLoad"
-              >
-                <div class="news-list">
-                  <div 
-                    v-for="news in newsList" 
-                    :key="news.id"
-                    class="news-item"
-                    @click="goToDetail(news.id)"
-                  >
-                    <div class="news-content">
-                      <div class="news-header">
-                        <h3 class="news-title">{{ news.title }}</h3>
-                        <van-tag v-if="news.isHot" type="danger" size="small">热点</van-tag>
-                        <van-tag v-if="news.isTop" type="primary" size="small">置顶</van-tag>
-                      </div>
-                      <p class="news-summary">{{ news.summary }}</p>
-                      <div class="news-meta">
-                        <span class="news-source">{{ news.source }}</span>
-                        <span class="news-time">{{ formatTime(news.publishTime) }}</span>
-                        <span class="news-views">{{ news.viewCount }}阅读</span>
-                      </div>
-                    </div>
-                    <div class="news-image" v-if="news.coverImage">
-                      <van-image
-                        :src="news.coverImage"
-                        width="100"
-                        height="80"
-                        fit="cover"
-                        :lazy-load="true"
-                      />
-                    </div>
-                  </div>
+      <!-- 新闻列表 -->
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+        <van-list
+          v-model:loading="loading"
+          :finished="finished"
+          finished-text="没有更多了"
+          @load="onLoad"
+        >
+          <div class="news-list">
+            <div 
+              v-for="news in newsList" 
+              :key="news.id"
+              class="news-item"
+              @click="goToDetail(news.id)"
+            >
+              <div class="news-content">
+                <div class="news-header">
+                  <h3 class="news-title">{{ news.title }}</h3>
+                  <van-tag v-if="news.isHot" type="danger" size="small">热点</van-tag>
+                  <van-tag v-if="news.isTop" type="primary" size="small">置顶</van-tag>
                 </div>
-              </van-list>
-            </van-pull-refresh>
-          </van-tab>
-        </van-tabs>
-      </div>
+                <p class="news-summary">{{ news.summary }}</p>
+                <div class="news-meta">
+                  <span class="news-source">{{ news.source }}</span>
+                  <span class="news-time">{{ formatTime(news.publishTime) }}</span>
+                  <span class="news-views">{{ news.viewCount }}阅读</span>
+                </div>
+              </div>
+              <div class="news-image" v-if="news.coverImage">
+                <van-image
+                  :src="news.coverImage"
+                  width="100"
+                  height="80"
+                  fit="cover"
+                  :lazy-load="true"
+                />
+              </div>
+            </div>
+          </div>
+        </van-list>
+      </van-pull-refresh>
     </div>
     
     <!-- 底部导航栏 -->
@@ -72,13 +60,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showFailToast } from 'vant'
-import { newsApi, mockNewsData, newsCategories, type NewsItem } from '@/api/news'
+import { newsApi, type NewsItem } from '@/api/news'
 import BottomTabbar from '@/components/BottomTabbar.vue'
 
 const router = useRouter()
 
 // 状态管理
-const activeCategory = ref('all')
 const newsList = ref<NewsItem[]>([])
 const loading = ref(false)
 const finished = ref(false)
@@ -115,69 +102,24 @@ const fetchNewsList = async (page = 1, isRefresh = false) => {
       finished.value = false
     }
     
+    // 获取真实的财经新闻
+    const response = await newsApi.getNewsList({
+      page: page,
+      pageSize: pageSize,
+      category: '财经'
+    })
+    
     let newsData: NewsItem[] = []
     
-    if (activeCategory.value === '财经') {
-      // 获取真实的财经新闻
-      const response = await newsApi.getNewsList({
-        page: page,
-        pageSize: pageSize,
-        category: '财经'
-      })
-      
-      if (response.code === 200 && response.data) {
-        newsData = response.data.records || []
-        // 检查是否还有更多数据
-        if (response.data.records.length < pageSize) {
-          finished.value = true
-        }
-      }
-    } else if (activeCategory.value === 'all') {
-      // 全部新闻：混合真实财经新闻和虚拟数据
-      if (page === 1) {
-        // 第一页获取真实财经新闻
-        const response = await newsApi.getNewsList({
-          page: 1,
-          pageSize: 5,
-          category: '财经'
-        })
-        
-        if (response.code === 200 && response.data) {
-          newsData = response.data.records || []
-        }
-        
-        // 添加虚拟数据
-        newsData = [
-          ...newsData,
-          ...mockNewsData.tech.slice(0, 2),
-          ...mockNewsData.sports.slice(0, 2),
-          ...mockNewsData.entertainment.slice(0, 1)
-        ]
-      } else {
-        // 后续页面使用虚拟数据
-        const allMockData = [
-          ...mockNewsData.tech,
-          ...mockNewsData.sports,
-          ...mockNewsData.entertainment,
-          ...mockNewsData.society
-        ]
-        const startIndex = (page - 2) * pageSize
-        newsData = allMockData.slice(startIndex, startIndex + pageSize)
-        
-        if (newsData.length < pageSize) {
-          finished.value = true
-        }
-      }
-    } else {
-      // 其他分类使用虚拟数据
-      const categoryKey = activeCategory.value as keyof typeof mockNewsData
-      const mockData = mockNewsData[categoryKey] || []
-      const startIndex = (page - 1) * pageSize
-      newsData = mockData.slice(startIndex, startIndex + pageSize)
-      
-      if (newsData.length < pageSize) {
+    if (response.code === 200 && response.data) {
+      newsData = response.data.records || []
+      // 检查是否还有更多数据
+      const hasMore = page < response.data.pages
+      if (!hasMore) {
         finished.value = true
       }
+    } else {
+      finished.value = true
     }
     
     if (isRefresh) {
@@ -190,6 +132,7 @@ const fetchNewsList = async (page = 1, isRefresh = false) => {
   } catch (error) {
     console.error('获取新闻列表失败:', error)
     showFailToast('获取新闻列表失败')
+    finished.value = true
   }
 }
 
@@ -203,14 +146,6 @@ const onLoad = async () => {
 const onRefresh = async () => {
   await fetchNewsList(1, true)
   refreshing.value = false
-}
-
-// 分类切换
-const onCategoryChange = async () => {
-  newsList.value = []
-  currentPage.value = 1
-  finished.value = false
-  await fetchNewsList(1, true)
 }
 
 // 跳转到新闻详情
@@ -232,26 +167,11 @@ onMounted(() => {
 }
 
 .content {
-  padding-top: 46px;
-}
-
-.category-tabs {
-  background: white;
-  
-  :deep(.van-tabs__wrap) {
-    position: sticky;
-    top: 46px;
-    z-index: 99;
-  }
-  
-  :deep(.van-tab) {
-    flex: none;
-    padding: 0 16px;
-  }
+  padding: 46px 0 0 0;
 }
 
 .news-list {
-  padding: 0 16px;
+  padding: 16px;
 }
 
 .news-item {
@@ -329,10 +249,6 @@ onMounted(() => {
 }
 
 :deep(.van-pull-refresh) {
-  min-height: calc(100vh - 140px);
-}
-
-:deep(.van-list) {
-  padding: 16px 0;
+  min-height: calc(100vh - 46px - 70px);
 }
 </style>
