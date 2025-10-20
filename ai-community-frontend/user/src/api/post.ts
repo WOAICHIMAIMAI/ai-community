@@ -123,7 +123,7 @@ export const getEssencePosts = (params: {
  */
 export const getPostDetail = (postId: number) => {
   return request({
-    url: `/user/posts/${postId}`,
+    url: `/api/user/posts/${postId}`,
     method: 'get'
   })
 }
@@ -158,6 +158,23 @@ export const getComments = (params: {
     url: '/api/user/comments/page',
     method: 'get',
     params
+  })
+}
+
+/**
+ * 新增评论（帖子评论或回复）
+ * @param data 评论数据
+ */
+export const addComment = (data: {
+  postId: number
+  content: string
+  parentId?: number
+  replyToId?: number
+}) => {
+  return request({
+    url: '/api/user/comments',
+    method: 'post',
+    data
   })
 }
 

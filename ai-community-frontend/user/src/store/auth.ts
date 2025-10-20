@@ -8,6 +8,7 @@ export interface UserInfo {
   avatarUrl: string
   role: string
   isVerified: number
+  phone?: string  // 手机号
 }
 
 // 定义认证状态接口

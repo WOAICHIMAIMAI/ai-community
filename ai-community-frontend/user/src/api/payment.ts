@@ -134,7 +134,7 @@ export const getBillPage = (params: BillQueryParams) => {
  * 获取账单详情
  */
 export const getBillDetail = (billId: number) => {
-  return request.get<PaymentBill>(`/user/payment/bills/${billId}`)
+  return request.get<PaymentBill>(`/api/user/payment/bills/${billId}`)
 }
 
 /**
@@ -148,7 +148,7 @@ export const createPaymentOrder = (params: PaymentCreateParams) => {
  * 确认支付
  */
 export const confirmPayment = (recordId: number, transactionId: string) => {
-  return request.post<boolean>(`/user/payment/orders/${recordId}/confirm`, null, {
+  return request.post<boolean>(`/api/user/payment/orders/${recordId}/confirm`, null, {
     params: { transactionId }
   })
 }
@@ -173,7 +173,7 @@ export const getPaymentStatistics = (year?: number) => {
  * 根据账单ID查询缴费记录
  */
 export const getPaymentRecordByBillId = (billId: number) => {
-  return request.get<PaymentRecord>(`/user/payment/records/bill/${billId}`)
+  return request.get<PaymentRecord>(`/api/user/payment/records/bill/${billId}`)
 }
 
 // 支付方式接口

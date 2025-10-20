@@ -37,8 +37,7 @@
             label="报修标题"
             placeholder="请简要描述问题，如：水龙头漏水"
             :rules="[
-              { required: true, message: '请填写报修标题' },
-              { min: 3, max: 20, message: '标题长度应在3-20字之间' }
+              { required: true, message: '请填写报修标题' }
             ]"
           />
 
@@ -52,8 +51,7 @@
             label="详细描述"
             placeholder="请详细描述故障情况"
             :rules="[
-              { required: true, message: '请填写详细描述' },
-              { min: 5, max: 200, message: '描述长度应在5-200字之间' }
+              { required: true, message: '请填写详细描述' }
             ]"
           />
 
@@ -65,17 +63,9 @@
             name="addressDetail"
             label="报修地址"
             placeholder="请选择报修地址"
-            @click="showAddressPicker = true"
+            @click="goToAddressBook"
             :rules="[{ required: true, message: '请选择报修地址' }]"
           />
-          <van-popup v-model:show="showAddressPicker" position="bottom">
-            <van-picker
-              :columns="addresses"
-              @confirm="onAddressConfirm"
-              @cancel="showAddressPicker = false"
-              :default-index="0"
-            />
-          </van-popup>
 
           <!-- 联系电话 -->
           <van-field
@@ -135,11 +125,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onActivated, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showSuccessToast, showFailToast } from 'vant'
 import { createRepairOrder, getRepairTypes } from '@/api/repair'
 import { useAuthStore } from '@/store/auth'
+import { getAddressBookList, type AddressBook } from '@/api/addressBook'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -161,69 +152,93 @@ const imageFiles = ref([])
 
 // 选择器
 const showTypePicker = ref(false)
-const showAddressPicker = ref(false)
 const showDatetimePicker = ref(false)
 
-// 报修类型
-const repairTypes = getRepairTypes()
+// 报修类型 - 将字符串数组转换为Picker组件需要的对象数组格式
+const repairTypes = getRepairTypes().map(type => ({
+  text: type,
+  value: type
+}))
 
 // 日期选择器范围
 const minDate = new Date()
 const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30天后
 
-// 日期时间选择器列
+// 日期时间选择器列 - 生成从当前时间起每个小时的时间列表
 const datetimeColumns = computed(() => {
-  // 生成日期列
-  const dateColumn = [];
+  const timeColumn = [];
   const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
   
-  for (let i = 0; i < 30; i++) {
-    const date = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
+  // 从下一个整点小时开始
+  let startHour = currentMinute >= 50 ? currentHour + 2 : currentHour + 1;
+  
+  // 生成未来48小时的每个小时时间段
+  for (let i = 0; i < 48; i++) {
+    const targetTime = new Date(now.getTime() + (startHour - currentHour + i) * 60 * 60 * 1000);
     
-    dateColumn.push({
-      text: `${month}月${day}日 周${dayOfWeek}`,
-      value: `${year}-${month}-${day}`
+    const year = targetTime.getFullYear();
+    const month = String(targetTime.getMonth() + 1).padStart(2, '0');
+    const day = String(targetTime.getDate()).padStart(2, '0');
+    const hour = targetTime.getHours();
+    const hourStr = String(hour).padStart(2, '0');
+    const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][targetTime.getDay()];
+    
+    // 判断是今天、明天还是具体日期
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetDate = new Date(targetTime);
+    targetDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((targetDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+    
+    let datePrefix = '';
+    if (diffDays === 0) {
+      datePrefix = '今天';
+    } else if (diffDays === 1) {
+      datePrefix = '明天';
+    } else {
+      datePrefix = `${month}月${day}日`;
+    }
+    
+    timeColumn.push({
+      text: `${datePrefix} ${hourStr}:00 (周${dayOfWeek})`,
+      value: `${year}-${month}-${day} ${hourStr}:00:00`
     });
   }
   
-  // 生成时间列
-  const timeColumn = [];
-  for (let hour = 8; hour <= 20; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      const hourStr = String(hour).padStart(2, '0');
-      const minuteStr = String(minute).padStart(2, '0');
-      timeColumn.push({
-        text: `${hourStr}:${minuteStr}`,
-        value: `${hourStr}:${minuteStr}:00`
-      });
-    }
-  }
-  
-  return [
-    { values: dateColumn, defaultIndex: 0 },
-    { values: timeColumn, defaultIndex: 0 }
-  ];
+  return [timeColumn];
 });
 
 // 提交状态
 const submitting = ref(false)
 
-// 模拟地址数据 - 实际应该从API获取
-const addresses = [
-  { text: '1号楼1单元101室', value: 1 },
-  { text: '1号楼1单元102室', value: 2 },
-  { text: '1号楼1单元201室', value: 3 },
-  { text: '1号楼1单元202室', value: 4 },
-  { text: '2号楼1单元101室', value: 5 },
-  { text: '2号楼1单元102室', value: 6 }
-]
+// 加载默认地址
+const loadDefaultAddress = async () => {
+  try {
+    const response = await getAddressBookList()
+    if (response.code === 200 && response.data && response.data.length > 0) {
+      // 查找默认地址
+      const defaultAddress = response.data.find((addr: AddressBook) => addr.isDefault === 1)
+      
+      if (defaultAddress) {
+        formData.addressId = defaultAddress.id
+        formData.addressDetail = `${defaultAddress.province}${defaultAddress.city}${defaultAddress.district}${defaultAddress.detail}`
+        
+        // 如果默认地址有联系电话，且表单中联系电话为空，则使用默认地址的电话
+        if (defaultAddress.phone && !formData.contactPhone) {
+          formData.contactPhone = defaultAddress.phone
+        }
+      }
+    }
+  } catch (error) {
+    console.error('加载默认地址失败:', error)
+    // 不显示错误提示，静默失败
+  }
+}
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
   // 检查登录状态
   if (!authStore.isLoggedIn) {
     showToast('请先登录')
@@ -235,26 +250,56 @@ onMounted(() => {
   if (authStore.userInfo?.phone) {
     formData.contactPhone = authStore.userInfo.phone
   }
+  
+  // 加载默认地址
+  await loadDefaultAddress()
+  
+  // 监听从地址簿返回后的地址选择
+  checkSelectedAddress()
+})
+
+// 跳转到地址簿选择地址
+const goToAddressBook = () => {
+  router.push({ 
+    path: '/address-book', 
+    query: { select: 'true' } 
+  })
+}
+
+// 检查是否从地址簿选择了地址
+const checkSelectedAddress = () => {
+  const selectedAddressStr = window.sessionStorage.getItem('selectedAddress')
+  if (selectedAddressStr) {
+    try {
+      const selectedAddress = JSON.parse(selectedAddressStr)
+      formData.addressId = selectedAddress.id
+      // 格式化完整地址：省 + 市 + 区 + 详细地址
+      formData.addressDetail = `${selectedAddress.province}${selectedAddress.city}${selectedAddress.district}${selectedAddress.detail}`
+      // 清除缓存
+      window.sessionStorage.removeItem('selectedAddress')
+    } catch (error) {
+      console.error('解析地址信息失败:', error)
+    }
+  }
+}
+
+// 监听页面显示事件，用于从地址簿返回时更新地址
+onActivated(() => {
+  checkSelectedAddress()
 })
 
 // 报修类型选择确认
-const onTypeConfirm = (value: string) => {
-  formData.repairType = value
+const onTypeConfirm = ({ selectedOptions }: any) => {
+  formData.repairType = selectedOptions[0]?.text || ''
   showTypePicker.value = false
 }
 
-// 地址选择确认
-const onAddressConfirm = (value: { text: string, value: number }) => {
-  formData.addressId = value.value
-  formData.addressDetail = value.text
-  showAddressPicker.value = false
-}
-
 // 日期时间选择确认
-const onDatetimeConfirm = (values: any[]) => {
-  const [dateValue, timeValue] = values;
-  formData.expectedTime = `${dateValue.value} ${timeValue.value}`;
-  showDatetimePicker.value = false;
+const onDatetimeConfirm = ({ selectedOptions }: any) => {
+  if (selectedOptions && selectedOptions.length === 1) {
+    formData.expectedTime = selectedOptions[0].value
+  }
+  showDatetimePicker.value = false
 }
 
 // 图片大小限制
@@ -263,15 +308,24 @@ const onOversize = () => {
 }
 
 // 图片验证
-const beforeRead = (file: File) => {
+const beforeRead = (file: File | File[]) => {
   const validTypes = ['image/jpeg', 'image/png', 'image/gif']
   
-  if (!validTypes.includes(file.type)) {
-    showToast('请上传jpg、png、gif格式图片')
-    return false
+  // 处理单个文件
+  const validateFile = (f: File) => {
+    if (!validTypes.includes(f.type)) {
+      showToast('请上传jpg、png、gif格式图片')
+      return false
+    }
+    return true
   }
   
-  return true
+  // 如果是数组，验证所有文件
+  if (Array.isArray(file)) {
+    return file.every(validateFile)
+  }
+  
+  return validateFile(file)
 }
 
 // 删除图片
@@ -301,7 +355,7 @@ const onSubmit = async () => {
   try {
     submitting.value = true
     
-    const res = await createRepairOrder(formData)
+    const res: any = await createRepairOrder(formData)
     
     if (res && res.code === 200) {
       showSuccessToast('报修提交成功')

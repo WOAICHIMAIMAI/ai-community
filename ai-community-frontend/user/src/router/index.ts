@@ -141,6 +141,13 @@ const routes = [
     component: () => import('@/views/repair/RepairDetailView.vue'),
     meta: { title: '报修详情' }
   },
+  // 地址簿路由
+  {
+    path: '/address-book',
+    name: 'AddressBook',
+    component: () => import('@/views/address/AddressBookListView.vue'),
+    meta: { title: '地址簿' }
+  },
   {
     path: '/common-problems',
     name: 'CommonProblems',

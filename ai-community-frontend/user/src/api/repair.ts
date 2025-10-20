@@ -26,7 +26,7 @@ export const createRepairOrder = (data: {
  */
 export const cancelRepairOrder = (orderId: number) => {
   return request({
-    url: `/user/repair-orders/cancel/${orderId}`,
+    url: `/api/user/repair-orders/cancel/${orderId}`,
     method: 'put'
   })
 }
@@ -57,7 +57,7 @@ export const pageRepairOrders = (params: {
  */
 export const getRepairOrderDetail = (orderId: number) => {
   return request({
-    url: `/user/repair-orders/${orderId}`,
+    url: `/api/user/repair-orders/${orderId}`,
     method: 'get'
   })
 }
@@ -84,7 +84,7 @@ export const submitFeedback = (data: {
  */
 export const getRepairProgressList = (orderId: number) => {
   return request({
-    url: `/user/repair-progress/list/${orderId}`,
+    url: `/api/user/repair-progress/list/${orderId}`,
     method: 'get'
   })
 }
@@ -123,7 +123,7 @@ export const getAvailableWorkers = (serviceType?: string) => {
  */
 export const getWorkerDetail = (workerId: number) => {
   return request({
-    url: `/user/workers/${workerId}`,
+    url: `/api/user/workers/${workerId}`,
     method: 'get'
   })
 }
@@ -134,8 +134,40 @@ export const getWorkerDetail = (workerId: number) => {
  */
 export const getWorkerCompletedOrders = (workerId: number) => {
   return request({
-    url: `/user/workers/${workerId}/orders`,
+    url: `/api/user/workers/${workerId}/orders`,
     method: 'get'
+  })
+}
+
+/**
+ * 获取维修工评价列表
+ * @param workerId 维修工ID
+ * @param params 分页参数
+ */
+export const getWorkerReviews = (workerId: number, params: {
+  page: number
+  pageSize: number
+}) => {
+  return request({
+    url: `/api/user/workers/${workerId}/reviews`,
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 预约维修工
+ * @param data 预约数据
+ */
+export const bookWorker = (data: {
+  workerId: number
+  serviceType: string
+  expectedTime: string
+}) => {
+  return request({
+    url: '/api/user/workers/book',
+    method: 'post',
+    data
   })
 }
 

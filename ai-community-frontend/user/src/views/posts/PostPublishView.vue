@@ -100,16 +100,14 @@ const formData = reactive({
 
 // 分类选择
 const showCategoryPicker = ref(false)
-const categories = [
-  '生活', '服务', '闲置', '求助', '公告'
-]
+const categories = ['生活', '服务', '闲置', '求助', '公告']
 
 // 提交状态
 const submitting = ref(false)
 
 // 分类选择确认
-const onCategoryConfirm = (value: string) => {
-  formData.category = value
+const onCategoryConfirm = ({ selectedValues }: any) => {
+  formData.category = selectedValues[0]
   showCategoryPicker.value = false
 }
 

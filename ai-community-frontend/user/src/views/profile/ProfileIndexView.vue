@@ -53,6 +53,9 @@
       <van-cell title="我的收藏" is-link @click="router.push('/')">
         <template #icon><van-icon name="star-o" class="menu-icon" /></template>
       </van-cell>
+      <van-cell title="地址簿" is-link to="/address-book">
+        <template #icon><van-icon name="location-o" class="menu-icon" /></template>
+      </van-cell>
     </van-cell-group>
 
     <van-cell-group inset title="其他" class="menu-group">

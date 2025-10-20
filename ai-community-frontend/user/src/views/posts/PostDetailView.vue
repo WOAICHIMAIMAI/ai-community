@@ -137,14 +137,14 @@
               </div>
             </div>
             
-            <div class="load-more" v-if="commentTotal > comments.length">
+            <div class="load-more" v-if="commentTotal > loadedCommentCount">
               <van-button size="small" plain type="primary" @click="loadMoreComments">加载更多</van-button>
             </div>
           </template>
           
           <template v-else>
             <div class="empty-comments">
-              <van-empty image="comment" description="暂无评论" />
+              <van-empty description="暂无评论" />
             </div>
           </template>
         </div>
@@ -210,8 +210,8 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast, showImagePreview } from 'vant'
-import { getPostDetail, getComments, likeOrUnlike } from '@/api/post'
+import { showToast, showImagePreview, showFailToast } from 'vant'
+import { getPostDetail, getComments, likeOrUnlike, addComment } from '@/api/post'
 // 暂时移除 getUserPosts 的导入
 
 const route = useRoute()
@@ -228,6 +228,8 @@ const comments = ref<any[]>([])
 const commentTotal = ref(0)
 const commentPage = ref(1)
 const commentPageSize = ref(10)
+// 已加载的扁平评论数量（用于判断是否还有更多）
+const loadedCommentCount = ref(0)
 
 // 评论相关
 const commentContent = ref('')
@@ -314,7 +316,41 @@ const fetchPostDetail = async () => {
   }
 }
 
-// 获取评论列表 - 使用真实API数据
+// 将扁平评论列表构造成二级树（父评论 -> 回复[]）
+const buildTwoLevelComments = (records: any[] = []) => {
+  const parents: any[] = []
+  const idToParent: Record<string, any> = {}
+
+  for (const item of records) {
+    // 判断是否为顶级评论：没有 parentId 或 parentId 为 0/undefined
+    const isTopLevel = !item.parentId || Number(item.parentId) === 0
+    if (isTopLevel) {
+      const parent = { ...item, replies: [] as any[] }
+      parents.push(parent)
+      idToParent[String(item.id)] = parent
+    }
+  }
+
+  for (const item of records) {
+    const parentId = item.parentId
+    if (parentId && Number(parentId) !== 0) {
+      const parent = idToParent[String(parentId)]
+      if (parent) {
+        parent.replies.push(item)
+      }
+    }
+  }
+
+  // 可选：按时间排序（父按时间，子按时间）
+  parents.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime())
+  parents.forEach(p => {
+    p.replies.sort((a: any, b: any) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime())
+  })
+
+  return parents
+}
+
+// 获取评论列表 - 使用真实API数据（构建二级目录展示）
 const fetchComments = async (append = false) => {
   commentsLoading.value = !append
   try {
@@ -323,14 +359,18 @@ const fetchComments = async (append = false) => {
       page: commentPage.value,
       pageSize: commentPageSize.value
     })
-    
+
     console.log('Comments response:', res)
-    
+
     if (res.code === 200 && res.data) {
+      const flatRecords = res.data.records || []
+      const tree = buildTwoLevelComments(flatRecords)
       if (append) {
-        comments.value = [...comments.value, ...res.data.records]
+        comments.value = [...comments.value, ...tree]
+        loadedCommentCount.value += flatRecords.length
       } else {
-        comments.value = res.data.records || []
+        comments.value = tree
+        loadedCommentCount.value = flatRecords.length
       }
       commentTotal.value = res.data.total || 0
     } else {
@@ -338,6 +378,7 @@ const fetchComments = async (append = false) => {
       if (!append) {
         comments.value = []
         commentTotal.value = 0
+        loadedCommentCount.value = 0
       }
     }
   } catch (error) {
@@ -345,6 +386,7 @@ const fetchComments = async (append = false) => {
     if (!append) {
       comments.value = []
       commentTotal.value = 0
+      loadedCommentCount.value = 0
     }
   } finally {
     commentsLoading.value = false
@@ -407,11 +449,25 @@ const handleCommentLike = async (comment: any) => {
 
 // 提交评论
 const submitComment = async () => {
-  if (!commentContent.value.trim()) return
-  
-  // 实现提交评论的逻辑
-  showToast('评论功能开发中')
-  commentContent.value = ''
+  const content = commentContent.value.trim()
+  if (!content) return
+  try {
+    const res = await addComment({
+      postId: postId.value,
+      content
+    })
+    if (res && res.code === 200) {
+      showToast('评论成功')
+      commentContent.value = ''
+      // 重新拉取评论，重置到第一页
+      commentPage.value = 1
+      await fetchComments()
+    } else {
+      showFailToast(res?.message || '评论失败')
+    }
+  } catch (error: any) {
+    showFailToast(error?.message || '评论失败')
+  }
 }
 
 // 显示回复输入框
@@ -422,12 +478,28 @@ const showReplyInput = (comment: any) => {
 
 // 提交回复
 const submitReply = async () => {
-  if (!replyContent.value.trim() || !currentComment.value) return
-  
-  // 实现提交回复的逻辑
-  showToast('回复功能开发中')
-  replyContent.value = ''
-  showReply.value = false
+  const content = replyContent.value.trim()
+  if (!content || !currentComment.value) return
+  try {
+    const res = await addComment({
+      postId: postId.value,
+      content,
+      parentId: currentComment.value.parentId ? currentComment.value.parentId : currentComment.value.id,
+      replyToId: currentComment.value.id
+    })
+    if (res && res.code === 200) {
+      showToast('回复成功')
+      replyContent.value = ''
+      showReply.value = false
+      // 刷新评论列表，保持当前位置尽量不变
+      commentPage.value = 1
+      await fetchComments()
+    } else {
+      showFailToast(res?.message || '回复失败')
+    }
+  } catch (error: any) {
+    showFailToast(error?.message || '回复失败')
+  }
 }
 
 // 滚动到评论区

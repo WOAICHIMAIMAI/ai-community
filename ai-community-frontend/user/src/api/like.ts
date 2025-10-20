@@ -9,7 +9,7 @@ export const likeOrUnlike = (data: {
   targetId: number
 }) => {
   return request({
-    url: '/user/likes',
+    url: '/api/user/likes',
     method: 'post',
     data
   })
@@ -22,7 +22,7 @@ export const likeOrUnlike = (data: {
  */
 export const getLikeStatus = (type: number, targetId: number) => {
   return request({
-    url: '/user/likes/status',
+    url: '/api/user/likes/status',
     method: 'get',
     params: { type, targetId }
   })
@@ -35,7 +35,7 @@ export const getLikeStatus = (type: number, targetId: number) => {
  */
 export const batchGetLikeStatus = (type: number, targetIds: number[]) => {
   return request({
-    url: '/user/likes/batch-status',
+    url: '/api/user/likes/batch-status',
     method: 'post',
     params: { type },
     data: targetIds
@@ -48,7 +48,7 @@ export const batchGetLikeStatus = (type: number, targetIds: number[]) => {
  */
 export const getUserLikedList = (type: number) => {
   return request({
-    url: '/user/likes/list',
+    url: '/api/user/likes/list',
     method: 'get',
     params: { type }
   })

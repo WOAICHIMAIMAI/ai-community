@@ -69,7 +69,7 @@ export const newsApi = {
     limit?: number;
     category?: string;
   }) => {
-    return await get('/api/news/latest', params);
+    return await get('/api/hotnews/latest', params);
   }
 };
 

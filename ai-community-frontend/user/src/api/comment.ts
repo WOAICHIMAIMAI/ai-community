@@ -10,7 +10,7 @@ export const getPostComments = (params: {
   pageSize: number
 }) => {
   return request({
-    url: '/user/comments/page',
+    url: '/api/user/comments/page',
     method: 'get',
     params
   })
@@ -22,7 +22,7 @@ export const getPostComments = (params: {
  */
 export const getCommentReplies = (commentId: number) => {
   return request({
-    url: `/user/comments/replies/${commentId}`,
+    url: `/api/user/comments/replies/${commentId}`,
     method: 'get'
   })
 }
@@ -38,7 +38,7 @@ export const createComment = (data: {
   replyToId?: number
 }) => {
   return request({
-    url: '/user/comments',
+    url: '/api/user/comments',
     method: 'post',
     data
   })
@@ -50,7 +50,7 @@ export const createComment = (data: {
  */
 export const deleteComment = (commentId: number) => {
   return request({
-    url: `/user/comments/${commentId}`,
+    url: `/api/user/comments/${commentId}`,
     method: 'delete'
   })
 }
@@ -61,7 +61,7 @@ export const deleteComment = (commentId: number) => {
  */
 export const getCommentCount = (postId: number) => {
   return request({
-    url: `/user/comments/count/${postId}`,
+    url: `/api/user/comments/count/${postId}`,
     method: 'get'
   })
 } 
