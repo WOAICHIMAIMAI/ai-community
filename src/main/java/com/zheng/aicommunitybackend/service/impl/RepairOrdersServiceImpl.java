@@ -750,6 +750,9 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         // 设置状态描述
         vo.setStatusDesc(convertStatusToDesc(order.getStatus()));
         
+        // 将address字段映射到addressDetail
+        vo.setAddressDetail(order.getAddress());
+        
         // 如果有维修工，查询维修工头像
         if (order.getWorkerId() != null) {
             RepairWorkers worker = repairWorkersMapper.selectById(order.getWorkerId());
@@ -757,8 +760,6 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
                 vo.setWorkerAvatar(worker.getAvatarUrl());
             }
         }
-        
-        // TODO: 获取地址详情（需要地址服务）
         
         return vo;
     }
@@ -796,6 +797,9 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         // 设置状态描述
         vo.setStatusDesc(convertStatusToDesc(order.getStatus()));
         
+        // 将address字段映射到addressDetail
+        vo.setAddressDetail(order.getAddress());
+        
         // 获取用户信息
         if (order.getUserId() != null) {
             Users user = usersMapper.selectById(order.getUserId());
@@ -812,8 +816,6 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
                 vo.setWorkerAvatar(worker.getAvatarUrl());
             }
         }
-        
-        // TODO: 获取地址详情（需要地址服务）
         
         return vo;
     }

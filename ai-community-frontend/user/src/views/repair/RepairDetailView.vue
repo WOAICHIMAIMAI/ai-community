@@ -49,86 +49,92 @@
   </div>
 </template>
 
-<script>
-import { showToast } from 'vant'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { showToast, showFailToast } from 'vant'
+import { getRepairOrderDetail } from '@/api/repair'
 
-export default {
-  name: 'RepairDetailView',
-  data() {
-    return {
-      loading: true,
-      repair: null,
-      repairId: null
+const router = useRouter()
+const route = useRoute()
+
+const loading = ref(true)
+const repair = ref<any>(null)
+
+// 获取状态文本
+const getStatusText = (status: number) => {
+  const statusMap: Record<number, string> = {
+    0: '待受理',
+    1: '已分配',
+    2: '处理中',
+    3: '已完成',
+    4: '已取消'
+  }
+  return statusMap[status] || '未知状态'
+}
+
+// 获取状态标签类型
+const getStatusTagType = (status: number) => {
+  const typeMap: Record<number, string> = {
+    0: 'primary',
+    1: 'warning',
+    2: 'warning',
+    3: 'success',
+    4: 'default'
+  }
+  return typeMap[status] || 'default'
+}
+
+// 获取报修详情
+const fetchRepairDetail = async () => {
+  loading.value = true
+  
+  try {
+    const orderId = Number(route.params.id)
+    
+    if (!orderId || isNaN(orderId)) {
+      showFailToast('工单ID无效')
+      loading.value = false
+      return
     }
-  },
-  created() {
-    // 获取路由参数
-    this.repairId = Number(this.$route.params.id)
-    this.fetchRepairDetail()
-  },
-  methods: {
-    // 获取状态文本
-    getStatusText(status) {
-      const statusMap = {
-        0: '待受理',
-        1: '已分配',
-        2: '处理中',
-        3: '已完成',
-        4: '已取消'
-      }
-      return statusMap[status] || '未知状态'
-    },
-    // 获取状态标签类型
-    getStatusTagType(status) {
-      const typeMap = {
-        0: 'primary',
-        1: 'warning',
-        2: 'warning',
-        3: 'success',
-        4: 'default'
-      }
-      return typeMap[status] || 'default'
-    },
-    // 获取报修详情
-    fetchRepairDetail() {
-      this.loading = true
-      
-      // 模拟数据
-      setTimeout(() => {
-        this.repair = {
-          id: this.repairId,
-          title: '水龙头漏水',
-          repairType: '水电维修',
-          description: '厨房水龙头漏水，无法关紧',
-          addressDetail: '1号楼1单元101室',
-          contactPhone: '13800138000',
-          expectedTime: '2023-04-15 14:00:00',
-          status: 2,
-          createTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-        }
-        
-        this.loading = false
-      }, 1000)
-    },
-    // 返回列表
-    goToList() {
-      console.log('返回列表')
-      this.$router.replace('/repair/list')
-    },
-    // 返回上一页
-    onClickLeft() {
-      console.log('返回报修列表')
-      this.$router.replace('/repair/list')
-    },
-    // 日期格式化
-    formatDate(dateString) {
-      if (!dateString) return ''
-      
-      const date = new Date(dateString)
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+    
+    const res = await getRepairOrderDetail(orderId)
+    
+    if (res && res.code === 200 && res.data) {
+      repair.value = res.data
+    } else {
+      showFailToast(res?.msg || '获取工单详情失败')
     }
+  } catch (error) {
+    console.error('获取报修详情失败:', error)
+    showFailToast('获取详情失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
 }
+
+// 返回列表
+const goToList = () => {
+  router.replace('/repair/list')
+}
+
+// 返回上一页
+const onClickLeft = () => {
+  router.back()
+}
+
+// 日期格式化
+const formatDate = (dateString: string) => {
+  if (!dateString) return ''
+  
+  const date = new Date(dateString)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+// 初始化
+onMounted(() => {
+  fetchRepairDetail()
+})
 </script>
 
 <style scoped>

@@ -562,6 +562,9 @@ public class RepairWorkersServiceImpl extends ServiceImpl<RepairWorkersMapper, R
         // 设置状态描述
         vo.setStatusDesc(convertOrderStatusToDesc(order.getStatus()));
         
+        // 将address字段映射到addressDetail
+        vo.setAddressDetail(order.getAddress());
+        
         return vo;
     }
     
