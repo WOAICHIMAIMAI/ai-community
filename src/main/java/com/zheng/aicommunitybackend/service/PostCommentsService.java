@@ -60,6 +60,13 @@ public interface PostCommentsService extends IService<PostComments> {
     Integer countCommentsByPostId(Long postId);
     
     /**
+     * 批量获取帖子评论总数
+     * @param postIds 帖子ID集合
+     * @return 帖子ID与评论数量的映射
+     */
+    Map<Long, Integer> batchCountCommentsByPostIds(List<Long> postIds);
+    
+    /**
      * 管理端分页查询评论
      * @param query 查询参数
      * @return 评论分页结果

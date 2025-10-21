@@ -2,6 +2,7 @@ package com.zheng.aicommunitybackend.controller.user;
 
 import com.zheng.aicommunitybackend.domain.dto.PostDTO;
 import com.zheng.aicommunitybackend.domain.dto.PostPageQuery;
+import com.zheng.aicommunitybackend.domain.enums.PostCategoryEnum;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.result.Result;
 import com.zheng.aicommunitybackend.domain.vo.PostVO;
@@ -11,6 +12,10 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 用户端帖子相关接口
@@ -126,5 +131,20 @@ public class CommunityPostsController {
         log.info("获取用户{}的帖子列表: {}", userId, query);
         PageResult pageResult = communityPostsService.getUserPostsByUserId(userId, query);
         return Result.success(pageResult);
+    }
+
+    /**
+     * 获取帖子分类列表
+     *
+     * @return 分类列表
+     */
+    @GetMapping("/categories")
+    @Operation(summary = "获取帖子分类", description = "获取所有帖子分类列表")
+    public Result<List<String>> getCategories() {
+        log.info("获取帖子分类列表");
+        List<String> categories = Arrays.stream(PostCategoryEnum.values())
+                .map(PostCategoryEnum::getName)
+                .collect(Collectors.toList());
+        return Result.success(categories);
     }
 }

@@ -7,18 +7,21 @@ export interface PostInfo {
   userId: number
   username: string
   nickname: string
-  userAvatar: string
+  avatar: string
+  userAvatar?: string
   title: string
   content: string
-  category: number
-  categoryName: string
+  category: string
+  categoryName?: string
   images: string[]
   viewCount: number
   likeCount: number
   commentCount: number
   status: number
   createdTime: string
+  createTime?: string
   updatedTime: string
+  updateTime?: string
 }
 
 // 帖子状态变更参数
@@ -35,12 +38,14 @@ export interface CommentInfo {
   userId: number
   username: string
   nickname: string
-  userAvatar: string
+  avatar: string
+  userAvatar?: string
   content: string
   parentId: number | null
   likeCount: number
   status: number
-  createdTime: string
+  createTime: string
+  createdTime?: string
 }
 
 // 评论状态变更参数

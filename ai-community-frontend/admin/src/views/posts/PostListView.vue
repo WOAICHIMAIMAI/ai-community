@@ -12,12 +12,12 @@
           <el-input v-model="searchForm.userId" placeholder="用户ID" clearable />
         </el-form-item>
         <el-form-item label="分类">
-          <el-select v-model="searchForm.category" placeholder="全部" clearable>
+          <el-select v-model.number="searchForm.category" placeholder="全部" clearable>
             <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
+          <el-select v-model.number="searchForm.status" placeholder="全部" clearable>
             <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -53,12 +53,12 @@
         <el-table-column prop="nickname" label="发布者" width="120">
           <template #default="{ row }">
             <div class="user-info">
-              <el-avatar :size="24" :src="row.userAvatar">{{ row.nickname?.substr(0, 1) }}</el-avatar>
+              <el-avatar :size="24" :src="row.avatar || row.userAvatar">{{ row.nickname?.substr(0, 1) }}</el-avatar>
               <span>{{ row.nickname }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="categoryName" label="分类" width="120" />
+        <el-table-column prop="category" label="分类" width="120" />
         <el-table-column label="数据统计" width="200">
           <template #default="{ row }">
             <div class="post-stats">
@@ -87,8 +87,12 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdTime" label="发布时间" width="160" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="发布时间" width="180">
+          <template #default="{ row }">
+            {{ formatTime(row.createdTime || row.createTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleViewDetail(row.id)">
               查看
@@ -97,17 +101,16 @@
               v-if="row.status === 0" 
               type="success" 
               size="small" 
-              @click="handleUpdateStatus(row.id, 1)"
+              @click="handlePublishPost(row.id)"
             >
-              通过
+              发布
             </el-button>
             <el-button 
-              v-if="row.status === 0" 
               type="danger" 
               size="small" 
-              @click="handleUpdateStatus(row.id, 2)"
+              @click="handleDeletePost(row.id)"
             >
-              拒绝
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -138,14 +141,14 @@
         <h2>{{ currentPost.title }}</h2>
         
         <div class="post-meta">
-          <el-avatar :size="32" :src="currentPost.userAvatar">
+          <el-avatar :size="32" :src="currentPost.avatar || currentPost.userAvatar">
             {{ currentPost.nickname?.substr(0, 1) }}
           </el-avatar>
           <div class="meta-info">
             <div class="author">{{ currentPost.nickname }}</div>
             <div class="time">
-              发布于：{{ currentPost.createdTime }}
-              <el-tag size="small" class="category-tag">{{ currentPost.categoryName }}</el-tag>
+              发布于：{{ formatTime(currentPost.createdTime || currentPost.createTime) }}
+              <el-tag size="small" class="category-tag">{{ currentPost.category || currentPost.categoryName }}</el-tag>
             </div>
           </div>
         </div>
@@ -166,38 +169,10 @@
         </div>
         
         <div class="post-actions" v-if="currentPost.status === 0">
-          <el-button type="success" @click="handleUpdateStatus(currentPost.id, 1)">通过审核</el-button>
-          <el-button type="danger" @click="handleUpdateStatus(currentPost.id, 2)">拒绝发布</el-button>
+          <el-button type="success" @click="handlePublishPost(currentPost.id)">发布帖子</el-button>
+          <el-button type="danger" @click="handleDeletePost(currentPost.id)">删除帖子</el-button>
         </div>
       </div>
-    </el-dialog>
-    
-    <!-- 拒绝理由表单 -->
-    <el-dialog
-      v-model="rejectFormVisible"
-      title="拒绝原因"
-      width="40%"
-      destroy-on-close
-    >
-      <el-form
-        ref="rejectFormRef"
-        :model="rejectForm"
-        :rules="rejectRules"
-        label-width="80px"
-      >
-        <el-form-item prop="reason" label="拒绝原因">
-          <el-input
-            v-model="rejectForm.reason"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入拒绝原因"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="rejectFormVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmReject">确定</el-button>
-      </template>
     </el-dialog>
   </div>
 </template>
@@ -205,8 +180,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { Search, RefreshRight, View, Star, ChatDotRound } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus'
-import { getPostList, getPostDetail, updatePostStatus } from '@/api/post'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getPostList, getPostDetail, updatePostStatus, deletePost } from '@/api/post'
 import type { PostInfo } from '@/api/post'
 
 // 敏感词列表（实际项目中可从后端获取）
@@ -223,17 +198,17 @@ const categoryOptions = [
 
 // 状态选项
 const statusOptions = [
-  { value: 0, label: '待审核' },
-  { value: 1, label: '已通过' },
-  { value: 2, label: '已拒绝' }
+  { value: 0, label: '草稿' },
+  { value: 1, label: '已发布' },
+  { value: 2, label: '已删除' }
 ]
 
 // 搜索表单
 const searchForm = reactive({
   keyword: '',
   userId: '',
-  category: null as number | null,
-  status: null as number | null
+  category: undefined as number | undefined,
+  status: undefined as number | undefined
 })
 
 // 表格数据
@@ -250,23 +225,6 @@ const total = ref(0)
 // 帖子详情
 const detailVisible = ref(false)
 const currentPost = ref<PostInfo | null>(null)
-
-// 拒绝表单
-const rejectFormRef = ref<FormInstance>()
-const rejectFormVisible = ref(false)
-const rejectForm = reactive({
-  postId: 0,
-  status: 2,
-  reason: ''
-})
-
-// 拒绝表单验证规则
-const rejectRules: FormRules = {
-  reason: [
-    { required: true, message: '请输入拒绝原因', trigger: 'blur' },
-    { min: 5, max: 200, message: '长度在 5 到 200 个字符', trigger: 'blur' }
-  ]
-}
 
 // 获取状态标签类型
 const getStatusType = (status: number): string => {
@@ -286,13 +244,32 @@ const getStatusType = (status: number): string => {
 const getStatusText = (status: number): string => {
   switch (status) {
     case 0:
-      return '待审核'
+      return '草稿'
     case 1:
-      return '已通过'
+      return '已发布'
     case 2:
-      return '已拒绝'
+      return '已删除'
     default:
       return '未知'
+  }
+}
+
+// 格式化时间
+const formatTime = (time: string): string => {
+  if (!time) return '-'
+  
+  try {
+    const date = new Date(time)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  } catch (e) {
+    return time
   }
 }
 
@@ -320,7 +297,7 @@ const loadPostList = async () => {
     
     // 移除空值参数
     Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null) {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
         delete params[key]
       }
     })
@@ -350,8 +327,8 @@ const handleSearch = () => {
 const resetSearch = () => {
   searchForm.keyword = ''
   searchForm.userId = ''
-  searchForm.category = null
-  searchForm.status = null
+  searchForm.category = undefined
+  searchForm.status = undefined
   handleSearch()
 }
 
@@ -371,74 +348,68 @@ const handleViewDetail = async (postId: number) => {
   }
 }
 
-// 更新帖子状态
-const handleUpdateStatus = (postId: number, status: number) => {
-  if (status === 2) {
-    // 拒绝需要填写原因
-    rejectForm.postId = postId
-    rejectFormVisible.value = true
-  } else {
-    // 通过直接确认
-    ElMessageBox.confirm(
-      '确定要通过该帖子吗？',
-      '提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'info',
-      }
-    ).then(async () => {
-      try {
-        const res = await updatePostStatus({
-          postId,
-          status
-        })
-        
-        if (res.code === 200 && res.data) {
-          ElMessage.success('审核通过成功')
-          loadPostList()
-          if (detailVisible.value) {
-            detailVisible.value = false
-          }
-        } else {
-          ElMessage.error(res.message || '审核失败')
+// 发布帖子（将草稿状态改为已发布）
+const handlePublishPost = (postId: number) => {
+  ElMessageBox.confirm(
+    '确定要发布该帖子吗？',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info',
+    }
+  ).then(async () => {
+    try {
+      const res = await updatePostStatus({
+        postId,
+        status: 1 // 1表示已发布
+      })
+      
+      if (res.code === 200 && res.data) {
+        ElMessage.success('发布成功')
+        loadPostList()
+        if (detailVisible.value) {
+          detailVisible.value = false
         }
-      } catch (error: any) {
-        ElMessage.error(error.message || '审核失败')
+      } else {
+        ElMessage.error(res.message || '发布失败')
       }
-    }).catch(() => {
-      // 取消操作
-    })
-  }
+    } catch (error: any) {
+      ElMessage.error(error.message || '发布失败')
+    }
+  }).catch(() => {
+    // 取消操作
+  })
 }
 
-// 确认拒绝
-const confirmReject = () => {
-  if (!rejectFormRef.value) return
-  
-  rejectFormRef.value.validate(async (valid) => {
-    if (valid) {
-      try {
-        const res = await updatePostStatus({
-          postId: rejectForm.postId,
-          status: rejectForm.status,
-          reason: rejectForm.reason
-        })
-        
-        if (res.code === 200 && res.data) {
-          ElMessage.success('已拒绝该帖子')
-          rejectFormVisible.value = false
-          loadPostList()
-          if (detailVisible.value) {
-            detailVisible.value = false
-          }
-        } else {
-          ElMessage.error(res.message || '操作失败')
-        }
-      } catch (error: any) {
-        ElMessage.error(error.message || '操作失败')
-      }
+// 删除帖子
+const handleDeletePost = (postId: number) => {
+  ElMessageBox.confirm(
+    '确定要删除该帖子吗？此操作不可恢复！',
+    '警告',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
     }
+  ).then(async () => {
+    try {
+      const res = await deletePost(postId)
+      
+      if (res.code === 200) {
+        ElMessage.success('删除成功')
+        loadPostList()
+        if (detailVisible.value) {
+          detailVisible.value = false
+        }
+      } else {
+        ElMessage.error(res.message || '删除失败')
+      }
+    } catch (error: any) {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }).catch(() => {
+    // 取消操作
   })
 }
 

@@ -171,6 +171,33 @@ public class PostCommentsServiceImpl extends ServiceImpl<PostCommentsMapper, Pos
     }
     
     @Override
+    public Map<Long, Integer> batchCountCommentsByPostIds(List<Long> postIds) {
+        if (postIds == null || postIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        // 批量查询所有帖子的评论（包括一级和二级）
+        LambdaQueryWrapper<PostComments> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(PostComments::getPostId, postIds)
+                .eq(PostComments::getStatus, 1);
+        
+        List<PostComments> comments = this.list(wrapper);
+        
+        // 按帖子ID分组统计评论数量
+        Map<Long, Integer> commentCountMap = new HashMap<>();
+        for (Long postId : postIds) {
+            commentCountMap.put(postId, 0);
+        }
+        
+        for (PostComments comment : comments) {
+            Long postId = comment.getPostId();
+            commentCountMap.put(postId, commentCountMap.get(postId) + 1);
+        }
+        
+        return commentCountMap;
+    }
+    
+    @Override
     public PageResult<AdminCommentVO> adminPageComments(AdminCommentPageQuery query) {
         // 1. 构建查询条件
         LambdaQueryWrapper<PostComments> queryWrapper = new LambdaQueryWrapper<>();

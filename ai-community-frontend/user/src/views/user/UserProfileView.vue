@@ -202,11 +202,9 @@ const fetchUserPosts = async (isRefresh = false) => {
     if (res.code === 200 && res.data) {
       const newPosts = res.data.records || []
       
-      // 处理图片字段
+      // 确保图片数据格式正确 - 后端返回的已经是数组格式
       newPosts.forEach((post: any) => {
-        if (post.images && typeof post.images === 'string') {
-          post.images = post.images.split(',').filter((img: string) => img.trim())
-        } else if (!post.images) {
+        if (!post.images) {
           post.images = []
         }
         

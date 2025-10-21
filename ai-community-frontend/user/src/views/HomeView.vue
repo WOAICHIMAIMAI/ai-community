@@ -467,22 +467,12 @@ const goToNewsDetail = (newsId: number) => {
   router.push(`/news/${newsId}`)
 }
 
-// 获取帖子图片
+// 获取帖子图片 - 后端返回的已经是数组格式
 const getPostImage = (post) => {
-  if (!post.images) return 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
-  
-  if (typeof post.images === 'string') {
-    if (post.images.includes(',')) {
-      return post.images.split(',')[0]
-    }
-    return post.images
+  if (!post.images || !Array.isArray(post.images) || post.images.length === 0) {
+    return 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
   }
-  
-  if (Array.isArray(post.images) && post.images.length > 0) {
-    return post.images[0]
-  }
-  
-  return 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
+  return post.images[0]
 }
 
 // 获取作者名称

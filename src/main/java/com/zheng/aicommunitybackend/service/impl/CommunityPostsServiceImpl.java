@@ -19,6 +19,7 @@ import com.zheng.aicommunitybackend.mapper.CommunityPostsMapper;
 import com.zheng.aicommunitybackend.service.CommunityPostsService;
 import com.zheng.aicommunitybackend.service.FavoriteRecordsService;
 import com.zheng.aicommunitybackend.service.LikeRecordsService;
+import com.zheng.aicommunitybackend.service.PostCommentsService;
 import com.zheng.aicommunitybackend.service.UsersService;
 import com.zheng.aicommunitybackend.utils.RedisUtils;
 import com.zheng.aicommunitybackend.constant.CacheConstants;
@@ -45,15 +46,18 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
     private final UsersService usersService;
     private final LikeRecordsService likeRecordsService;
     private final FavoriteRecordsService favoriteRecordsService;
+    private final PostCommentsService postCommentsService;
     private final RedisUtils redisUtils;
 
     public CommunityPostsServiceImpl(UsersService usersService,
                                    LikeRecordsService likeRecordsService,
                                    FavoriteRecordsService favoriteRecordsService,
+                                   PostCommentsService postCommentsService,
                                    RedisUtils redisUtils) {
         this.usersService = usersService;
         this.likeRecordsService = likeRecordsService;
         this.favoriteRecordsService = favoriteRecordsService;
+        this.postCommentsService = postCommentsService;
         this.redisUtils = redisUtils;
     }
 
@@ -422,6 +426,10 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
             postVO.setAvatar(user.getAvatarUrl());
         }
         
+        // 实时查询评论数量（覆盖从数据库复制的冗余字段）
+        Integer commentCount = postCommentsService.countCommentsByPostId(post.getId());
+        postVO.setCommentCount(commentCount);
+        
         return postVO;
     }
     
@@ -448,15 +456,20 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         // 当前登录用户ID
         Long currentUserId = UserContext.getUserId();
         
+        // 获取所有帖子ID
+        Set<Long> postIds = postList.stream()
+                .map(CommunityPosts::getId)
+                .collect(Collectors.toSet());
+        
+        // 批量查询评论数量
+        Map<Long, Integer> commentCountMap = postCommentsService.batchCountCommentsByPostIds(
+                new ArrayList<>(postIds));
+        
         // 如果用户已登录，批量查询点赞和收藏状态
         Map<Long, Boolean> likeMap = new HashMap<>();
         Map<Long, Boolean> favoriteMap = new HashMap<>();
         
         if (currentUserId != null && !CollectionUtils.isEmpty(postList)) {
-            Set<Long> postIds = postList.stream()
-                    .map(CommunityPosts::getId)
-                    .collect(Collectors.toSet());
-            
             // 批量查询点赞记录
             LambdaQueryWrapper<LikeRecords> likeWrapper = new LambdaQueryWrapper<>();
             likeWrapper.eq(LikeRecords::getUserId, currentUserId)
@@ -488,6 +501,7 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         Map<Long, Users> finalUserMap = userMap;
         Map<Long, Boolean> finalLikeMap = likeMap;
         Map<Long, Boolean> finalFavoriteMap = favoriteMap;
+        Map<Long, Integer> finalCommentCountMap = commentCountMap;
         
         return postList.stream().map(post -> {
             PostVO postVO = new PostVO();
@@ -515,6 +529,9 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
             // 设置点赞和收藏状态
             postVO.setHasLiked(finalLikeMap.getOrDefault(post.getId(), false));
             postVO.setHasFavorited(finalFavoriteMap.getOrDefault(post.getId(), false));
+            
+            // 设置实时查询的评论数量（覆盖从数据库复制的冗余字段）
+            postVO.setCommentCount(finalCommentCountMap.getOrDefault(post.getId(), 0));
             
             return postVO;
         }).collect(Collectors.toList());

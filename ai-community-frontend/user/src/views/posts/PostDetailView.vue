@@ -100,40 +100,63 @@
                   <van-icon :name="comment.hasLiked ? 'like' : 'like-o'" :color="comment.hasLiked ? '#ee0a24' : ''" />
                   {{ comment.likeCount || 0 }}
                 </div>
-                <div class="comment-reply" @click="showReplyInput(comment)">
+                <div class="comment-reply" @click="toggleReplies(comment)">
+                  <van-icon name="chat-o" />
                   回复({{ comment.replyCount || 0 }})
                 </div>
               </div>
               
               <!-- 回复列表 -->
-              <div class="replies-list" v-if="comment.replies && comment.replies.length">
-                <div
-                  v-for="reply in comment.replies"
-                  :key="reply.id"
-                  class="reply-item"
-                >
-                  <div class="comment-user">
-                    <van-image
-                      :src="reply.avatar || 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
-                      class="comment-avatar"
-                      round
-                      fit="cover"
-                    />
-                    <div>
-                      <div class="comment-username">
-                        {{ reply.nickname }}
-                        <van-tag v-if="reply.isAuthor" type="danger" size="mini">楼主</van-tag>
+              <div class="replies-list" v-if="comment.showReplies">
+                <template v-if="comment.loadingReplies">
+                  <van-skeleton title avatar :row="2" />
+                </template>
+                <template v-else-if="comment.replies && comment.replies.length">
+                  <div
+                    v-for="reply in comment.replies"
+                    :key="reply.id"
+                    class="reply-item"
+                  >
+                    <div class="comment-user">
+                      <van-image
+                        :src="reply.avatar || 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
+                        class="comment-avatar"
+                        round
+                        fit="cover"
+                        @click="goToUserProfile(reply.userId?.toString() || '')"
+                      />
+                      <div>
+                        <div class="comment-username">
+                          {{ reply.nickname }}
+                          <van-tag v-if="reply.isAuthor" type="danger" size="mini">楼主</van-tag>
+                        </div>
+                        <div class="comment-time">{{ formatDate(reply.createTime) }}</div>
                       </div>
-                      <div class="comment-time">{{ formatDate(reply.createTime) }}</div>
+                    </div>
+                    
+                    <div class="comment-content">
+                      <span v-if="reply.replyToNickname" class="reply-to">
+                        回复 <span class="reply-to-name">@{{ reply.replyToNickname }}</span>:
+                      </span>
+                      {{ reply.content }}
+                    </div>
+                    
+                    <div class="comment-actions">
+                      <div class="comment-like" @click="handleCommentLike(reply)">
+                        <van-icon :name="reply.hasLiked ? 'like' : 'like-o'" :color="reply.hasLiked ? '#ee0a24' : ''" />
+                        {{ reply.likeCount || 0 }}
+                      </div>
+                      <div class="comment-reply" @click="showReplyInput(reply)">
+                        回复
+                      </div>
                     </div>
                   </div>
-                  
-                  <div class="comment-content">{{ reply.content }}</div>
-                </div>
-                
-                <div class="view-more" v-if="comment.replyCount > comment.replies.length" @click="loadMoreReplies(comment.id)">
-                  查看更多回复
-                </div>
+                </template>
+                <template v-else>
+                  <div class="empty-replies">
+                    <van-empty description="暂无回复" :image-size="60" />
+                  </div>
+                </template>
               </div>
             </div>
             
@@ -212,6 +235,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast, showImagePreview, showFailToast } from 'vant'
 import { getPostDetail, getComments, likeOrUnlike, addComment } from '@/api/post'
+import { getCommentReplies } from '@/api/comment'
 // 暂时移除 getUserPosts 的导入
 
 const route = useRoute()
@@ -279,6 +303,11 @@ const fetchPostDetail = async () => {
       post.value = res.data
       console.log('=== 帖子数据分析 ===')
       console.log('帖子ID:', post.value.id)
+      console.log('图片数据:', {
+        images: post.value.images,
+        imagesType: typeof post.value.images,
+        isArray: Array.isArray(post.value.images)
+      })
       console.log('用户ID字段:', {
         userId: post.value.userId,
         authorId: post.value.authorId,
@@ -298,10 +327,8 @@ const fetchPostDetail = async () => {
         post.value.userId = fallbackUserId
       }
       
-      // 处理图片数组
-      if (post.value.images && typeof post.value.images === 'string') {
-        post.value.images = post.value.images.split(',').filter((img: string) => img)
-      } else if (!post.value.images) {
+      // 确保图片数据格式正确 - 后端返回的已经是数组格式
+      if (!post.value.images) {
         post.value.images = []
       }
     } else {
@@ -399,10 +426,48 @@ const loadMoreComments = () => {
   fetchComments(true)
 }
 
-// 加载更多回复
-const loadMoreReplies = async (commentId: number) => {
-  // 实现获取更多回复的逻辑
-  showToast('加载更多回复功能开发中')
+// 切换回复显示状态
+const toggleReplies = async (comment: any) => {
+  // 如果已经显示,则收起
+  if (comment.showReplies) {
+    comment.showReplies = false
+    return
+  }
+  
+  // 如果没有回复数量,不需要加载
+  if (!comment.replyCount || comment.replyCount === 0) {
+    showToast('暂无回复')
+    return
+  }
+  
+  // 如果已经加载过回复,直接显示
+  if (comment.replies && comment.replies.length > 0) {
+    comment.showReplies = true
+    return
+  }
+  
+  // 加载回复
+  comment.loadingReplies = true
+  comment.showReplies = true
+  
+  try {
+    const res = await getCommentReplies(comment.id)
+    console.log('回复数据响应:', res)
+    
+    if (res.code === 200 && res.data) {
+      comment.replies = res.data
+    } else {
+      console.error('获取回复失败:', res.message || '未知错误')
+      showToast(res.message || '获取回复失败')
+      comment.replies = []
+    }
+  } catch (error) {
+    console.error('获取回复失败:', error)
+    showToast('获取回复失败,请稍后重试')
+    comment.replies = []
+  } finally {
+    comment.loadingReplies = false
+  }
 }
 
 // 点赞帖子
@@ -491,9 +556,33 @@ const submitReply = async () => {
       showToast('回复成功')
       replyContent.value = ''
       showReply.value = false
-      // 刷新评论列表，保持当前位置尽量不变
-      commentPage.value = 1
-      await fetchComments()
+      
+      // 找到父评论并更新其回复列表
+      const parentCommentId = currentComment.value.parentId || currentComment.value.id
+      const parentComment = comments.value.find(c => c.id === parentCommentId)
+      
+      if (parentComment) {
+        // 更新回复数量
+        parentComment.replyCount = (parentComment.replyCount || 0) + 1
+        
+        // 如果回复列表已展开,重新加载回复
+        if (parentComment.showReplies) {
+          try {
+            const repliesRes = await getCommentReplies(parentComment.id)
+            if (repliesRes.code === 200 && repliesRes.data) {
+              parentComment.replies = repliesRes.data
+            }
+          } catch (error) {
+            console.error('重新加载回复失败:', error)
+          }
+        }
+      }
+      
+      // 更新帖子的评论总数
+      if (post.value) {
+        post.value.commentCount = (post.value.commentCount || 0) + 1
+      }
+      commentTotal.value = (commentTotal.value || 0) + 1
     } else {
       showFailToast(res?.message || '回复失败')
     }
@@ -721,10 +810,35 @@ onMounted(async () => {
   margin-left: 20px;
   padding: 8px;
   border-left: 2px solid #eee;
+  background-color: #f9f9f9;
+  border-radius: 4px;
 }
 
 .reply-item {
   margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+  
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.reply-to {
+  color: #999;
+  font-size: 13px;
+  
+  .reply-to-name {
+    color: #1989fa;
+    font-weight: 500;
+  }
+}
+
+.empty-replies {
+  padding: 20px 0;
+  text-align: center;
 }
 
 .view-more {

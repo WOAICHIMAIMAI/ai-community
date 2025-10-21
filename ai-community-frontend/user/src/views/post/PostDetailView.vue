@@ -244,12 +244,9 @@ const toggleLike = async () => {
   }
 }
 
-// 获取图片列表
+// 获取图片列表 - 后端返回的已经是数组格式
 const getImageList = (images: string | string[]) => {
   if (!images) return []
-  if (typeof images === 'string') {
-    return images.split(',').filter(img => img.trim())
-  }
   return Array.isArray(images) ? images : []
 }
 

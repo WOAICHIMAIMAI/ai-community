@@ -35,6 +35,7 @@
                 <div class="post-header">
                   <div class="post-category">
                     <van-tag plain type="primary">{{ post.category }}</van-tag>
+                    <van-tag v-if="post.status === 0" plain type="warning" style="margin-left: 4px;">草稿</van-tag>
                     <span class="post-date">{{ formatDate(post.createTime || post.createdTime) }}</span>
                   </div>
                   <div class="post-status">
@@ -55,7 +56,12 @@
                       :src="img"
                       fit="cover"
                       class="grid-image"
-                    />
+                      lazy-load
+                    >
+                      <template v-slot:error>
+                        <div class="image-error">加载失败</div>
+                      </template>
+                    </van-image>
                     <div v-if="getImageArray(post.images).length > 3" class="more-images">
                       +{{ getImageArray(post.images).length - 3 }}
                     </div>
@@ -97,8 +103,23 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 // 分类
-const categories = ref(getCategories())
-const activeCategory = ref(0)
+const categories = ref<string[]>(['全部'])
+const activeCategory = ref<number>(0)
+
+// 加载分类列表
+const loadCategories = async () => {
+  try {
+    const res: any = await getCategories()
+    if (res.code === 200 && res.data) {
+      categories.value = ['全部', ...res.data]
+    } else {
+      categories.value = ['全部', '公告', '求助', '分享', '讨论', '动态', '闲置']
+    }
+  } catch (error) {
+    console.error('加载分类失败:', error)
+    categories.value = ['全部', '公告', '求助', '分享', '讨论', '动态', '闲置']
+  }
+}
 
 // 分页
 const page = ref(1)
@@ -128,28 +149,36 @@ const resetList = () => {
 const onLoad = async () => {
   try {
     // 构建查询参数
-    const params = {
+    const params: any = {
       page: page.value,
       pageSize: pageSize.value,
     }
 
     // 根据分类筛选
     if (activeCategory.value > 0) {
-      params['category' as keyof typeof params] = categories.value[activeCategory.value]
+      params.category = categories.value[activeCategory.value]
     }
 
-    const res = await getMyPosts(params)
+    const res: any = await getMyPosts(params)
 
     if (res && res.code === 200 && res.data) {
       const newPosts = res.data.records || []
       
-      // 处理图片数据
+      console.log('=== MyPostsView 帖子数据 ===')
+      console.log('获取到的帖子数量:', newPosts.length)
+      if (newPosts.length > 0) {
+        console.log('第一个帖子的数据:', newPosts[0])
+        console.log('第一个帖子的images字段:', {
+          value: newPosts[0].images,
+          type: typeof newPosts[0].images,
+          isArray: Array.isArray(newPosts[0].images)
+        })
+      }
+      
+      // 确保图片数据格式正确
       newPosts.forEach((post: any) => {
-        if (post.images) {
-          post.images = typeof post.images === 'string' 
-            ? post.images.split(',') 
-            : post.images
-        } else {
+        // 后端返回的images已经是数组格式，无需处理
+        if (!post.images) {
           post.images = []
         }
       })
@@ -163,7 +192,7 @@ const onLoad = async () => {
       }
     } else {
       finished.value = true
-      if (res && res.code !== 200) {
+      if (res && (res as any).code !== 200) {
         showFailToast('获取帖子列表失败')
       }
     }
@@ -235,10 +264,8 @@ const truncateContent = (content: string) => {
 // 获取图片数组
 const getImageArray = (images: string | string[]) => {
   if (!images) return []
-  if (typeof images === 'string') {
-    return images.split(',')
-  }
-  return images
+  // 后端返回的已经是字符串数组，直接使用
+  return Array.isArray(images) ? images : []
 }
 
 onMounted(() => {
@@ -248,6 +275,9 @@ onMounted(() => {
     router.push('/login')
     return
   }
+  
+  // 加载分类
+  loadCategories()
 })
 </script>
 
@@ -316,6 +346,17 @@ onMounted(() => {
             height: 80px;
             border-radius: 4px;
             overflow: hidden;
+          }
+          
+          .image-error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background-color: #f7f8fa;
+            color: #999;
+            font-size: 12px;
           }
           
           .more-images {

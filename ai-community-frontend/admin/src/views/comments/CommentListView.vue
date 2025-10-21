@@ -15,7 +15,7 @@
           <el-input v-model="searchForm.postId" placeholder="帖子ID" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
+          <el-select v-model.number="searchForm.status" placeholder="全部" clearable>
             <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -55,7 +55,7 @@
         <el-table-column label="发布者" width="120">
           <template #default="{ row }">
             <div class="user-info">
-              <el-avatar :size="24" :src="row.userAvatar">{{ row.nickname?.substr(0, 1) }}</el-avatar>
+              <el-avatar :size="24" :src="row.avatar || row.userAvatar">{{ row.nickname?.substr(0, 1) }}</el-avatar>
               <span>{{ row.nickname }}</span>
             </div>
           </template>
@@ -69,8 +69,8 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdTime" label="发布时间" width="160" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column prop="createTime" label="发布时间" width="160" />
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleViewDetail(row)">
               查看
@@ -85,11 +85,18 @@
             </el-button>
             <el-button 
               v-if="row.status === 0" 
-              type="danger" 
+              type="warning" 
               size="small" 
               @click="handleUpdateStatus(row.id, 2)"
             >
               拒绝
+            </el-button>
+            <el-button 
+              type="danger" 
+              size="small" 
+              @click="handleDelete(row.id)"
+            >
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -123,7 +130,7 @@
           <el-descriptions-item label="用户ID">{{ currentComment.userId }}</el-descriptions-item>
           <el-descriptions-item label="用户名">
             <div class="user-info">
-              <el-avatar :size="24" :src="currentComment.userAvatar">{{ currentComment.nickname?.substr(0, 1) }}</el-avatar>
+              <el-avatar :size="24" :src="currentComment.avatar || currentComment.userAvatar">{{ currentComment.nickname?.substr(0, 1) }}</el-avatar>
               <span>{{ currentComment.nickname }}</span>
             </div>
           </el-descriptions-item>
@@ -137,7 +144,7 @@
               {{ getStatusText(currentComment.status) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="发布时间">{{ currentComment.createdTime }}</el-descriptions-item>
+          <el-descriptions-item label="发布时间">{{ currentComment.createTime || currentComment.createdTime }}</el-descriptions-item>
         </el-descriptions>
         
         <div class="comment-actions" v-if="currentComment.status === 0">
@@ -181,7 +188,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus'
-import { getCommentList, updateCommentStatus } from '@/api/post'
+import { getCommentList, updateCommentStatus, deleteComment } from '@/api/post'
 import type { CommentInfo } from '@/api/post'
 
 // 敏感词列表（实际项目中可从后端获取）
@@ -199,7 +206,7 @@ const searchForm = reactive({
   keyword: '',
   userId: '',
   postId: '',
-  status: null as number | null
+  status: undefined as number | undefined
 })
 
 // 表格数据
@@ -286,7 +293,7 @@ const loadCommentList = async () => {
     
     // 移除空值参数
     Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null) {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
         delete params[key]
       }
     })
@@ -317,7 +324,7 @@ const resetSearch = () => {
   searchForm.keyword = ''
   searchForm.userId = ''
   searchForm.postId = ''
-  searchForm.status = null
+  searchForm.status = undefined
   handleSearch()
 }
 
@@ -395,6 +402,34 @@ const confirmReject = () => {
         ElMessage.error(error.message || '操作失败')
       }
     }
+  })
+}
+
+// 删除评论
+const handleDelete = (commentId: number) => {
+  ElMessageBox.confirm(
+    '确定要删除该评论吗？删除后不可恢复。',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(async () => {
+    try {
+      const res = await deleteComment(commentId)
+      
+      if (res.code === 200 && res.data) {
+        ElMessage.success('删除成功')
+        loadCommentList()
+      } else {
+        ElMessage.error(res.message || '删除失败')
+      }
+    } catch (error: any) {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }).catch(() => {
+    // 取消操作
   })
 }
 

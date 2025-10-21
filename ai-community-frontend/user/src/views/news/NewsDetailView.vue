@@ -153,9 +153,10 @@ const parseTags = (tags: string) => {
   return tags ? tags.split(',').filter(tag => tag.trim()) : []
 }
 
-// 解析图片
-const parseImages = (images: string) => {
-  return images ? images.split(',').filter(img => img.trim()) : []
+// 解析图片 - 后端返回的已经是数组格式
+const parseImages = (images: string | string[]) => {
+  if (!images) return []
+  return Array.isArray(images) ? images : []
 }
 
 // 格式化内容

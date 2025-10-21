@@ -22,7 +22,10 @@ export const listPosts = (params: {
  * 获取所有帖子分类
  */
 export const getCategories = () => {
-  return ['全部', '公告', '动态', '讨论', '求助', '分享', '闲置']
+  return request({
+    url: '/api/user/posts/categories',
+    method: 'get'
+  })
 }
 
 /**

@@ -204,7 +204,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 // 分类
-const categories = ref(getCategories())
+const categories = ref<string[]>(['全部'])
 const activeCategory = ref('全部')
 
 // 筛选
@@ -227,8 +227,36 @@ const searchResults = ref<any[]>([])
 const searchSubmitted = ref(false)
 const searchHistory = ref<string[]>([])
 
+// 加载分类数据
+const loadCategories = async () => {
+  try {
+    const res = await getCategories()
+    if (res && res.code === 200 && res.data) {
+      // 在分类列表前面加上"全部"
+      categories.value = ['全部', ...res.data]
+      console.log('分类列表加载成功:', categories.value)
+    } else {
+      console.error('获取分类列表失败:', res)
+      showFailToast('获取分类列表失败')
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+    showFailToast('获取分类列表失败')
+  }
+}
+
 // 初始化
-onBeforeMount(() => {
+onBeforeMount(async () => {
+  // 检查登录状态
+  if (!authStore.isLoggedIn) {
+    showToast('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  // 加载分类列表
+  await loadCategories()
+  
   // 检查URL参数中是否有指定分类
   const categoryParam = route.query.category as string
   if (categoryParam && categories.value.includes(categoryParam)) {
@@ -238,13 +266,6 @@ onBeforeMount(() => {
 })
 
 onMounted(() => {
-  // 检查登录状态
-  if (!authStore.isLoggedIn) {
-    showToast('请先登录')
-    router.push('/login')
-    return
-  }
-  
   // 加载历史记录
   const history = localStorage.getItem('searchHistory')
   if (history) {
@@ -312,13 +333,9 @@ const onLoad = async () => {
     if (res && res.code === 200 && res.data) {
       const newPosts = res.data.records || []
       
-      // 处理图片数据，将字符串转为数组
+      // 确保图片数据格式正确 - 后端返回的已经是数组格式
       newPosts.forEach((post: any) => {
-        if (post.images) {
-          post.images = typeof post.images === 'string' 
-            ? post.images.split(',') 
-            : post.images
-        } else {
+        if (!post.images) {
           post.images = []
         }
       })
@@ -386,13 +403,9 @@ const onSearchSubmit = async () => {
     if (res && res.code === 200 && res.data) {
       searchResults.value = res.data.records || []
       
-      // 处理图片数据
+      // 确保图片数据格式正确 - 后端返回的已经是数组格式
       searchResults.value.forEach((post: any) => {
-        if (post.images) {
-          post.images = typeof post.images === 'string' 
-            ? post.images.split(',') 
-            : post.images
-        } else {
+        if (!post.images) {
           post.images = []
         }
       })
