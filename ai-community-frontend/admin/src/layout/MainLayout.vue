@@ -175,9 +175,19 @@ const menuItems = [
     index: '/appointments'
   },
   {
-    title: '系统监控',
-    icon: Monitor,
-    index: '/news-deduplication'
+    title: '新闻管理',
+    icon: Document,
+    index: 'news-menu',
+    children: [
+      {
+        title: '新闻列表',
+        index: '/news'
+      },
+      {
+        title: '去重监控',
+        index: '/news-deduplication'
+      }
+    ]
   },
   {
     title: '数据分析',

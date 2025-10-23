@@ -44,31 +44,8 @@
             </div>
           </header>
           
-          <!-- 封面图片 -->
-          <div class="news-cover" v-if="newsDetail.coverImage">
-            <van-image
-              :src="newsDetail.coverImage"
-              width="100%"
-              fit="cover"
-              :lazy-load="true"
-            />
-          </div>
-          
           <!-- 新闻内容 -->
           <div class="news-content" v-html="formatContent(newsDetail.content)"></div>
-          
-          <!-- 新闻图片 -->
-          <div class="news-images" v-if="newsDetail.images">
-            <van-image
-              v-for="(image, index) in parseImages(newsDetail.images)"
-              :key="index"
-              :src="image"
-              width="100%"
-              fit="cover"
-              :lazy-load="true"
-              @click="previewImage(image, parseImages(newsDetail.images))"
-            />
-          </div>
           
           <!-- 原文链接 -->
           <div class="source-link" v-if="newsDetail.sourceUrl">
@@ -122,7 +99,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showFailToast, showSuccessToast, showImagePreview } from 'vant'
+import { showFailToast, showSuccessToast } from 'vant'
 import { newsApi, type NewsItem } from '@/api/news'
 
 const route = useRoute()
@@ -151,12 +128,6 @@ const formatTime = (timeString: string) => {
 // 解析标签
 const parseTags = (tags: string) => {
   return tags ? tags.split(',').filter(tag => tag.trim()) : []
-}
-
-// 解析图片 - 后端返回的已经是数组格式
-const parseImages = (images: string | string[]) => {
-  if (!images) return []
-  return Array.isArray(images) ? images : []
 }
 
 // 格式化内容
@@ -222,14 +193,6 @@ const shareNews = () => {
   } else {
     showSuccessToast('分享功能开发中...')
   }
-}
-
-// 预览图片
-const previewImage = (current: string, images: string[]) => {
-  showImagePreview({
-    images,
-    startPosition: images.indexOf(current)
-  })
 }
 
 // 打开原文链接
@@ -303,14 +266,6 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.news-cover {
-  margin-bottom: 20px;
-  
-  :deep(.van-image) {
-    width: 100%;
-  }
-}
-
 .news-content {
   padding: 0 20px 20px;
   font-size: 16px;
@@ -333,17 +288,6 @@ onMounted(() => {
   :deep(em) {
     font-style: italic;
     color: #666;
-  }
-}
-
-.news-images {
-  padding: 0 20px 20px;
-  display: grid;
-  gap: 12px;
-  
-  :deep(.van-image) {
-    border-radius: 8px;
-    cursor: pointer;
   }
 }
 

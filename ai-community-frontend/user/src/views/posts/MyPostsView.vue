@@ -48,26 +48,6 @@
                 
                 <div class="post-content">{{ truncateContent(post.content) }}</div>
                 
-                <div class="post-images" v-if="post.images && post.images.length > 0">
-                  <div class="image-grid">
-                    <van-image
-                      v-for="(img, index) in getImageArray(post.images).slice(0, 3)"
-                      :key="index"
-                      :src="img"
-                      fit="cover"
-                      class="grid-image"
-                      lazy-load
-                    >
-                      <template v-slot:error>
-                        <div class="image-error">加载失败</div>
-                      </template>
-                    </van-image>
-                    <div v-if="getImageArray(post.images).length > 3" class="more-images">
-                      +{{ getImageArray(post.images).length - 3 }}
-                    </div>
-                  </div>
-                </div>
-                
                 <div class="post-stats">
                   <div class="stat-item">
                     <van-icon name="eye-o" /> {{ post.viewCount || 0 }}
@@ -331,46 +311,6 @@ onMounted(() => {
         color: #666;
         margin-bottom: 12px;
         line-height: 1.5;
-      }
-      
-      .post-images {
-        margin-bottom: 12px;
-        
-        .image-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 4px;
-          
-          .grid-image {
-            width: calc(33.33% - 3px);
-            height: 80px;
-            border-radius: 4px;
-            overflow: hidden;
-          }
-          
-          .image-error {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-            background-color: #f7f8fa;
-            color: #999;
-            font-size: 12px;
-          }
-          
-          .more-images {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: calc(33.33% - 3px);
-            height: 80px;
-            background-color: rgba(0, 0, 0, 0.03);
-            border-radius: 4px;
-            color: #999;
-            font-size: 16px;
-          }
-        }
       }
       
       .post-stats {

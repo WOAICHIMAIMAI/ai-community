@@ -36,15 +36,6 @@
                   <span class="news-views">{{ news.viewCount }}阅读</span>
                 </div>
               </div>
-              <div class="news-image" v-if="news.coverImage">
-                <van-image
-                  :src="news.coverImage"
-                  width="100"
-                  height="80"
-                  fit="cover"
-                  :lazy-load="true"
-                />
-              </div>
             </div>
           </div>
         </van-list>
@@ -192,7 +183,6 @@ onMounted(() => {
 
 .news-content {
   flex: 1;
-  margin-right: 12px;
 }
 
 .news-header {
@@ -237,15 +227,6 @@ onMounted(() => {
 .news-source {
   color: var(--primary-color);
   font-weight: 500;
-}
-
-.news-image {
-  flex-shrink: 0;
-  
-  :deep(.van-image) {
-    border-radius: 6px;
-    overflow: hidden;
-  }
 }
 
 :deep(.van-pull-refresh) {
