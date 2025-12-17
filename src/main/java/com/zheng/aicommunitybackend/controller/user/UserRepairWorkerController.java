@@ -3,6 +3,7 @@ package com.zheng.aicommunitybackend.controller.user;
 import com.zheng.aicommunitybackend.domain.result.Result;
 import com.zheng.aicommunitybackend.domain.vo.RepairOrderVO;
 import com.zheng.aicommunitybackend.domain.vo.RepairWorkerVO;
+import com.zheng.aicommunitybackend.domain.vo.WorkerReviewVO;
 import com.zheng.aicommunitybackend.service.RepairWorkersService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -55,5 +56,18 @@ public class UserRepairWorkerController {
         // 只查询已完成的工单（状态为3）
         List<RepairOrderVO> orders = repairWorkersService.getWorkerOrders(workerId, 3);
         return Result.success(orders);
+    }
+    
+    /**
+     * 获取维修工评价列表
+     */
+    @GetMapping("/{workerId}/reviews")
+    @Operation(summary = "获取维修工评价列表", description = "获取维修工的用户评价")
+    public Result<List<WorkerReviewVO>> getWorkerReviews(
+            @Parameter(description = "维修工ID") @PathVariable Long workerId,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") int pageSize) {
+        List<WorkerReviewVO> reviews = repairWorkersService.getWorkerReviews(workerId, page, pageSize);
+        return Result.success(reviews);
     }
 } 

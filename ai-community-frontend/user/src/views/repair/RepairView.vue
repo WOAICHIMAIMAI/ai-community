@@ -628,20 +628,23 @@ export default {
       }
     },
     
-    // 获取维修工评价列表（使用假数据）
+    // 获取维修工评价列表
     async fetchWorkerReviews(workerId) {
       try {
         this.loading.reviews = true
-        // 直接使用假数据，不调用接口
-        // const res = await getWorkerReviews(workerId, { page: 1, pageSize: 5 })
         
-        // 模拟异步加载
-        await new Promise(resolve => setTimeout(resolve, 300))
+        // 调用真实接口
+        const res = await getWorkerReviews(workerId, { page: 1, pageSize: 5 })
         
-        // 使用假数据
-        this.useBackupReviewData()
+        if (res && res.code === 200 && res.data) {
+          this.workerReviews = res.data
+        } else {
+          console.warn('获取维修工评价API返回异常，使用备用数据')
+          this.useBackupReviewData()
+        }
       } catch (error) {
         console.error('获取维修工评价失败:', error)
+        // 如果接口调用失败，使用备用数据
         this.useBackupReviewData()
       } finally {
         this.loading.reviews = false

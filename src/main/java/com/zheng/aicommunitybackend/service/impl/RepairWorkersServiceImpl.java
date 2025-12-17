@@ -11,6 +11,7 @@ import com.zheng.aicommunitybackend.domain.entity.RepairWorkers;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.vo.RepairOrderVO;
 import com.zheng.aicommunitybackend.domain.vo.RepairWorkerVO;
+import com.zheng.aicommunitybackend.domain.vo.WorkerReviewVO;
 import com.zheng.aicommunitybackend.domain.vo.WorkerStatsVO;
 import com.zheng.aicommunitybackend.exception.BaseException;
 import com.zheng.aicommunitybackend.mapper.RepairOrdersMapper;
@@ -625,6 +626,83 @@ public class RepairWorkersServiceImpl extends ServiceImpl<RepairWorkersMapper, R
             default:
                 return "未知";
         }
+    }
+    
+    /**
+     * 转换报修类型代码为中文标签
+     * @param repairType 报修类型代码
+     * @return 中文标签
+     */
+    private String convertRepairTypeToLabel(String repairType) {
+        if (repairType == null || repairType.trim().isEmpty()) {
+            return "其他";
+        }
+        
+        switch (repairType.trim()) {
+            case "water_electricity":
+                return "水电维修";
+            case "furniture":
+                return "家具维修";
+            case "door_window":
+                return "门窗维修";
+            case "wall":
+                return "墙面维修";
+            case "appliance":
+                return "电器维修";
+            case "plumbing":
+                return "管道疏通";
+            case "other":
+                return "其他";
+            default:
+                // 如果是未知的类型，返回原值或"其他"
+                return StringUtils.hasText(repairType) ? repairType : "其他";
+        }
+    }
+    
+    @Override
+    public List<WorkerReviewVO> getWorkerReviews(Long workerId, int page, int pageSize) {
+        // 1. 检查维修工是否存在
+        RepairWorkers worker = getById(workerId);
+        if (worker == null) {
+            throw new BaseException("维修工不存在");
+        }
+        
+        // 2. 查询该维修工的已完成且有评价的工单
+        LambdaQueryWrapper<RepairOrders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(RepairOrders::getWorkerId, workerId)
+               .eq(RepairOrders::getStatus, 3) // 已完成的工单
+               .isNotNull(RepairOrders::getSatisfactionLevel) // 有评分
+               .isNotNull(RepairOrders::getFeedback) // 有评价内容
+               .orderByDesc(RepairOrders::getUpdateTime); // 按更新时间降序
+        
+        // 3. 分页查询
+        Page<RepairOrders> pageQuery = new Page<>(page, pageSize);
+        Page<RepairOrders> pageResult = repairOrdersMapper.selectPage(pageQuery, wrapper);
+        
+        // 4. 转换为VO
+        List<WorkerReviewVO> reviews = new ArrayList<>();
+        for (RepairOrders order : pageResult.getRecords()) {
+            WorkerReviewVO review = new WorkerReviewVO();
+            review.setId(order.getId());
+            
+            // 脱敏处理用户ID（手机号）
+            String phone = order.getContactPhone();
+            if (StringUtils.hasText(phone) && phone.length() >= 11) {
+                review.setUserId(phone.substring(0, 3) + "****" + phone.substring(7));
+            } else {
+                review.setUserId("匿名用户");
+            }
+            
+            review.setRating(order.getSatisfactionLevel());
+            review.setContent(order.getFeedback());
+            review.setCreateTime(order.getUpdateTime()); // 使用更新时间作为评价时间
+            review.setOrderTitle(order.getTitle());
+            review.setRepairType(convertRepairTypeToLabel(order.getRepairType()));
+            
+            reviews.add(review);
+        }
+        
+        return reviews;
     }
 }
 

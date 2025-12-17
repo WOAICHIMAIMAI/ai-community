@@ -2,6 +2,7 @@ package com.zheng.aicommunitybackend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zheng.aicommunitybackend.domain.dto.*;
@@ -70,13 +71,27 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         // 1. 构建工单对象并设置初始属性
         RepairOrders order = new RepairOrders();
         BeanUtils.copyProperties(dto, order);
-        
+        Long workerId = dto.getWorkerId();
         // 2. 设置其他必要属性
         order.setOrderNumber(generateOrderNumber());
         order.setUserId(userId);
-        order.setStatus(STATUS_PENDING);
         order.setCreateTime(new Date());
         order.setUpdateTime(new Date());
+        if(workerId != null){
+            order.setWorkerId(workerId);
+            order.setStatus(STATUS_ASSIGNED);
+            RepairWorkers repairWorkers = repairWorkersMapper.selectById(workerId);
+            if(repairWorkers == null){
+                throw new BaseException("系统异常!");
+            }
+            if(repairWorkers.getWorkStatus() != 1){
+                throw new BaseException("当前师傅不接单!");
+            }
+            repairWorkers.setWorkStatus(2);
+            repairWorkersMapper.updateById(repairWorkers);
+        }else{
+            order.setStatus(STATUS_PENDING);
+        }
         
         // 3. 保存工单到数据库
         save(order);

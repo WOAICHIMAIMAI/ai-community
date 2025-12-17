@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.vo.RepairOrderVO;
 import com.zheng.aicommunitybackend.domain.vo.RepairWorkerVO;
+import com.zheng.aicommunitybackend.domain.vo.WorkerReviewVO;
 import com.zheng.aicommunitybackend.domain.vo.WorkerStatsVO;
 
 import java.util.List;
@@ -88,4 +89,13 @@ public interface RepairWorkersService extends IService<RepairWorkers> {
      * @param workerId 维修工ID
      */
     void updateWorkerRating(Long workerId);
+    
+    /**
+     * 获取维修工评价列表
+     * @param workerId 维修工ID
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 评价列表
+     */
+    List<WorkerReviewVO> getWorkerReviews(Long workerId, int page, int pageSize);
 }

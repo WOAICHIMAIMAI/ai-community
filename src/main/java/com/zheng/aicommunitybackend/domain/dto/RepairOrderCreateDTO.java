@@ -22,6 +22,11 @@ public class RepairOrderCreateDTO {
     @NotBlank(message = "报修地址不能为空")
     @Schema(description = "报修地址", required = true)
     private String address;
+
+    /**
+     * 报修工ID
+     */
+    private Long workerId;
     
     /**
      * 报修类型：水电/门窗/家电等
