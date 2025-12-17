@@ -210,11 +210,33 @@ const goToChat = () => {
 }
 const refreshing = ref(false)
 
-// 模拟数据 - 轮播图
+// 轮播图数据 - 智能社区主题
 const bannerList = ref([
-  { imageUrl: 'https://fastly.jsdelivr.net/npm/@vant/assets/apple-1.jpeg', link: '' },
-  { imageUrl: 'https://fastly.jsdelivr.net/npm/@vant/assets/apple-2.jpeg', link: '' },
-  { imageUrl: 'https://fastly.jsdelivr.net/npm/@vant/assets/apple-3.jpeg', link: '' },
+  { 
+    imageUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=400&fit=crop&q=80', 
+    link: '',
+    title: '智慧社区，美好生活'
+  },
+  { 
+    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&h=400&fit=crop&q=80', 
+    link: '',
+    title: '现代化社区服务'
+  },
+  { 
+    imageUrl: 'https://images.unsplash.com/photo-1460317442991-0ec209397118?w=800&h=400&fit=crop&q=80', 
+    link: '',
+    title: '智能家居，舒适生活'
+  },
+  { 
+    imageUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=400&fit=crop&q=80', 
+    link: '',
+    title: '社区互动，邻里和睦'
+  },
+  { 
+    imageUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=400&fit=crop&q=80', 
+    link: '',
+    title: '绿色社区，生态宜居'
+  },
 ])
 
 // 加载状态
@@ -387,8 +409,11 @@ const fetchHotNews = async () => {
   try {
     loadingNews.value = true
     const response = await newsApi.getHotNews(3)
+    console.log('热点新闻API返回:', response)
+    
     if (response.code === 200 && response.data) {
-      hotNews.value = response.data.records || []
+      // 后端直接返回数组，而不是包含records的对象
+      hotNews.value = Array.isArray(response.data) ? response.data : (response.data.records || [])
     }
   } catch (error) {
     console.error('获取热点新闻失败:', error)

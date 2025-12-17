@@ -2,7 +2,6 @@ package com.zheng.aicommunitybackend.controller.user;
 
 import com.zheng.aicommunitybackend.domain.dto.PostDTO;
 import com.zheng.aicommunitybackend.domain.dto.PostPageQuery;
-import com.zheng.aicommunitybackend.domain.enums.PostCategoryEnum;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.result.Result;
 import com.zheng.aicommunitybackend.domain.vo.PostVO;
@@ -142,9 +141,10 @@ public class CommunityPostsController {
     @Operation(summary = "获取帖子分类", description = "获取所有帖子分类列表")
     public Result<List<String>> getCategories() {
         log.info("获取帖子分类列表");
-        List<String> categories = Arrays.stream(PostCategoryEnum.values())
+        /*List<String> categories = Arrays.stream(PostCategoryEnum.values())
                 .map(PostCategoryEnum::getName)
                 .collect(Collectors.toList());
-        return Result.success(categories);
+        return Result.success(categories);*/
+        return Result.success();
     }
 }

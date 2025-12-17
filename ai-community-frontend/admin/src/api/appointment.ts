@@ -128,70 +128,70 @@ export interface AppointmentStats {
  * 获取预约服务列表
  */
 export const getServices = (params: ServiceQueryParams) => {
-  return request.get<PageResponse<AppointmentService>>('/admin/appointments/services', { params })
+  return request.get<PageResponse<AppointmentService>>('/api/admin/appointments/services', { params })
 }
 
 /**
  * 获取预约记录列表
  */
 export const getAppointments = (params: AppointmentQueryParams) => {
-  return request.get<PageResponse<AppointmentRecord>>('/admin/appointments/records', { params })
+  return request.get<PageResponse<AppointmentRecord>>('/api/admin/appointments/records', { params })
 }
 
 /**
  * 根据ID获取服务详情
  */
 export const getServiceDetail = (id: number) => {
-  return request.get<AppointmentService>(`/admin/appointments/services/${id}`)
+  return request.get<AppointmentService>(`/api/admin/appointments/services/${id}`)
 }
 
 /**
  * 根据ID获取预约详情
  */
 export const getAppointmentDetail = (id: number) => {
-  return request.get<AppointmentRecord>(`/admin/appointments/records/${id}`)
+  return request.get<AppointmentRecord>(`/api/admin/appointments/records/${id}`)
 }
 
 /**
  * 创建预约服务
  */
 export const createService = (data: ServiceForm) => {
-  return request.post<boolean>('/admin/appointments/services', data)
+  return request.post<boolean>('/api/admin/appointments/services', data)
 }
 
 /**
  * 更新预约服务
  */
 export const updateService = (id: number, data: ServiceForm) => {
-  return request.put<boolean>(`/admin/appointments/services/${id}`, data)
+  return request.put<boolean>(`/api/admin/appointments/services/${id}`, data)
 }
 
 /**
  * 删除预约服务
  */
 export const deleteService = (id: number) => {
-  return request.delete<boolean>(`/admin/appointments/services/${id}`)
+  return request.delete<boolean>(`/api/admin/appointments/services/${id}`)
 }
 
 /**
  * 批量删除预约服务
  */
 export const batchDeleteServices = (ids: number[]) => {
-  return request.delete<boolean>('/admin/appointments/services/batch', { data: { ids } })
+  return request.delete<boolean>('/api/admin/appointments/services/batch', { data: { ids } })
 }
 
 /**
  * 创建预约记录
  */
 export const createAppointment = (data: AppointmentForm) => {
-  return request.post<boolean>('/admin/appointments/records', data)
+  return request.post<boolean>('/api/admin/appointments/records', data)
 }
 
 /**
  * 更新预约状态
  */
 export const updateAppointmentStatus = (id: number, status: AppointmentStatus, workerId?: number, reason?: string) => {
-  return request.put<boolean>(`/admin/appointments/records/${id}/status`, { 
+  return request.put<boolean>(`/api/admin/appointments/records/${id}/status`, { 
     status, 
     workerId, 
     reason 
@@ -202,21 +202,21 @@ export const updateAppointmentStatus = (id: number, status: AppointmentStatus, w
  * 分配工作人员
  */
 export const assignWorker = (id: number, workerId: number) => {
-  return request.put<boolean>(`/admin/appointments/records/${id}/assign`, { workerId })
+  return request.put<boolean>(`/api/admin/appointments/records/${id}/assign`, { workerId })
 }
 
 /**
  * 获取预约统计数据
  */
 export const getAppointmentStats = () => {
-  return request.get<AppointmentStats>('/admin/appointments/stats')
+  return request.get<AppointmentStats>('/api/admin/appointments/stats')
 }
 
 /**
  * 导出预约记录
  */
 export const exportAppointments = (params: AppointmentQueryParams) => {
-  return request.get('/admin/appointments/records/export', { 
+  return request.get('/api/admin/appointments/records/export', { 
     params,
     responseType: 'blob'
   })

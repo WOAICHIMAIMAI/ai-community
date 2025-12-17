@@ -49,54 +49,54 @@ export interface PageResponse<T> {
  * 获取问题分类列表
  */
 export const getProblemCategories = () => {
-  return request.get<ProblemCategory[]>('/admin/common-problems/categories')
+  return request.get<ProblemCategory[]>('/api/admin/common-problems/categories')
 }
 
 /**
  * 根据条件查询问题列表
  */
 export const getProblemsPage = (params: ProblemQueryParams) => {
-  return request.get<PageResponse<ProblemDetail>>('/admin/common-problems/list', { params })
+  return request.get<PageResponse<ProblemDetail>>('/api/admin/common-problems/list', { params })
 }
 
 /**
  * 根据问题ID查询问题详情
  */
 export const getProblemDetail = (id: number) => {
-  return request.get<ProblemDetail>(`/admin/common-problems/${id}`)
+  return request.get<ProblemDetail>(`/api/admin/common-problems/${id}`)
 }
 
 /**
  * 新增问题
  */
 export const createProblem = (data: ProblemForm) => {
-  return request.post<boolean>('/admin/common-problems', data)
+  return request.post<boolean>('/api/admin/common-problems', data)
 }
 
 /**
  * 更新问题
  */
 export const updateProblem = (id: number, data: ProblemForm) => {
-  return request.put<boolean>(`/admin/common-problems/${id}`, data)
+  return request.put<boolean>(`/api/admin/common-problems/${id}`, data)
 }
 
 /**
  * 删除问题
  */
 export const deleteProblem = (id: number) => {
-  return request.delete<boolean>(`/admin/common-problems/${id}`)
+  return request.delete<boolean>(`/api/admin/common-problems/${id}`)
 }
 
 /**
  * 批量删除问题
  */
 export const batchDeleteProblems = (ids: number[]) => {
-  return request.delete<boolean>('/admin/common-problems/batch', { data: { ids } })
+  return request.delete<boolean>('/api/admin/common-problems/batch', { data: { ids } })
 }
 
 /**
  * 设置问题置顶状态
  */
 export const setProblemPriority = (id: number, priority: number) => {
-  return request.put<boolean>(`/admin/common-problems/${id}/priority`, { priority })
+  return request.put<boolean>(`/api/admin/common-problems/${id}/priority`, { priority })
 }

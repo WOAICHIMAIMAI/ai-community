@@ -58,7 +58,7 @@ export interface UserInfoResult {
 }
 
 /**
- * 用户登录
+ * 管理员登录（使用通用认证接口）
  * @param params 登录参数
  * @returns 登录结果
  */
@@ -67,7 +67,7 @@ export function login(params: LoginParams): Promise<LoginResult> {
 }
 
 /**
- * 用户注册
+ * 管理员注册
  * @param params 注册参数
  * @returns 注册结果
  */
@@ -76,11 +76,11 @@ export function register(params: RegisterParams): Promise<RegisterResult> {
 }
 
 /**
- * 获取当前登录用户信息
+ * 获取当前登录用户信息（管理员也使用此接口）
  * @returns 用户信息
  */
 export function getUserInfo(): Promise<UserInfoResult> {
-  return get<UserInfoResult>('/api/user/info')
+  return get<UserInfoResult>('/api/user/user/info')
 }
 
 /**
