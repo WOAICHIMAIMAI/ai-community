@@ -19,9 +19,9 @@ public interface RepairOrdersService extends IService<RepairOrders> {
      * 创建报修工单
      * @param dto 报修工单创建DTO
      * @param userId 用户ID
-     * @return 工单编号
+     * @return 工单ID
      */
-    String createRepairOrder(RepairOrderCreateDTO dto, Long userId);
+    Long createRepairOrder(RepairOrderCreateDTO dto, Long userId);
     
     /**
      * 取消报修工单
@@ -54,6 +54,14 @@ public interface RepairOrdersService extends IService<RepairOrders> {
      * @return 是否成功
      */
     boolean submitFeedback(RepairFeedbackDTO dto, Long userId);
+    
+    /**
+     * 用户端修改报修工单状态
+     * @param dto 状态更新DTO
+     * @param userId 用户ID
+     * @return 是否成功
+     */
+    boolean updateUserRepairOrderStatus(UserRepairOrderStatusDTO dto, Long userId);
     
     /**
      * 管理端分页查询报修工单

@@ -300,69 +300,109 @@
     <el-dialog
       v-model="assignFormVisible"
       title="分配维修工"
-      width="60%"
+      width="70%"
       destroy-on-close
     >
       <div class="worker-assignment">
-        <el-form :model="assignForm" label-width="100px">
-          <el-form-item label="工单号">
-            <span>{{ assignForm.orderId }}</span>
-          </el-form-item>
-          <el-form-item label="选择维修工">
-            <el-select 
-              v-model="assignForm.workerId" 
-              placeholder="请选择维修工" 
-              filterable
-              popper-class="worker-select-dropdown"
-              size="large"
-              style="width: 100%"
+        <div class="assignment-header">
+          <div class="order-info">
+            <span class="label">工单号：</span>
+            <span class="value">{{ assignForm.orderId }}</span>
+          </div>
+        </div>
+        
+        <div class="worker-list-container">
+          <div class="list-title">
+            <span>可用维修工列表</span>
+            <span class="count">(共 {{ availableWorkers.length }} 人)</span>
+          </div>
+          
+          <div class="worker-list" v-if="availableWorkers.length > 0">
+            <div 
+              v-for="worker in availableWorkers" 
+              :key="worker.id"
+              class="worker-card"
+              :class="{ 'selected': assignForm.workerId === worker.id }"
             >
-              <el-option
-                v-for="worker in availableWorkers"
-                :key="worker.id"
-                :label="`${worker.name} - ${worker.phone}`"
-                :value="worker.id"
-                class="worker-select-option"
-              >
-                <div class="worker-option">
-                  <el-avatar :size="45" :src="worker.avatarUrl" class="worker-avatar">
-                    {{ worker.name?.charAt(0) }}
-                  </el-avatar>
-                  <div class="worker-info">
-                    <div class="worker-name">
-                      {{ worker.name }}
-                      <el-tag size="small" :type="worker.ongoingOrders >= 5 ? 'warning' : 'success'" effect="light" class="order-badge">
-                        {{ worker.ongoingOrders || 0 }}单
-                      </el-tag>
-                    </div>
-                    <div class="worker-phone">
+              <div class="worker-main-info">
+                <el-avatar :size="60" :src="worker.avatarUrl" class="worker-avatar">
+                  {{ worker.name?.charAt(0) }}
+                </el-avatar>
+                
+                <div class="worker-details">
+                  <div class="name-row">
+                    <span class="worker-name">{{ worker.name }}</span>
+                    <el-tag 
+                      size="small" 
+                      :type="getWorkStatusType(worker.workStatus)" 
+                      effect="light"
+                    >
+                      {{ getWorkStatusText(worker.workStatus) }}
+                    </el-tag>
+                  </div>
+                  
+                  <div class="info-row">
+                    <div class="info-item">
                       <el-icon><Phone /></el-icon>
-                      {{ worker.phone }}
+                      <span>{{ worker.phone }}</span>
                     </div>
-                    <div class="worker-skills" v-if="worker.skills && worker.skills.length > 0">
+                    <div class="info-item" v-if="worker.rating">
+                      <el-icon color="#fadb14"><Star /></el-icon>
+                      <span>{{ worker.rating?.toFixed(1) }}分</span>
+                    </div>
+                    <div class="info-item" v-if="worker.ongoingOrders !== undefined">
+                      <el-icon><Document /></el-icon>
+                      <span>进行中: {{ worker.ongoingOrders || 0 }}单</span>
+                    </div>
+                  </div>
+                  
+                  <div class="skills-row" v-if="worker.skills && worker.skills.length > 0">
+                    <span class="skills-label">擅长：</span>
+                    <div class="skills-tags">
                       <el-tag 
                         v-for="(skill, index) in worker.skills" 
                         :key="index" 
                         size="small" 
                         type="primary" 
-                        effect="plain" 
+                        effect="plain"
                         class="skill-tag"
                       >
                         {{ skill }}
                       </el-tag>
                     </div>
                   </div>
-                  <div class="worker-rating" v-if="worker.rating">
-                    <div class="rating-score">
-                      <el-icon color="#fadb14"><Star /></el-icon>
-                      {{ worker.rating?.toFixed(1) }}
-                    </div>
+                  
+                  <div class="intro-row" v-if="worker.introduction">
+                    <span class="intro-text">{{ worker.introduction }}</span>
                   </div>
                 </div>
-              </el-option>
-            </el-select>
-          </el-form-item>
-        </el-form>
+              </div>
+              
+              <div class="worker-action">
+                <el-button 
+                  v-if="assignForm.workerId !== worker.id"
+                  type="primary" 
+                  size="default"
+                  @click="selectWorker(worker.id)"
+                >
+                  选择
+                </el-button>
+                <el-button 
+                  v-else
+                  type="success" 
+                  size="default"
+                  plain
+                  disabled
+                >
+                  <el-icon><Check /></el-icon>
+                  已选择
+                </el-button>
+              </div>
+            </div>
+          </div>
+          
+          <el-empty v-else description="暂无可用维修工" />
+        </div>
       </div>
       <template #footer>
         <el-button @click="assignFormVisible = false">取消</el-button>
@@ -431,8 +471,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Search, RefreshRight, Plus, Phone, Star } from '@element-plus/icons-vue'
-import { Check, SetUp, Finished, WarningFilled, CircleCheck } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Plus, Phone, Star, Document, Check } from '@element-plus/icons-vue'
+import { SetUp, Finished, WarningFilled, CircleCheck } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { getRepairOrderList, getRepairOrderDetail, getRepairProgressList, assignRepairWorker, 
@@ -711,6 +751,38 @@ const getOperatorType = (type: number): string => {
   }
 }
 
+// 获取工作状态文本
+const getWorkStatusText = (workStatus: number | undefined): string => {
+  if (workStatus === undefined || workStatus === null) return '未知'
+  
+  switch (workStatus) {
+    case 0:
+      return '休息中'
+    case 1:
+      return '可接单'
+    case 2:
+      return '忙碌中'
+    default:
+      return '未知'
+  }
+}
+
+// 获取工作状态标签类型
+const getWorkStatusType = (workStatus: number | undefined): 'success' | 'warning' | 'danger' | 'info' => {
+  if (workStatus === undefined || workStatus === null) return 'info'
+  
+  switch (workStatus) {
+    case 0:
+      return 'info'     // 休息 - 灰色
+    case 1:
+      return 'success'  // 可接单 - 绿色
+    case 2:
+      return 'warning'  // 忙碌 - 橙色
+    default:
+      return 'info'
+  }
+}
+
 // 加载工单列表
 const loadOrderList = async () => {
   try {
@@ -856,6 +928,11 @@ const handleAssignWorker = async (orderId: number) => {
   } catch (error: any) {
     ElMessage.error(error.message || '获取维修工列表失败')
   }
+}
+
+// 选择维修工
+const selectWorker = (workerId: number) => {
+  assignForm.workerId = workerId
 }
 
 // 确认分配维修工
@@ -1151,135 +1228,187 @@ onMounted(() => {
   }
   
   .worker-assignment {
-    .el-select {
-      .el-input__wrapper {
-        padding: 8px 12px;
-      }
-    }
-    
-    .worker-option {
-      display: flex;
-      align-items: center;
-      padding: 12px 0;
-      gap: 12px;
-      transition: all 0.3s ease;
+    .assignment-header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+      border-radius: 8px;
+      margin-bottom: 20px;
       
-      .worker-avatar {
-        flex-shrink: 0;
-        border: 2px solid #f0f0f0;
-        transition: all 0.3s ease;
-      }
-      
-      .worker-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        min-width: 0;
-        
-        .worker-name {
-          font-size: 15px;
-          font-weight: 600;
-          color: #303133;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          
-          .order-badge {
-            font-size: 12px;
-            padding: 0 8px;
-            height: 20px;
-            line-height: 20px;
-          }
-        }
-        
-        .worker-phone {
-          font-size: 13px;
-          color: #909399;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          
-          .el-icon {
-            font-size: 14px;
-          }
-        }
-        
-        .worker-skills {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 2px;
-          
-          .skill-tag {
-            font-size: 12px;
-            padding: 0 8px;
-            height: 22px;
-            line-height: 22px;
-            border-radius: 4px;
-          }
-        }
-      }
-      
-      .worker-rating {
-        flex-shrink: 0;
+      .order-info {
         display: flex;
         align-items: center;
+        font-size: 15px;
         
-        .rating-score {
-          font-size: 16px;
-          font-weight: 600;
+        .label {
+          color: #606266;
+          font-weight: 500;
+        }
+        
+        .value {
           color: #303133;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          padding: 6px 12px;
-          background: linear-gradient(135deg, #fff9e6 0%, #fff4d9 100%);
-          border-radius: 20px;
-          border: 1px solid #ffe7ba;
-          
-          .el-icon {
-            font-size: 16px;
-          }
+          font-weight: 600;
+          margin-left: 8px;
         }
       }
     }
-  }
-}
-
-// 下拉框全局样式
-:deep(.worker-select-dropdown) {
-  .el-select-dropdown__item {
-    height: auto;
-    padding: 8px 12px;
-    line-height: normal;
     
-    &.worker-select-option {
-      border-bottom: 1px solid #f0f0f0;
-      
-      &:last-child {
-        border-bottom: none;
-      }
-      
-      &:hover {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    .worker-list-container {
+      .list-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #303133;
+        border-bottom: 2px solid #e4e7ed;
+        margin-bottom: 16px;
         
-        .worker-avatar {
-          border-color: #409EFF;
-          transform: scale(1.05);
+        .count {
+          font-size: 14px;
+          color: #909399;
+          font-weight: 400;
         }
       }
       
-      &.selected {
-        background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%);
-        font-weight: normal;
+      .worker-list {
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 8px;
         
-        .worker-avatar {
-          border-color: #409EFF;
+        &::-webkit-scrollbar {
+          width: 6px;
         }
         
-        .worker-name {
-          color: #409EFF;
+        &::-webkit-scrollbar-thumb {
+          background-color: #dcdfe6;
+          border-radius: 3px;
+          
+          &:hover {
+            background-color: #c0c4cc;
+          }
+        }
+        
+        .worker-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 20px;
+          margin-bottom: 16px;
+          background: #ffffff;
+          border: 2px solid #e4e7ed;
+          border-radius: 12px;
+          transition: all 0.3s ease;
+          cursor: pointer;
+          
+          &:hover {
+            border-color: #409EFF;
+            box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+            transform: translateY(-2px);
+          }
+          
+          &.selected {
+            border-color: #409EFF;
+            background: linear-gradient(135deg, #ecf5ff 0%, #e0efff 100%);
+            box-shadow: 0 4px 16px rgba(64, 158, 255, 0.2);
+          }
+          
+          .worker-main-info {
+            display: flex;
+            gap: 16px;
+            flex: 1;
+            
+            .worker-avatar {
+              flex-shrink: 0;
+              border: 3px solid #e4e7ed;
+              transition: all 0.3s ease;
+            }
+            
+            .worker-details {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              
+              .name-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                
+                .worker-name {
+                  font-size: 17px;
+                  font-weight: 600;
+                  color: #303133;
+                }
+              }
+              
+              .info-row {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                flex-wrap: wrap;
+                
+                .info-item {
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                  font-size: 14px;
+                  color: #606266;
+                  
+                  .el-icon {
+                    font-size: 15px;
+                  }
+                }
+              }
+              
+              .skills-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-wrap: wrap;
+                
+                .skills-label {
+                  font-size: 13px;
+                  color: #909399;
+                  flex-shrink: 0;
+                }
+                
+                .skills-tags {
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 6px;
+                  
+                  .skill-tag {
+                    font-size: 12px;
+                    padding: 0 10px;
+                    height: 24px;
+                    line-height: 24px;
+                    border-radius: 6px;
+                  }
+                }
+              }
+              
+              .intro-row {
+                .intro-text {
+                  font-size: 13px;
+                  color: #909399;
+                  line-height: 1.6;
+                }
+              }
+            }
+          }
+          
+          .worker-action {
+            flex-shrink: 0;
+            margin-left: 20px;
+            
+            .el-button {
+              min-width: 100px;
+              height: 40px;
+              font-size: 15px;
+              border-radius: 8px;
+            }
+          }
         }
       }
     }

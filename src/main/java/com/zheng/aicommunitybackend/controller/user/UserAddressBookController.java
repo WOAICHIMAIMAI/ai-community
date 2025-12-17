@@ -36,7 +36,7 @@ public class UserAddressBookController {
      * @param addressBookDTO 地址信息DTO
      * @return 添加结果
      */
-    @PostMapping
+    @PostMapping("/add")
     @Operation(summary = "添加地址", description = "添加用户收货地址")
     public Result<Void> addAddress(@RequestBody @Valid AddressBookDTO addressBookDTO) {
         log.info("用户添加地址：{}", addressBookDTO);

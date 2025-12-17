@@ -27,7 +27,7 @@ public class RepairTools {
      */
     @Tool(description = "帮助用户创建报修工单")
     public String repairOrderCreate(@ToolParam(description = "创建工单所需要的参数") RepairOrderCreateDTO repairOrderCreateDTO) {
-        String orderNumber = repairOrdersService.createRepairOrder(repairOrderCreateDTO, UserContext.getUserId());
+        Long orderNumber = repairOrdersService.createRepairOrder(repairOrderCreateDTO, UserContext.getUserId());
         return "已成功创建报修工单，工单ID" + orderNumber;
     }
 }

@@ -32,6 +32,22 @@ export const cancelRepairOrder = (orderId: number) => {
 }
 
 /**
+ * 修改报修工单状态
+ * @param data 状态更新数据
+ */
+export const updateRepairOrderStatus = (data: {
+  orderId: number
+  status: number
+  remark?: string
+}) => {
+  return request({
+    url: '/api/user/repair-orders/status',
+    method: 'put',
+    data
+  })
+}
+
+/**
  * 分页查询用户报修工单
  * @param params 查询参数
  */

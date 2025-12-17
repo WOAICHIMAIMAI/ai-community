@@ -4,6 +4,7 @@ import com.zheng.aicommunitybackend.common.UserContext;
 import com.zheng.aicommunitybackend.domain.dto.RepairFeedbackDTO;
 import com.zheng.aicommunitybackend.domain.dto.RepairOrderCreateDTO;
 import com.zheng.aicommunitybackend.domain.dto.RepairOrderPageQuery;
+import com.zheng.aicommunitybackend.domain.dto.UserRepairOrderStatusDTO;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.result.Result;
 import com.zheng.aicommunitybackend.domain.vo.RepairOrderVO;
@@ -33,10 +34,10 @@ public class UserRepairOrderController {
      */
     @PostMapping
     @Operation(summary = "创建报修工单", description = "用户创建物业报修工单")
-    public Result<String> createRepairOrder(@RequestBody @Validated RepairOrderCreateDTO dto) {
+    public Result<Long> createRepairOrder(@RequestBody @Validated RepairOrderCreateDTO dto) {
         Long userId = UserContext.getUserId();
-        String orderNumber = repairOrdersService.createRepairOrder(dto, userId);
-        return Result.success(orderNumber);
+        Long orderId = repairOrdersService.createRepairOrder(dto, userId);
+        return Result.success(orderId);
     }
     
     /**
@@ -84,6 +85,17 @@ public class UserRepairOrderController {
     public Result<Boolean> submitFeedback(@RequestBody @Validated RepairFeedbackDTO dto) {
         Long userId = UserContext.getUserId();
         boolean result = repairOrdersService.submitFeedback(dto, userId);
+        return Result.success(result);
+    }
+    
+    /**
+     * 修改报修工单状态
+     */
+    @PutMapping("/status")
+    @Operation(summary = "修改工单状态", description = "用户修改报修工单状态（取消或确认完成）")
+    public Result<Boolean> updateRepairOrderStatus(@RequestBody @Validated UserRepairOrderStatusDTO dto) {
+        Long userId = UserContext.getUserId();
+        boolean result = repairOrdersService.updateUserRepairOrderStatus(dto, userId);
         return Result.success(result);
     }
 } 

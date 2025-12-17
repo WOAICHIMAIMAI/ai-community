@@ -66,7 +66,7 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
 
     @Override
     @Transactional
-    public String createRepairOrder(RepairOrderCreateDTO dto, Long userId) {
+    public Long createRepairOrder(RepairOrderCreateDTO dto, Long userId) {
         // 1. 构建工单对象并设置初始属性
         RepairOrders order = new RepairOrders();
         BeanUtils.copyProperties(dto, order);
@@ -87,7 +87,7 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
                 "创建工单", 
                 "用户创建了报修工单，等待物业受理");
         
-        return order.getOrderNumber();
+        return order.getId();
     }
 
     @Override
@@ -253,6 +253,127 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         }
         
         return result;
+    }
+
+    @Override
+    @Transactional
+    public boolean updateUserRepairOrderStatus(UserRepairOrderStatusDTO dto, Long userId) {
+        // 1. 查询工单并校验
+        RepairOrders order = getById(dto.getOrderId());
+        if (order == null) {
+            throw new BaseException("工单不存在");
+        }
+        
+        // 2. 验证工单归属权
+        if (!order.getUserId().equals(userId)) {
+            throw new BaseException("您无权操作此工单");
+        }
+        
+        // 3. 获取当前状态和目标状态
+        Integer currentStatus = order.getStatus();
+        Integer targetStatus = dto.getStatus();
+        
+        // 4. 严格的状态校验
+        validateUserStatusChange(currentStatus, targetStatus);
+        
+        // 5. 更新工单状态
+        order.setStatus(targetStatus);
+        order.setUpdateTime(new Date());
+        
+        // 6. 如果状态变为已完成，设置完成时间
+        if (targetStatus == STATUS_COMPLETED) {
+            order.setCompletionTime(new Date());
+            
+            // 如果有维修工，则更新维修工状态为可接单
+            if (order.getWorkerId() != null) {
+                RepairWorkers worker = repairWorkersMapper.selectById(order.getWorkerId());
+                if (worker != null) {
+                    worker.setWorkStatus(1); // 1-可接单
+                    repairWorkersMapper.updateById(worker);
+                }
+            }
+        }
+        
+        // 7. 执行更新
+        boolean result = updateById(order);
+        
+        // 8. 记录状态变更进度
+        if (result) {
+            String statusDesc = convertStatusToDesc(targetStatus);
+            String action = targetStatus == STATUS_CANCELLED ? "取消工单" : "更新状态";
+            String description = "用户将工单状态更新为：" + statusDesc;
+            
+            // 如果有备注，添加到描述中
+            if (StringUtils.hasText(dto.getRemark())) {
+                description += "，备注：" + dto.getRemark();
+            }
+            
+            repairProgressService.recordSystemProgress(
+                    dto.getOrderId(),
+                    action,
+                    description
+            );
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 校验用户端工单状态变更的合法性
+     *
+     * @param currentStatus 当前状态
+     * @param targetStatus 目标状态
+     */
+    private void validateUserStatusChange(Integer currentStatus, Integer targetStatus) {
+        if (currentStatus == null || targetStatus == null) {
+            throw new BaseException("工单状态不能为空");
+        }
+        
+        // 如果状态没有变化，直接返回
+        if (currentStatus.equals(targetStatus)) {
+            throw new BaseException("工单状态未发生变化");
+        }
+        
+        // 已完成或已取消的工单不能更改状态
+        if (currentStatus == STATUS_COMPLETED) {
+            throw new BaseException("工单已完成，无法修改状态");
+        }
+        
+        if (currentStatus == STATUS_CANCELLED) {
+            throw new BaseException("工单已取消，无法修改状态");
+        }
+        
+        // 用户只能执行以下状态变更操作：
+        switch (currentStatus) {
+            case 0: // 待受理
+                // 待受理状态只能取消
+                if (targetStatus != STATUS_CANCELLED) {
+                    throw new BaseException("待受理状态的工单只能取消");
+                }
+                break;
+                
+            case 1: // 已分配
+                // 已分配状态只能取消
+                if (targetStatus != STATUS_CANCELLED) {
+                    throw new BaseException("已分配状态的工单只能取消");
+                }
+                break;
+                
+            case 2: // 处理中
+                // 处理中状态可以取消或确认完成
+                if (targetStatus != STATUS_CANCELLED && targetStatus != STATUS_COMPLETED) {
+                    throw new BaseException("处理中的工单只能取消或确认完成");
+                }
+                break;
+                
+            default:
+                throw new BaseException("当前状态不支持此操作");
+        }
+        
+        // 用户不能将状态改为待受理、已分配、处理中（这些是系统/管理员/维修工的操作）
+        if (targetStatus == STATUS_PENDING || targetStatus == STATUS_ASSIGNED || targetStatus == STATUS_PROCESSING) {
+            throw new BaseException("用户无权将工单状态修改为：" + convertStatusToDesc(targetStatus));
+        }
     }
 
     @Override

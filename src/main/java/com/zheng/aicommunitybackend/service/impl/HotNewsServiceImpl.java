@@ -37,14 +37,15 @@ public class HotNewsServiceImpl extends ServiceImpl<HotNewsMapper, HotNews>
     public Page<HotNews> getHotNewsByPage(Page<HotNews> page, String category) {
         log.info("分页查询新闻：page={}, size={}, category={}", page.getCurrent(), page.getSize(), category);
         
-        // 先尝试从缓存获取
+        // 先尝试从缓存获取 - 临时禁用缓存以测试分页
         String cacheKey = CacheConstants.buildNewsPageKey(
             (int) page.getCurrent(), (int) page.getSize(), category);
-        Page<HotNews> cachedResult = (Page<HotNews>) redisUtils.get(cacheKey);
+        // FIXME: 临时注释缓存读取，测试分页功能
+        /*Page<HotNews> cachedResult = (Page<HotNews>) redisUtils.get(cacheKey);
         if (cachedResult != null) {
             log.info("从缓存获取新闻列表：total={}, records={}", cachedResult.getTotal(), cachedResult.getRecords().size());
             return cachedResult;
-        }
+        }*/
 
         LambdaQueryWrapper<HotNews> queryWrapper = new LambdaQueryWrapper<>();
 
@@ -66,8 +67,9 @@ public class HotNewsServiceImpl extends ServiceImpl<HotNewsMapper, HotNews>
         log.info("查询新闻列表结果：total={}, records={}, current={}, size={}", 
             result.getTotal(), result.getRecords().size(), result.getCurrent(), result.getSize());
 
-        // 缓存结果
-        redisUtils.set(cacheKey, result, CacheConstants.DEFAULT_EXPIRE_TIME);
+        // 缓存结果 - 临时禁用缓存写入
+        // FIXME: 确认分页正常后再启用缓存
+        // redisUtils.set(cacheKey, result, CacheConstants.DEFAULT_EXPIRE_TIME);
 
         return result;
     }

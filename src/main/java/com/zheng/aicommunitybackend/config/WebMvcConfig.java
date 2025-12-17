@@ -26,7 +26,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/error",
-            "/analytics/**"  // 允许数据分析API不需要认证
+            "/analytics/**",
+            "/common/upload"// 允许数据分析API不需要认证
     );
 
     public WebMvcConfig(JwtAuthInterceptor jwtAuthInterceptor) {

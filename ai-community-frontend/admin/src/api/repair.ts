@@ -52,9 +52,11 @@ export interface RepairWorker {
   avatarUrl: string
   skills: string[]
   status: number
+  workStatus: number  // 工作状态：0-休息 1-可接单 2-忙碌
   rating: number
   completedOrders: number
   ongoingOrders: number
+  introduction?: string
 }
 
 // 工单分配参数
