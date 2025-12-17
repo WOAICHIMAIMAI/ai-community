@@ -2,46 +2,87 @@
   <div class="worker-manage-container">
     <h2 class="page-title">维修工管理</h2>
     
-    <!-- 绩效统计卡片 -->
+    <!-- 绩效统计表格 -->
     <el-card shadow="never" class="stats-card">
       <template #header>
         <div class="card-header">
-          <span>维修工绩效统计</span>
+          <span>维修工绩效统计（Top 10）</span>
         </div>
       </template>
       
-      <div class="worker-stats">
-        <div class="stats-list" v-loading="statsLoading">
-          <el-empty v-if="workerStats.length === 0" description="暂无数据" />
-          <div class="stats-item" v-for="worker in workerStats" :key="worker.id">
-            <div class="worker-avatar">
-              <el-avatar :size="60" :src="worker.avatar">{{ worker.name?.charAt(0) }}</el-avatar>
+      <el-table
+        v-loading="statsLoading"
+        :data="workerStats"
+        style="width: 100%"
+        :header-cell-style="{ background: '#f5f7fa' }"
+      >
+        <el-table-column label="排名" width="80" align="center">
+          <template #default="{ $index }">
+            <el-tag v-if="$index === 0" type="danger" effect="dark">🥇</el-tag>
+            <el-tag v-else-if="$index === 1" type="warning" effect="dark">🥈</el-tag>
+            <el-tag v-else-if="$index === 2" type="success" effect="dark">🥉</el-tag>
+            <span v-else style="font-weight: 500">{{ $index + 1 }}</span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="维修工" width="200">
+          <template #default="{ row }">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <el-avatar :size="40" :src="row.avatar">{{ row.name?.charAt(0) }}</el-avatar>
+              <span style="font-weight: 500">{{ row.name }}</span>
             </div>
-            <div class="worker-info">
-              <h3 class="name">{{ worker.name }}</h3>
-              <div class="rating">
-                <span>评分：</span>
-                <el-rate v-model="worker.rating" disabled :colors="rateColors" />
-                <span class="rating-value">{{ worker.rating.toFixed(1) }}</span>
-              </div>
-              <div class="metrics">
-                <div class="metric-item">
-                  <div class="label">完成工单</div>
-                  <div class="value">{{ worker.completedCount }}</div>
-                </div>
-                <div class="metric-item">
-                  <div class="label">好评数</div>
-                  <div class="value">{{ worker.goodReviews }}</div>
-                </div>
-                <div class="metric-item">
-                  <div class="label">平均完成时间</div>
-                  <div class="value">{{ worker.avgCompletionTime }}小时</div>
-                </div>
-              </div>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="评分" width="180" align="center">
+          <template #default="{ row }">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px">
+              <el-rate 
+                :model-value="row.rating" 
+                disabled 
+                :colors="rateColors"
+                size="small"
+              />
+              <span style="font-weight: 600; color: #f7ba2a">{{ row.rating?.toFixed(1) }}</span>
             </div>
-          </div>
-        </div>
-      </div>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="完成工单" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag type="primary" effect="plain">{{ row.completedCount }} 单</el-tag>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="好评数" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag type="success" effect="plain">{{ row.goodReviews }} 个</el-tag>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="本月服务" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag type="warning" effect="plain">{{ row.monthlyServiceCount || 0 }} 单</el-tag>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="平均完成时间" width="140" align="center">
+          <template #default="{ row }">
+            <span style="color: #606266">{{ row.avgCompletionTime }}小时</span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="好评率" align="center">
+          <template #default="{ row }">
+            <el-progress 
+              :percentage="row.completedCount > 0 ? Math.round((row.goodReviews / row.completedCount) * 100) : 0"
+              :color="getProgressColor(row.completedCount > 0 ? (row.goodReviews / row.completedCount) * 100 : 0)"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+      
+      <el-empty v-if="workerStats.length === 0 && !statsLoading" description="暂无绩效数据" />
     </el-card>
     
     <!-- 搜索表单 -->
@@ -51,13 +92,13 @@
           <el-input v-model="searchForm.keyword" placeholder="姓名/手机号" clearable />
         </el-form-item>
         <el-form-item label="技能">
-          <el-select v-model="searchForm.skill" placeholder="全部" clearable>
+          <el-select v-model="searchForm.skill" placeholder="全部" clearable style="width: 180px">
             <el-option v-for="item in skillOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+        <el-form-item label="工作状态">
+          <el-select v-model="searchForm.workStatus" placeholder="全部" clearable style="width: 180px">
+            <el-option v-for="item in workStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -104,31 +145,33 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="技能" min-width="200">
-          <template #default="{ row }">
-            <el-tag
-              v-for="(skill, index) in row.skills"
-              :key="index"
-              class="skill-tag"
-              type="success"
-              effect="plain"
-            >
-              {{ skill }}
-            </el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="rating" label="评分" width="150">
           <template #default="{ row }">
             <el-rate v-model="row.rating" disabled :colors="rateColors" />
             <span class="rating-text">{{ row.rating.toFixed(1) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="completedOrders" label="已完成" width="100" />
-        <el-table-column prop="ongoingOrders" label="进行中" width="100" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column label="服务类型" width="200">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">
-              {{ row.status === 1 ? '在职' : '离职' }}
+            <el-tag 
+              v-for="(type, index) in getServiceTypeLabels(row.serviceType)" 
+              :key="index"
+              style="margin-right: 5px; margin-bottom: 5px"
+              size="small"
+            >
+              {{ type }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="员工添加日期" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="工作状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="getWorkStatusType(row.workStatus)">
+              {{ getWorkStatusText(row.workStatus) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -138,11 +181,11 @@
               编辑
             </el-button>
             <el-button 
-              :type="row.status === 1 ? 'danger' : 'success'" 
+              type="danger" 
               size="small" 
-              @click="handleToggleStatus(row)"
+              @click="handleDeleteWorker(row)"
             >
-              {{ row.status === 1 ? '离职' : '在职' }}
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -181,22 +224,54 @@
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="workerForm.phone" placeholder="请输入手机号" />
         </el-form-item>
-        <el-form-item label="技能" prop="skills">
+        <el-form-item label="身份证号" prop="idCardNumber">
+          <el-input v-model="workerForm.idCardNumber" placeholder="请输入身份证号" />
+        </el-form-item>
+        <el-form-item label="服务类型" prop="serviceType">
           <el-select
-            v-model="workerForm.skills"
+            v-model="workerForm.serviceType"
             multiple
             filterable
-            allow-create
-            default-first-option
-            placeholder="请选择或创建技能标签"
+            collapse-tags
+            placeholder="请选择服务类型"
             style="width: 100%"
           >
-            <el-option
-              v-for="item in skillOptions"
-              :key="item.value"
-              :label="item.label"
+            <el-option label="水电维修" value="water_electricity" />
+            <el-option label="家具维修" value="furniture" />
+            <el-option label="门窗维修" value="doors_windows" />
+            <el-option label="墙面维修" value="walls" />
+            <el-option label="电器维修" value="appliances" />
+            <el-option label="管道疏通" value="plumbing" />
+            <el-option label="安装服务" value="installation" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="个人介绍">
+          <el-input
+            v-model="workerForm.introduction"
+            type="textarea"
+            :rows="3"
+            maxlength="500"
+            show-word-limit
+            placeholder="请输入个人介绍"
+          />
+        </el-form-item>
+        <el-form-item label="工作状态" prop="workStatus">
+          <el-select 
+            v-model="workerForm.workStatus" 
+            placeholder="请选择工作状态"
+            style="width: 100%"
+          >
+            <el-option 
+              v-for="item in workStatusOptions" 
+              :key="item.value" 
+              :label="item.label" 
               :value="item.value"
-            />
+            >
+              <span style="float: left">{{ item.label }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">
+                {{ item.value === 0 ? '不接新单' : item.value === 1 ? '可接新单' : '处理中' }}
+              </span>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="头像">
@@ -212,12 +287,6 @@
             <el-icon v-else class="avatar-uploader-icon"><plus /></el-icon>
           </el-upload>
         </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="workerForm.status">
-            <el-radio :label="1">在职</el-radio>
-            <el-radio :label="0">离职</el-radio>
-          </el-radio-group>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="formVisible = false">取消</el-button>
@@ -231,34 +300,35 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Search, RefreshRight, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus'
-import { getRepairWorkerList, updateWorkerStatus, getWorkerStats } from '@/api/repair'
+import { getRepairWorkerList, updateWorkerStatus, getAllWorkerStats, deleteWorker, addWorker, updateWorker } from '@/api/repair'
 import type { RepairWorker, WorkerStatusParams, WorkerStatsVO } from '@/api/repair'
 
 // 评分颜色
 const rateColors = ['#99A9BF', '#F7BA2A', '#FF9900']
 
-// 技能选项
+// 技能选项（使用英文代码作为value，与后端一致）
 const skillOptions = [
-  { value: '水电维修', label: '水电维修' },
-  { value: '家具维修', label: '家具维修' },
-  { value: '门窗维修', label: '门窗维修' },
-  { value: '墙面维修', label: '墙面维修' },
-  { value: '电器维修', label: '电器维修' },
-  { value: '管道疏通', label: '管道疏通' },
-  { value: '安装服务', label: '安装服务' }
+  { value: 'water_electricity', label: '水电维修' },
+  { value: 'furniture', label: '家具维修' },
+  { value: 'doors_windows', label: '门窗维修' },
+  { value: 'walls', label: '墙面维修' },
+  { value: 'appliances', label: '电器维修' },
+  { value: 'plumbing', label: '管道疏通' },
+  { value: 'installation', label: '安装服务' }
 ]
 
-// 状态选项
-const statusOptions = [
-  { value: 1, label: '在职' },
-  { value: 0, label: '离职' }
+// 工作状态选项
+const workStatusOptions = [
+  { value: 0, label: '休息' },
+  { value: 1, label: '可接单' },
+  { value: 2, label: '忙碌' }
 ]
 
 // 搜索表单
 const searchForm = reactive({
   keyword: '',
   skill: '',
-  status: null as number | null
+  workStatus: null as number | null
 })
 
 // 表格数据
@@ -281,13 +351,24 @@ const formType = ref<'add' | 'edit'>('add')
 const formVisible = ref(false)
 const workerFormRef = ref<FormInstance>()
 const avatarUrl = ref('')
-const workerForm = reactive({
+const workerForm = reactive<{
+  id: number
+  name: string
+  phone: string
+  avatarUrl: string
+  serviceType: string | string[]  // 服务类型，后端需要字符串（逗号分隔），前端表单用数组
+  idCardNumber: string
+  introduction: string
+  workStatus: number
+}>({
   id: 0,
   name: '',
   phone: '',
   avatarUrl: '',
-  skills: [] as string[],
-  status: 1
+  serviceType: [],  // 前端表单用数组
+  idCardNumber: '',  // 身份证号
+  introduction: '',  // 个人介绍
+  workStatus: 1  // 工作状态：0-休息 1-可接单 2-忙碌，默认为可接单
 })
 
 // 表单验证规则
@@ -300,12 +381,15 @@ const workerRules: FormRules = {
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3456789]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
   ],
-  skills: [
-    { required: true, message: '请至少选择一项技能', trigger: 'change' },
-    { type: 'array', min: 1, message: '请至少选择一项技能', trigger: 'change' }
+  serviceType: [
+    { required: true, message: '请输入服务类型', trigger: 'blur' }
   ],
-  status: [
-    { required: true, message: '请选择状态', trigger: 'change' }
+  idCardNumber: [
+    { required: true, message: '请输入身份证号', trigger: 'blur' },
+    { pattern: /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/, message: '请输入有效的身份证号', trigger: 'blur' }
+  ],
+  workStatus: [
+    { required: true, message: '请选择工作状态', trigger: 'change' }
   ]
 }
 
@@ -313,9 +397,23 @@ const workerRules: FormRules = {
 const loadWorkerList = async () => {
   try {
     tableLoading.value = true
-    const params = {
-      ...pageParams,
-      ...searchForm
+    const params: any = {
+      ...pageParams
+    }
+    
+    // 处理关键词搜索：将keyword映射到name字段
+    if (searchForm.keyword) {
+      params.name = searchForm.keyword
+    }
+    
+    // 处理技能搜索：将skill映射到serviceType字段
+    if (searchForm.skill) {
+      params.serviceType = searchForm.skill
+    }
+    
+    // 处理工作状态
+    if (searchForm.workStatus !== null && searchForm.workStatus !== undefined) {
+      params.workStatus = searchForm.workStatus
     }
     
     // 移除空值参数
@@ -344,12 +442,15 @@ const loadWorkerList = async () => {
 const loadWorkerStats = async () => {
   try {
     statsLoading.value = true
-    // 获取绩效统计，如果需要获取特定维修工的统计，可以传递workerId参数
-    // 这里我们获取最近的几个维修工的统计数据
-    const res = await getWorkerStats(1) // 这里可以根据实际需求传递不同的workerId，或者在页面上添加选择维修工的功能
+    // 获取所有维修工的绩效统计，默认获取前10名
+    const res = await getAllWorkerStats(10)
     
     if (res.code === 200) {
-      workerStats.value = res.data
+      // 将后端返回的 workerId 映射为前端需要的 id
+      workerStats.value = res.data.map((item: any) => ({
+        ...item,
+        id: item.workerId || item.id
+      }))
     } else {
       ElMessage.error(res.message || '获取绩效统计失败')
     }
@@ -370,7 +471,7 @@ const handleSearch = () => {
 const resetSearch = () => {
   searchForm.keyword = ''
   searchForm.skill = ''
-  searchForm.status = null
+  searchForm.workStatus = null
   handleSearch()
 }
 
@@ -380,9 +481,11 @@ const handleAddWorker = () => {
   workerForm.id = 0
   workerForm.name = ''
   workerForm.phone = ''
-  workerForm.avatar = ''
-  workerForm.skills = []
-  workerForm.status = 1
+  workerForm.avatarUrl = ''
+  workerForm.serviceType = []
+  workerForm.idCardNumber = ''
+  workerForm.introduction = ''
+  workerForm.workStatus = 1
   avatarUrl.value = ''
   formVisible.value = true
 }
@@ -393,10 +496,13 @@ const handleEditWorker = (row: RepairWorker) => {
   workerForm.id = row.id
   workerForm.name = row.name
   workerForm.phone = row.phone
-  workerForm.avatar = row.avatar
-  workerForm.skills = [...row.skills]
-  workerForm.status = row.status
-  avatarUrl.value = row.avatar
+  workerForm.avatarUrl = row.avatarUrl || ''
+  // serviceType如果是字符串需要转换为数组用于el-select多选
+  workerForm.serviceType = row.serviceType ? row.serviceType.split(',') : []
+  workerForm.idCardNumber = row.idCardNumber || ''
+  workerForm.introduction = row.introduction || ''
+  workerForm.workStatus = row.workStatus || 1
+  avatarUrl.value = row.avatarUrl || ''
   formVisible.value = true
 }
 
@@ -436,6 +542,35 @@ const handleToggleStatus = (row: RepairWorker) => {
   })
 }
 
+// 删除维修工
+const handleDeleteWorker = (row: RepairWorker) => {
+  ElMessageBox.confirm(
+    `确定要删除维修工 "${row.name}" 吗？删除后将无法恢复！`,
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'error',
+    }
+  ).then(async () => {
+    try {
+      const res = await deleteWorker(row.id)
+      
+      if (res.code === 200) {
+        ElMessage.success('删除成功')
+        // 刷新列表
+        loadWorkerList()
+      } else {
+        ElMessage.error(res.message || '删除失败')
+      }
+    } catch (error: any) {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }).catch(() => {
+    // 取消操作
+  })
+}
+
 // 头像变更
 const handleAvatarChange = (file: any) => {
   // 实际项目中应该上传到服务器
@@ -447,12 +582,33 @@ const handleAvatarChange = (file: any) => {
 const submitWorkerForm = () => {
   if (!workerFormRef.value) return
   
-  workerFormRef.value.validate((valid) => {
+  workerFormRef.value.validate(async (valid) => {
     if (valid) {
-      // 实际项目中应调用API保存数据
-      ElMessage.success(formType.value === 'add' ? '添加维修工成功' : '更新维修工信息成功')
-      formVisible.value = false
-      loadWorkerList()
+      try {
+        // 准备数据，serviceType需要转换为逗号分隔的字符串
+        const submitData = {
+          ...workerForm,
+          serviceType: Array.isArray(workerForm.serviceType) 
+            ? workerForm.serviceType.join(',') 
+            : workerForm.serviceType
+        }
+        
+        if (formType.value === 'add') {
+          // 添加维修工
+          delete submitData.id  // 添加时不需要传id
+          await addWorker(submitData)
+          ElMessage.success('添加维修工成功')
+        } else {
+          // 更新维修工
+          await updateWorker(submitData)
+          ElMessage.success('更新维修工信息成功')
+        }
+        
+        formVisible.value = false
+        loadWorkerList()
+      } catch (error: any) {
+        ElMessage.error(error.message || '操作失败')
+      }
     }
   })
 }
@@ -467,6 +623,87 @@ const handleSizeChange = (size: number) => {
 const handleCurrentChange = (page: number) => {
   pageParams.page = page
   loadWorkerList()
+}
+
+// 格式化日期时间
+const formatDateTime = (timestamp: number | string | undefined): string => {
+  if (!timestamp) return '-'
+  
+  const time = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+  const date = new Date(time)
+  
+  if (isNaN(date.getTime())) return '-'
+  
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+// 获取工作状态文本
+const getWorkStatusText = (workStatus: number | undefined): string => {
+  if (workStatus === undefined || workStatus === null) return '未知'
+  
+  switch (workStatus) {
+    case 0:
+      return '休息'
+    case 1:
+      return '可接单'
+    case 2:
+      return '忙碌'
+    default:
+      return '未知'
+  }
+}
+
+// 获取工作状态标签类型
+const getWorkStatusType = (workStatus: number | undefined): 'success' | 'warning' | 'danger' | 'info' => {
+  if (workStatus === undefined || workStatus === null) return 'info'
+  
+  switch (workStatus) {
+    case 0:
+      return 'info'     // 休息 - 灰色
+    case 1:
+      return 'success'  // 可接单 - 绿色
+    case 2:
+      return 'warning'  // 忙碌 - 橙色
+    default:
+      return 'info'
+  }
+}
+
+// 服务类型映射（英文代码 -> 中文标签）
+const serviceTypeMap: Record<string, string> = {
+  'water_electricity': '水电维修',
+  'furniture': '家具维修',
+  'doors_windows': '门窗维修',
+  'walls': '墙面维修',
+  'appliances': '电器维修',
+  'plumbing': '管道疏通',
+  'installation': '安装服务'
+}
+
+// 将服务类型字符串转换为中文标签数组
+const getServiceTypeLabels = (serviceType: string | undefined): string[] => {
+  if (!serviceType) return []
+  
+  // 如果是逗号分隔的字符串，拆分后转换
+  return serviceType.split(',')
+    .map(type => type.trim())
+    .filter(type => type)
+    .map(type => serviceTypeMap[type] || type)
+}
+
+// 根据好评率获取进度条颜色
+const getProgressColor = (percentage: number): string => {
+  if (percentage >= 90) return '#67c23a'  // 绿色 - 优秀
+  if (percentage >= 80) return '#e6a23c'  // 橙色 - 良好
+  if (percentage >= 70) return '#f56c6c'  // 红色 - 一般
+  return '#909399'  // 灰色 - 较差
 }
 
 // 组件挂载后加载数据
@@ -487,79 +724,6 @@ onMounted(() => {
   
   .stats-card {
     margin-bottom: 20px;
-    
-    .worker-stats {
-      .stats-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-      }
-      
-      .stats-item {
-        flex: 0 0 calc(25% - 15px);
-        display: flex;
-        align-items: center;
-        background-color: #f8f9fa;
-        border-radius: var(--border-radius);
-        padding: 16px;
-        transition: all 0.3s ease;
-        
-        &:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-        
-        .worker-avatar {
-          margin-right: 16px;
-        }
-        
-        .worker-info {
-          flex: 1;
-          
-          .name {
-            font-size: 16px;
-            font-weight: 500;
-            margin: 0 0 5px;
-          }
-          
-          .rating {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            
-            .rating-value {
-              margin-left: 5px;
-              font-weight: 500;
-            }
-          }
-          
-          .metrics {
-            display: flex;
-            gap: 10px;
-            
-            .metric-item {
-              flex: 1;
-              text-align: center;
-              background-color: #fff;
-              border-radius: var(--border-radius);
-              padding: 8px;
-              
-              .label {
-                font-size: 12px;
-                color: var(--text-color-secondary);
-                margin-bottom: 5px;
-              }
-              
-              .value {
-                font-size: 16px;
-                font-weight: 500;
-                color: var(--text-color);
-              }
-            }
-          }
-        }
-      }
-    }
   }
   
   .search-card {

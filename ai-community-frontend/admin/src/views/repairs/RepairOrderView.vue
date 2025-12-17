@@ -205,16 +205,6 @@
             (<span v-if="currentOrder.contactPhone">{{ currentOrder.contactPhone }}</span><span v-else>-</span>)
           </el-descriptions-item>
           <el-descriptions-item label="报修地址">{{ currentOrder.addressDetail || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="紧急程度">
-            <el-tag 
-              v-if="currentOrder.urgencyLevel"
-              :type="currentOrder.urgencyLevel === 3 ? 'danger' : currentOrder.urgencyLevel === 2 ? 'warning' : 'info'"
-              :effect="currentOrder.urgencyLevel === 3 ? 'dark' : 'light'"
-            >
-              {{ getUrgencyText(currentOrder.urgencyLevel) }}
-            </el-tag>
-            <span v-else>-</span>
-          </el-descriptions-item>
           <el-descriptions-item label="维修工信息">
             <template v-if="currentOrder.workerId">
               {{ currentOrder.workerName || '-' }} ({{ currentOrder.workerPhone || '-' }})
@@ -462,11 +452,11 @@ import type { RepairOrder, RepairProgress, RepairWorker, OrderStatsVO } from '@/
 const repairTypeOptions = ref([
   { value: 'water_electricity', label: '水电维修' },
   { value: 'furniture', label: '家具维修' },
-  { value: 'door_window', label: '门窗维修' },
-  { value: 'wall', label: '墙面维修' },
-  { value: 'appliance', label: '电器维修' },
+  { value: 'doors_windows', label: '门窗维修' },
+  { value: 'walls', label: '墙面维修' },
+  { value: 'appliances', label: '电器维修' },
   { value: 'plumbing', label: '管道疏通' },
-  { value: 'other', label: '其他' }
+  { value: 'installation', label: '安装服务' }
 ])
 
 // 状态选项
@@ -476,13 +466,6 @@ const statusOptions = [
   { value: 2, label: '处理中' },
   { value: 3, label: '已完成' },
   { value: 4, label: '已取消' }
-]
-
-// 紧急程度选项
-const urgencyOptions = [
-  { value: 1, label: '一般' },
-  { value: 2, label: '紧急' },
-  { value: 3, label: '非常紧急' }
 ]
 
 // 评分颜色
@@ -580,22 +563,6 @@ const getRepairTypeName = (type: string | undefined): string => {
   }
   
   return typeMap[type] || type
-}
-
-// 获取紧急度文本
-const getUrgencyText = (urgency: number | null | undefined): string => {
-  if (!urgency) return '-'
-  
-  switch (urgency) {
-    case 1:
-      return '一般'
-    case 2:
-      return '紧急'
-    case 3:
-      return '非常紧急'
-    default:
-      return '未知'
-  }
 }
 
 // 获取状态标签类型
@@ -849,9 +816,11 @@ const loadRepairTypeOptions = () => {
   repairTypeOptions.value = [
     { value: 'water_electricity', label: '水电维修' },
     { value: 'furniture', label: '家具维修' },
-    { value: 'door_window', label: '门窗维修' },
-    { value: 'appliance', label: '电器维修' },
-    { value: 'other', label: '其他' }
+    { value: 'doors_windows', label: '门窗维修' },
+    { value: 'walls', label: '墙面维修' },
+    { value: 'appliances', label: '电器维修' },
+    { value: 'plumbing', label: '管道疏通' },
+    { value: 'installation', label: '安装服务' }
   ]
 }
 

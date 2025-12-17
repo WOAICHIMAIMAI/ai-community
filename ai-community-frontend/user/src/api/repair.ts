@@ -5,13 +5,14 @@ import request from '@/utils/request'
  * @param data 报修工单创建数据
  */
 export const createRepairOrder = (data: {
-  addressId: number
+  address: string
   repairType: string
   title: string
   description: string
   images?: string
   contactPhone: string
   expectedTime?: string
+  workerId?: number
 }) => {
   return request({
     url: '/api/user/repair-orders',

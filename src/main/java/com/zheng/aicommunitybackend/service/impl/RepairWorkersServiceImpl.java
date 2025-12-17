@@ -196,6 +196,7 @@ public class RepairWorkersServiceImpl extends ServiceImpl<RepairWorkersMapper, R
         worker.setRating(new BigDecimal("5.0")); // 初始评分为5分
         worker.setServiceCount(0); // 初始服务次数为0
         worker.setCreateTime(new Date());
+        worker.setIsDeleted(0);
         
         // 5. 保存维修工信息
         save(worker);
@@ -292,6 +293,89 @@ public class RepairWorkersServiceImpl extends ServiceImpl<RepairWorkersMapper, R
         return updateById(worker);
     }
 
+    @Override
+    public List<WorkerStatsVO> getAllWorkerStats(Integer limit) {
+        // 1. 查询所有维修工，按评分和服务次数排序
+        LambdaQueryWrapper<RepairWorkers> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(RepairWorkers::getRating)
+               .orderByDesc(RepairWorkers::getServiceCount)
+               .last("LIMIT " + limit);
+        
+        List<RepairWorkers> workers = list(wrapper);
+        
+        if (workers.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // 2. 为每个维修工构建统计数据
+        List<WorkerStatsVO> statsList = new ArrayList<>();
+        for (RepairWorkers worker : workers) {
+            WorkerStatsVO stats = new WorkerStatsVO();
+            stats.setWorkerId(worker.getId());
+            stats.setWorkerName(worker.getName());
+            stats.setTotalServiceCount(worker.getServiceCount());
+            stats.setAverageRating(worker.getRating());
+            
+            // 设置前端列表展示字段
+            stats.setAvatar(worker.getAvatarUrl());
+            stats.setName(worker.getName());
+            stats.setRating(worker.getRating());
+            
+            // 查询本月服务次数
+            Calendar calendar = Calendar.getInstance();
+            calendar.set(Calendar.DAY_OF_MONTH, 1);
+            calendar.set(Calendar.HOUR_OF_DAY, 0);
+            calendar.set(Calendar.MINUTE, 0);
+            calendar.set(Calendar.SECOND, 0);
+            Date monthStart = calendar.getTime();
+            
+            LambdaQueryWrapper<RepairOrders> orderWrapper = new LambdaQueryWrapper<>();
+            orderWrapper.eq(RepairOrders::getWorkerId, worker.getId())
+                       .eq(RepairOrders::getStatus, 3) // 已完成的工单
+                       .ge(RepairOrders::getUpdateTime, monthStart);
+            stats.setMonthlyServiceCount(repairOrdersMapper.selectCount(orderWrapper).intValue());
+            
+            // 计算完成工单数
+            LambdaQueryWrapper<RepairOrders> completedCountWrapper = new LambdaQueryWrapper<>();
+            completedCountWrapper.eq(RepairOrders::getWorkerId, worker.getId())
+                                .eq(RepairOrders::getStatus, 3);
+            int completedCount = repairOrdersMapper.selectCount(completedCountWrapper).intValue();
+            stats.setCompletedCount(completedCount);
+            
+            // 计算好评数（评分>=4的）
+            LambdaQueryWrapper<RepairOrders> goodReviewWrapper = new LambdaQueryWrapper<>();
+            goodReviewWrapper.eq(RepairOrders::getWorkerId, worker.getId())
+                            .eq(RepairOrders::getStatus, 3)
+                            .ge(RepairOrders::getSatisfactionLevel, 4);
+            long goodReviews = repairOrdersMapper.selectCount(goodReviewWrapper);
+            stats.setGoodReviews(goodReviews);
+            
+            // 计算平均完成时间（小时）
+            LambdaQueryWrapper<RepairOrders> completedWrapper = new LambdaQueryWrapper<>();
+            completedWrapper.eq(RepairOrders::getWorkerId, worker.getId())
+                           .eq(RepairOrders::getStatus, 3)
+                           .isNotNull(RepairOrders::getCompletionTime);
+            List<RepairOrders> completedOrders = repairOrdersMapper.selectList(completedWrapper);
+            
+            long avgCompletionTime = 0;
+            if (!completedOrders.isEmpty()) {
+                long totalHours = 0;
+                for (RepairOrders order : completedOrders) {
+                    if (order.getCompletionTime() != null && order.getCreateTime() != null) {
+                        long hours = (order.getCompletionTime().getTime() - order.getCreateTime().getTime()) / (1000 * 60 * 60);
+                        totalHours += hours;
+                    }
+                }
+                avgCompletionTime = totalHours / completedOrders.size();
+            }
+            stats.setAvgCompletionTime(avgCompletionTime);
+            
+            statsList.add(stats);
+        }
+        
+        return statsList;
+    }
+    
     @Override
     public WorkerStatsVO getWorkerStats(Long workerId) {
         // 1. 检查维修工是否存在

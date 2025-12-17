@@ -70,4 +70,11 @@ public class UserRepairWorkerController {
         List<WorkerReviewVO> reviews = repairWorkersService.getWorkerReviews(workerId, page, pageSize);
         return Result.success(reviews);
     }
+
+    @PostMapping(value = "delete")
+    @Operation(summary = "删除维修工", description = "删除维修工")
+    public Result delete(@RequestParam Long id){
+        repairWorkersService.deleteWorker(id);
+        return Result.success(id);
+    }
 } 

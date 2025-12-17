@@ -95,6 +95,17 @@ public class AdminRepairWorkerController {
     }
     
     /**
+     * 获取所有维修工绩效统计列表
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "获取所有维修工绩效统计", description = "获取所有维修工的绩效统计列表")
+    public Result<List<WorkerStatsVO>> getAllWorkerStats(
+            @Parameter(description = "限制返回数量，默认10") @RequestParam(defaultValue = "10") Integer limit) {
+        List<WorkerStatsVO> statsList = repairWorkersService.getAllWorkerStats(limit);
+        return Result.success(statsList);
+    }
+    
+    /**
      * 获取维修工绩效统计
      */
     @GetMapping("/{workerId}/stats")

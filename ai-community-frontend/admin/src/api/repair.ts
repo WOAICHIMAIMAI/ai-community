@@ -50,6 +50,9 @@ export interface RepairWorker {
   name: string
   phone: string
   avatarUrl: string
+  serviceType: string  // 服务类型，多个用逗号分隔
+  serviceTypeList?: string[]  // 服务类型列表
+  idCardNumber?: string  // 身份证号
   skills: string[]
   status: number
   workStatus: number  // 工作状态：0-休息 1-可接单 2-忙碌
@@ -57,6 +60,7 @@ export interface RepairWorker {
   completedOrders: number
   ongoingOrders: number
   introduction?: string
+  createTime?: string  // 创建时间
 }
 
 // 工单分配参数
@@ -117,6 +121,7 @@ export interface WorkerStatsVO {
   rating: number
   avgCompletionTime: number
   goodReviews: number
+  monthlyServiceCount?: number  // 本月服务次数
 }
 
 /**
@@ -192,6 +197,33 @@ export function updateWorkerStatus(params: WorkerStatusParams): Promise<ApiResul
 }
 
 /**
+ * 添加维修工
+ * @param data 维修工信息
+ * @returns 操作结果
+ */
+export function addWorker(data: any): Promise<ApiResult<number>> {
+  return post<ApiResult<number>>('/api/admin/workers', data)
+}
+
+/**
+ * 更新维修工
+ * @param data 维修工信息
+ * @returns 操作结果
+ */
+export function updateWorker(data: any): Promise<ApiResult<boolean>> {
+  return put<ApiResult<boolean>>('/api/admin/workers', data)
+}
+
+/**
+ * 删除维修工
+ * @param id 维修工ID
+ * @returns 操作结果
+ */
+export function deleteWorker(id: number): Promise<ApiResult<boolean>> {
+  return del<ApiResult<boolean>>(`/api/admin/workers/${id}`)
+}
+
+/**
  * 获取工单统计数据
  * @returns 统计数据
  */
@@ -200,17 +232,19 @@ export function getOrderStats(): Promise<ApiResult<OrderStatsVO>> {
 }
 
 /**
- * 获取维修工绩效列表
- * @param workerId 维修工ID，如果不提供则获取所有维修工的统计
+ * 获取所有维修工绩效统计列表
+ * @param limit 限制返回数量，默认10
  * @returns 绩效列表
  */
-export function getWorkerStats(workerId?: number): Promise<ApiResult<WorkerStatsVO[]>> {
-  if (workerId) {
-    // 获取指定维修工的统计数据
-    return get<ApiResult<WorkerStatsVO[]>>(`/api/admin/workers/${workerId}/stats`)
-  } else {
-    // 在没有指定workerId时，可能需要一个默认值或采用其他逻辑
-    // 这里暂时使用ID为1的维修工，或者根据实际需求修改
-    return get<ApiResult<WorkerStatsVO[]>>('/api/admin/workers/1/stats')
-  }
+export function getAllWorkerStats(limit: number = 10): Promise<ApiResult<WorkerStatsVO[]>> {
+  return get<ApiResult<WorkerStatsVO[]>>('/api/admin/workers/stats', { limit })
+}
+
+/**
+ * 获取单个维修工绩效统计
+ * @param workerId 维修工ID
+ * @returns 绩效统计
+ */
+export function getWorkerStats(workerId: number): Promise<ApiResult<any>> {
+  return get<ApiResult<any>>(`/api/admin/workers/${workerId}/stats`)
 } 

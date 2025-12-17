@@ -89,6 +89,8 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
             }
             repairWorkers.setWorkStatus(2);
             repairWorkersMapper.updateById(repairWorkers);
+            order.setWorkerPhone(repairWorkers.getPhone());
+            order.setWorkerName(repairWorkers.getName());
         }else{
             order.setStatus(STATUS_PENDING);
         }
@@ -404,12 +406,8 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         }
         
         if (StringUtils.hasText(query.getRepairType())) {
-            // 将中文维修类型转换为英文
-            String convertedType = ServiceTypeConverter.convertToEnglish(query.getRepairType());
-            // 如果转换后不为null（即不是"全部"），则添加筛选条件
-            if (convertedType != null) {
-                wrapper.eq(RepairOrders::getRepairType, convertedType);
-            }
+            // 直接使用前端传入的英文代码进行匹配
+            wrapper.eq(RepairOrders::getRepairType, query.getRepairType());
         }
         
         if (query.getStatus() != null) {

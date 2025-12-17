@@ -70,6 +70,13 @@ public interface RepairWorkersService extends IService<RepairWorkers> {
     boolean updateWorkerStatus(RepairWorkerStatusDTO dto);
     
     /**
+     * 获取所有维修工绩效统计列表
+     * @param limit 限制返回数量
+     * @return 绩效统计列表
+     */
+    List<WorkerStatsVO> getAllWorkerStats(Integer limit);
+    
+    /**
      * 获取维修工绩效统计
      * @param workerId 维修工ID
      * @return 绩效统计

@@ -311,7 +311,7 @@
 
 <script>
 import { useAuthStore } from '@/store/auth'
-import { getAvailableWorkers, getWorkerDetail, getWorkerReviews, pageRepairOrders, bookWorker } from '@/api/repair'
+import { getAvailableWorkers, getWorkerDetail, getWorkerReviews, pageRepairOrders, createRepairOrder } from '@/api/repair'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import MoreButton from '@/components/MoreButton.vue'
 
@@ -671,32 +671,24 @@ export default {
       ]
     },
 
-    // 预约师傅
-    async onBookWorker(workerId) {
-      try {
-        showLoadingToast({
-          message: '预约中...',
-          forbidClick: true
-        })
-        
-        const res = await bookWorker({
-          workerId,
-          serviceType: this.currentWorker.serviceType,
-          expectedTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-        })
-        
-        if (res && res.code === 200) {
-          showToast('预约成功')
-          this.showWorkerDetailPopup = false
-        } else {
-          showToast('预约失败：' + (res?.msg || '未知错误'))
-        }
-      } catch (error) {
-        console.error('预约师傅失败:', error)
-        showToast('预约失败，请稍后重试')
-      } finally {
-        closeToast()
+    // 预约师傅 - 跳转到创建报修页面并预填师傅信息
+    onBookWorker(workerId) {
+      // 关闭师傅详情弹窗
+      this.showWorkerDetailPopup = false
+      
+      // 将师傅信息保存到 sessionStorage
+      const workerInfo = {
+        workerId: workerId,
+        workerName: this.currentWorker.name,
+        serviceType: this.currentWorker.serviceType
       }
+      window.sessionStorage.setItem('selectedWorker', JSON.stringify(workerInfo))
+      
+      // 跳转到创建报修页面
+      this.$router.push({
+        path: '/repair/create',
+        query: { workerId: workerId }
+      })
     },
     
     // 格式化日期

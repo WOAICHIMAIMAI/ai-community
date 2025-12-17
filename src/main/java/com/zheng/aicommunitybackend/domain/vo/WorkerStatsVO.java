@@ -66,4 +66,40 @@ public class WorkerStatsVO {
      */
     @Schema(description = "月度服务统计（近6个月）")
     private Map<String, Long> monthlyStats;
+    
+    /**
+     * 维修工头像URL（用于列表展示）
+     */
+    @Schema(description = "维修工头像URL")
+    private String avatar;
+    
+    /**
+     * 维修工姓名（用于列表展示）
+     */
+    @Schema(description = "维修工姓名")
+    private String name;
+    
+    /**
+     * 评分（用于列表展示）
+     */
+    @Schema(description = "评分")
+    private BigDecimal rating;
+    
+    /**
+     * 完成工单数（用于列表展示）
+     */
+    @Schema(description = "完成工单数")
+    private Integer completedCount;
+    
+    /**
+     * 好评数（用于列表展示）
+     */
+    @Schema(description = "好评数")
+    private Long goodReviews;
+    
+    /**
+     * 平均完成时间（小时，用于列表展示）
+     */
+    @Schema(description = "平均完成时间（小时）")
+    private Long avgCompletionTime;
 } 

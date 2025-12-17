@@ -8,6 +8,21 @@
     />
     
     <div class="content">
+      <!-- 已选择师傅提示 -->
+      <van-cell-group inset v-if="selectedWorker" style="margin-bottom: 10px;">
+        <van-cell center>
+          <template #title>
+            <div style="display: flex; align-items: center;">
+              <van-icon name="user-circle-o" color="#07c160" size="20" style="margin-right: 8px;" />
+              <span style="font-size: 14px; color: #07c160; font-weight: 500;">已选择师傅</span>
+            </div>
+          </template>
+          <template #value>
+            <span style="font-size: 14px; color: #323233;">{{ selectedWorker.workerName }}</span>
+          </template>
+        </van-cell>
+      </van-cell-group>
+      
       <van-form @submit="onSubmit">
         <!-- 报修类型 -->
         <van-cell-group inset>
@@ -145,7 +160,8 @@ const formData = reactive({
   description: '',
   images: '',
   contactPhone: '',
-  expectedTime: ''
+  expectedTime: '',
+  workerId: undefined as number | undefined
 })
 
 // 图片上传
@@ -226,6 +242,13 @@ const loadDefaultAddress = async () => {
   }
 }
 
+// 选中的师傅信息
+const selectedWorker = ref<{
+  workerId: number
+  workerName: string
+  serviceType: string
+} | null>(null)
+
 // 初始化
 onMounted(async () => {
   // 检查登录状态
@@ -238,7 +261,10 @@ onMounted(async () => {
   // 先尝试恢复保存的表单数据
   restoreFormData()
   
-  // 如果没有恢复的表单数据，则初始化
+  // 检查是否从预约师傅跳转过来（在恢复表单数据之后）
+  checkSelectedWorker()
+  
+  // 如果没有联系电话，使用用户信息中的电话
   if (!formData.contactPhone && authStore.userInfo?.phone) {
     formData.contactPhone = authStore.userInfo.phone
   }
@@ -251,6 +277,27 @@ onMounted(async () => {
   // 监听从地址簿返回后的地址选择
   checkSelectedAddress()
 })
+
+// 检查是否选择了师傅
+const checkSelectedWorker = () => {
+  const workerInfoStr = window.sessionStorage.getItem('selectedWorker')
+  if (workerInfoStr) {
+    try {
+      const workerInfo = JSON.parse(workerInfoStr)
+      selectedWorker.value = workerInfo
+      formData.workerId = workerInfo.workerId
+      
+      // 不自动设置报修类型，让用户自己选择
+      
+      showToast(`已选择师傅：${workerInfo.workerName}`)
+      
+      // 清除 sessionStorage
+      window.sessionStorage.removeItem('selectedWorker')
+    } catch (error) {
+      console.error('解析师傅信息失败:', error)
+    }
+  }
+}
 
 // 跳转到地址簿选择地址
 const goToAddressBook = () => {
@@ -266,7 +313,8 @@ const goToAddressBook = () => {
 const saveFormData = () => {
   window.sessionStorage.setItem('repairFormData', JSON.stringify({
     ...formData,
-    imageFiles: imageFiles.value
+    imageFiles: imageFiles.value,
+    selectedWorker: selectedWorker.value
   }))
 }
 
@@ -279,6 +327,9 @@ const restoreFormData = () => {
       Object.assign(formData, savedData)
       if (savedData.imageFiles) {
         imageFiles.value = savedData.imageFiles
+      }
+      if (savedData.selectedWorker) {
+        selectedWorker.value = savedData.selectedWorker
       }
     } catch (error) {
       console.error('恢复表单数据失败:', error)
