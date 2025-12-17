@@ -281,9 +281,10 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         order.setUpdateTime(new Date());
         
         // 6. 如果状态变为已完成，设置完成时间
-        if (targetStatus == STATUS_COMPLETED) {
-            order.setCompletionTime(new Date());
-            
+        if (targetStatus == STATUS_COMPLETED || targetStatus == STATUS_CANCELLED) {
+            if(targetStatus == STATUS_COMPLETED){
+                order.setCompletionTime(new Date());
+            }
             // 如果有维修工，则更新维修工状态为可接单
             if (order.getWorkerId() != null) {
                 RepairWorkers worker = repairWorkersMapper.selectById(order.getWorkerId());
@@ -354,8 +355,8 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
                 
             case 1: // 已分配
                 // 已分配状态只能取消
-                if (targetStatus != STATUS_CANCELLED) {
-                    throw new BaseException("已分配状态的工单只能取消");
+                if (targetStatus != STATUS_CANCELLED && targetStatus != STATUS_PROCESSING) {
+                    throw new BaseException("已分配状态的工单只能取消或开始服务");
                 }
                 break;
                 
@@ -371,9 +372,6 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         }
         
         // 用户不能将状态改为待受理、已分配、处理中（这些是系统/管理员/维修工的操作）
-        if (targetStatus == STATUS_PENDING || targetStatus == STATUS_ASSIGNED || targetStatus == STATUS_PROCESSING) {
-            throw new BaseException("用户无权将工单状态修改为：" + convertStatusToDesc(targetStatus));
-        }
     }
 
     @Override
@@ -510,19 +508,16 @@ public class RepairOrdersServiceImpl extends ServiceImpl<RepairOrdersMapper, Rep
         order.setWorkerName(worker.getName());
         order.setWorkerPhone(worker.getPhone());
         order.setStatus(STATUS_ASSIGNED);
-        order.setAppointmentTime(dto.getAppointmentTime());
         order.setUpdateTime(new Date());
         boolean result = updateById(order);
         
         // 6. 记录分配进度
         if (result) {
-            String remark = StringUtils.hasText(dto.getRemark()) ? "，备注：" + dto.getRemark() : "";
             repairProgressService.addProgress(
                     createProgressDTO(
                             dto.getOrderId(),
                             "分配维修工",
-                            "管理员已将工单分配给维修工" + worker.getName() + 
-                                    "，预约上门时间：" + formatDate(dto.getAppointmentTime()) + remark
+                            ""
                     ),
                     null,
                     OPERATOR_TYPE_ADMIN

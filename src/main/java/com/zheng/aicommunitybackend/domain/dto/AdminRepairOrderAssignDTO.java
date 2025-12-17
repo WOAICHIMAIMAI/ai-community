@@ -27,18 +27,4 @@ public class AdminRepairOrderAssignDTO {
     @NotNull(message = "维修工ID不能为空")
     @Schema(description = "维修工ID", required = true)
     private Long workerId;
-    
-    /**
-     * 预约上门时间
-     */
-    @NotNull(message = "预约上门时间不能为空")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    @Schema(description = "预约上门时间", required = true)
-    private Date appointmentTime;
-    
-    /**
-     * 备注说明
-     */
-    @Schema(description = "备注说明")
-    private String remark;
 } 

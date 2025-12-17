@@ -34,18 +34,7 @@
           
           <van-cell-group inset>
             <van-cell title="维修工" :value="repair.workerName" />
-            <van-cell title="联系电话" :value="repair.workerPhone">
-              <template #right-icon>
-                <van-button 
-                  size="small" 
-                  type="primary" 
-                  plain 
-                  @click="callWorker"
-                >
-                  拨打电话
-                </van-button>
-              </template>
-            </van-cell>
+            <van-cell title="联系电话" :value="repair.workerPhone" />
             <van-cell 
               v-if="repair.appointmentTime" 
               title="预约上门时间" 
@@ -108,6 +97,16 @@
             @click="handleCancelOrder"
           >
             取消工单
+          </van-button>
+          
+          <!-- 开始处理按钮：状态为 1（已分配）时显示 -->
+          <van-button 
+            v-if="canStartProcessing"
+            block 
+            type="primary"
+            @click="handleStartProcessing"
+          >
+            开始处理
           </van-button>
           
           <!-- 确认完成按钮：状态为 2（处理中）时显示 -->
@@ -239,6 +238,12 @@ const canCancel = computed(() => {
   return status === 0 || status === 1 || status === 2
 })
 
+// 是否可以开始处理：状态为 1（已分配）
+const canStartProcessing = computed(() => {
+  if (!repair.value) return false
+  return repair.value.status === 1
+})
+
 // 是否可以确认完成：状态为 2（处理中）
 const canComplete = computed(() => {
   if (!repair.value) return false
@@ -307,6 +312,35 @@ const confirmCancel = async () => {
   }
 }
 
+// 开始处理
+const handleStartProcessing = async () => {
+  showConfirmDialog({
+    title: '开始处理',
+    message: '确认开始处理此报修工单？',
+  }).then(async () => {
+    try {
+      const res: any = await updateRepairOrderStatus({
+        orderId: repair.value.id,
+        status: 2, // 处理中
+        remark: '用户确认开始处理'
+      })
+      
+      if (res && res.code === 200) {
+        showSuccessToast('已开始处理')
+        // 重新加载详情
+        await fetchRepairDetail()
+      } else {
+        showFailToast(res?.message || '操作失败')
+      }
+    } catch (error) {
+      console.error('开始处理失败:', error)
+      showFailToast('操作失败，请重试')
+    }
+  }).catch(() => {
+    // 用户取消
+  })
+}
+
 // 确认完成
 const handleCompleteOrder = async () => {
   showConfirmDialog({
@@ -369,13 +403,6 @@ const confirmEvaluate = async () => {
   } catch (error) {
     console.error('提交评价失败:', error)
     showFailToast('评价失败，请重试')
-  }
-}
-
-// 拨打维修工电话
-const callWorker = () => {
-  if (repair.value.workerPhone) {
-    window.location.href = `tel:${repair.value.workerPhone}`
   }
 }
 

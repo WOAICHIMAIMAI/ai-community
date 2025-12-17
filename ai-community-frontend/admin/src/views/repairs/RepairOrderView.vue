@@ -81,21 +81,6 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="紧急程度">
-          <el-select 
-            v-model="searchForm.urgencyLevel" 
-            placeholder="全部" 
-            clearable 
-            style="width: 150px"
-          >
-            <el-option 
-              v-for="(item, index) in urgencyOptions" 
-              :key="index" 
-              :label="item.label" 
-              :value="item.value" 
-            />
-          </el-select>
-        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
             <el-icon><search /></el-icon>搜索
@@ -151,16 +136,6 @@
             <el-tag v-else type="info" size="small">未分配</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="urgencyLevel" label="紧急度" width="100">
-          <template #default="{ row }">
-            <el-tag 
-              :type="row.urgencyLevel === 3 ? 'danger' : row.urgencyLevel === 2 ? 'warning' : 'info'"
-              :effect="row.urgencyLevel === 3 ? 'dark' : 'light'"
-            >
-              {{ getUrgencyText(row.urgencyLevel) }}
-            </el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
@@ -168,7 +143,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="160" />
+        <el-table-column label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createTime) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleViewDetail(row.id)">
@@ -515,13 +494,11 @@ const searchForm = reactive<{
   keyword: string
   repairType: string
   status: number | undefined
-  urgencyLevel: number | undefined
 }>({
   orderNumber: '',
   keyword: '',
   repairType: '',
-  status: undefined,
-  urgencyLevel: undefined
+  status: undefined
 })
 
 // 表格数据
@@ -783,6 +760,28 @@ const getWorkStatusType = (workStatus: number | undefined): 'success' | 'warning
   }
 }
 
+// 格式化时间
+const formatDateTime = (timestamp: number | string | undefined): string => {
+  if (!timestamp) return '-'
+  
+  // 如果是字符串格式的时间戳，转换为数字
+  const time = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+  
+  const date = new Date(time)
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) return '-'
+  
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
 // 加载工单列表
 const loadOrderList = async () => {
   try {
@@ -868,7 +867,6 @@ const resetSearch = () => {
   searchForm.keyword = ''
   searchForm.repairType = ''
   searchForm.status = undefined
-  searchForm.urgencyLevel = undefined
   handleSearch()
 }
 
