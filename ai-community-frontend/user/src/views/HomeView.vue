@@ -28,7 +28,7 @@
             <van-grid-item icon="question-o" text="常见问题" to="/common-problems" />
             <van-grid-item icon="bullhorn-o" text="通知公告" @click="goToAnnouncementList" />
             <van-grid-item icon="user-o" text="个人中心" to="/profile" />
-            <van-grid-item icon="wechat-o" text="AI聊天" @click="goToAiChat" />
+            <van-grid-item icon="guide-o" text="AI聊天" @click="goToAiChat" />
           </van-grid>
         </div>
 

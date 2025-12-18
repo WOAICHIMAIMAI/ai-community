@@ -9,16 +9,26 @@
           <el-input v-model="searchForm.content" placeholder="请输入评论内容" clearable style="width: 200px" />
         </el-form-item>
         <el-form-item label="用户ID">
-          <el-input v-model="searchForm.userId" placeholder="用户ID" clearable readonly style="width: 200px">
+          <el-input v-model="searchForm.userId" placeholder="用户ID" readonly style="width: 250px">
+            <template #prepend>
+              <el-button :icon="Search" @click="showUserSelectDialog" title="选择用户" />
+            </template>
             <template #append>
-              <el-button :icon="Search" @click="showUserSelectDialog" />
+              <el-button @click="clearUserId" title="清除">
+                <el-icon><close /></el-icon>
+              </el-button>
             </template>
           </el-input>
         </el-form-item>
         <el-form-item label="帖子ID">
-          <el-input v-model="searchForm.postId" placeholder="帖子ID" clearable readonly style="width: 200px">
+          <el-input v-model="searchForm.postId" placeholder="帖子ID" readonly style="width: 250px">
+            <template #prepend>
+              <el-button :icon="Search" @click="showPostSelectDialog" title="选择帖子" />
+            </template>
             <template #append>
-              <el-button :icon="Search" @click="showPostSelectDialog" />
+              <el-button @click="clearPostId" title="清除">
+                <el-icon><close /></el-icon>
+              </el-button>
             </template>
           </el-input>
         </el-form-item>
@@ -333,7 +343,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Search, RefreshRight } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Close } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus'
 import { getCommentList, updateCommentStatus, deleteComment, getPostList } from '@/api/post'
 import type { CommentInfo, PostInfo } from '@/api/post'
@@ -583,6 +593,12 @@ const confirmUserSelection = () => {
   }
 }
 
+// 清除用户ID
+const clearUserId = () => {
+  searchForm.userId = ''
+  selectedUser.value = null
+}
+
 // 用户分页大小变化
 const handleUserSizeChange = (size: number) => {
   userPageParams.pageSize = size
@@ -657,6 +673,12 @@ const confirmPostSelection = () => {
     postSelectVisible.value = false
     ElMessage.success('已选择帖子')
   }
+}
+
+// 清除帖子ID
+const clearPostId = () => {
+  searchForm.postId = ''
+  selectedPost.value = null
 }
 
 // 帖子分页大小变化
