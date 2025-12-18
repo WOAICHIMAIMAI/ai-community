@@ -8,11 +8,14 @@
         <el-form-item label="用户名">
           <el-input v-model="searchForm.username" placeholder="请输入用户名" clearable />
         </el-form-item>
+        <el-form-item label="昵称">
+          <el-input v-model="searchForm.nickName" placeholder="请输入昵称" clearable />
+        </el-form-item>
         <el-form-item label="手机号">
           <el-input v-model="searchForm.phone" placeholder="请输入手机号" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 180px">
             <el-option label="启用" :value="1" />
             <el-option label="禁用" :value="0" />
           </el-select>
@@ -72,8 +75,16 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdTime" label="注册时间" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="lastLoginTime" label="最后登录时间" min-width="160" show-overflow-tooltip />
+        <el-table-column label="注册时间" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ formatTimestamp(row.registerTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="最后登录时间" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ formatTimestamp(row.lastLoginTime) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button v-if="row.status === 0" type="success" size="small" @click="handleUpdateStatus(row.id, 1)">
@@ -92,7 +103,7 @@
       <!-- 分页 -->
       <div class="pagination-container">
         <el-pagination
-          v-model:current-page="pageParams.page"
+          v-model:current-page="pageParams.pageNum"
           v-model:page-size="pageParams.pageSize"
           :total="total"
           :page-sizes="[10, 20, 50, 100]"
@@ -132,8 +143,8 @@
               {{ currentUser.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="注册时间">{{ currentUser.createdTime }}</el-descriptions-item>
-          <el-descriptions-item label="最后登录时间">{{ currentUser.lastLoginTime }}</el-descriptions-item>
+          <el-descriptions-item label="注册时间">{{ formatTimestamp(currentUser.registerTime) }}</el-descriptions-item>
+          <el-descriptions-item label="最后登录时间">{{ formatTimestamp(currentUser.lastLoginTime) }}</el-descriptions-item>
         </el-descriptions>
       </div>
     </el-drawer>
@@ -146,6 +157,7 @@ import { Search, RefreshRight, Download } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserList, updateUserStatus } from '@/api/user'
 import type { UserInfo } from '@/api/user'
+import * as XLSX from 'xlsx'
 
 // 默认头像
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
@@ -153,6 +165,7 @@ const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726
 // 搜索表单
 const searchForm = reactive({
   username: '',
+  nickName: '',
   phone: '',
   status: null as number | null
 })
@@ -163,7 +176,7 @@ const tableLoading = ref(false)
 
 // 分页参数
 const pageParams = reactive({
-  page: 1,
+  pageNum: 1,
   pageSize: 10
 })
 const total = ref(0)
@@ -171,6 +184,35 @@ const total = ref(0)
 // 用户详情
 const drawerVisible = ref(false)
 const currentUser = ref<UserInfo | null>(null)
+
+// 时间戳转换为时间格式
+const formatTimestamp = (timestamp: number | string | null | undefined): string => {
+  if (!timestamp) return '-'
+  
+  try {
+    // 如果是字符串，尝试转换为数字
+    const time = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+    
+    // 检查是否为有效的时间戳
+    if (isNaN(time)) return '-'
+    
+    const date = new Date(time)
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) return '-'
+    
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  } catch (e) {
+    return '-'
+  }
+}
 
 // 加载用户列表
 const loadUserList = async () => {
@@ -205,20 +247,21 @@ const loadUserList = async () => {
 
 // 搜索
 const handleSearch = () => {
-  pageParams.page = 1
+  pageParams.pageNum = 1
   loadUserList()
 }
 
 // 重置搜索条件
 const resetSearch = () => {
   searchForm.username = ''
+  searchForm.nickName = ''
   searchForm.phone = ''
   searchForm.status = null
   handleSearch()
 }
 
 // 更新用户状态
-const handleUpdateStatus = (userId: number, status: number) => {
+const handleUpdateStatus = (userId: string | number, status: number) => {
   const action = status === 1 ? '启用' : '禁用'
   
   ElMessageBox.confirm(
@@ -231,12 +274,9 @@ const handleUpdateStatus = (userId: number, status: number) => {
     }
   ).then(async () => {
     try {
-      const res = await updateUserStatus({
-        userId,
-        status
-      })
+      const res = await updateUserStatus(userId, status)
       
-      if (res.code === 200 && res.data) {
+      if (res.code === 200) {
         ElMessage.success(`${action}用户成功`)
         loadUserList()
       } else {
@@ -251,8 +291,10 @@ const handleUpdateStatus = (userId: number, status: number) => {
 }
 
 // 查看用户详情
-const handleViewDetail = (userId: number) => {
-  const user = tableData.value.find(item => item.id === userId)
+const handleViewDetail = (userId: string | number) => {
+  // 统一转换为字符串进行比较，避免精度问题
+  const userIdStr = String(userId)
+  const user = tableData.value.find(item => String(item.id) === userIdStr)
   if (user) {
     currentUser.value = user
     drawerVisible.value = true
@@ -260,9 +302,77 @@ const handleViewDetail = (userId: number) => {
 }
 
 // 导出Excel
-const handleExport = () => {
-  ElMessage.success('导出用户数据成功')
-  // 实际项目中应该调用后端接口生成Excel文件并下载
+const handleExport = async () => {
+  try {
+    // 获取当前筛选条件下的所有数据（不分页）
+    const params = {
+      pageNum: 1,
+      pageSize: 10000, // 获取大量数据
+      ...searchForm
+    }
+    
+    // 移除空值参数
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null) {
+        delete params[key]
+      }
+    })
+    
+    const res = await getUserList(params)
+    
+    if (res.code === 200) {
+      const users = res.data.records
+      
+      if (users.length === 0) {
+        ElMessage.warning('暂无数据可导出')
+        return
+      }
+      
+      // 准备导出的数据
+      const exportData = users.map((user, index) => ({
+        '序号': index + 1,
+        '用户名': user.username || '-',
+        '昵称': user.nickname || '-',
+        '手机号': user.phone || '-',
+        '性别': user.gender === 1 ? '男' : user.gender === 2 ? '女' : '未知',
+        '状态': user.status === 1 ? '启用' : '禁用',
+        '注册时间': formatTimestamp(user.registerTime),
+        '最后登录时间': formatTimestamp(user.lastLoginTime)
+      }))
+      
+      // 创建工作簿
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, '用户列表')
+      
+      // 设置列宽
+      const colWidths = [
+        { wch: 8 },  // 序号
+        { wch: 20 }, // 用户名
+        { wch: 20 }, // 昵称
+        { wch: 15 }, // 手机号
+        { wch: 8 },  // 性别
+        { wch: 10 }, // 状态
+        { wch: 20 }, // 注册时间
+        { wch: 20 }  // 最后登录时间
+      ]
+      worksheet['!cols'] = colWidths
+      
+      // 生成文件名（包含当前日期时间）
+      const now = new Date()
+      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
+      const fileName = `用户列表_${dateStr}.xlsx`
+      
+      // 导出文件
+      XLSX.writeFile(workbook, fileName)
+      
+      ElMessage.success(`成功导出 ${users.length} 条用户数据`)
+    } else {
+      ElMessage.error(res.message || '获取用户数据失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '导出失败')
+  }
 }
 
 // 分页大小变化
@@ -273,7 +383,7 @@ const handleSizeChange = (size: number) => {
 
 // 页码变化
 const handleCurrentChange = (page: number) => {
-  pageParams.page = page
+  pageParams.pageNum = page
   loadUserList()
 }
 

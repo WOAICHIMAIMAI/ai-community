@@ -5,19 +5,22 @@
     <!-- 搜索表单 -->
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="评论内容关键词" clearable />
+        <el-form-item label="评论内容">
+          <el-input v-model="searchForm.content" placeholder="请输入评论内容" clearable style="width: 200px" />
         </el-form-item>
         <el-form-item label="用户ID">
-          <el-input v-model="searchForm.userId" placeholder="用户ID" clearable />
+          <el-input v-model="searchForm.userId" placeholder="用户ID" clearable readonly style="width: 200px">
+            <template #append>
+              <el-button :icon="Search" @click="showUserSelectDialog" />
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item label="帖子ID">
-          <el-input v-model="searchForm.postId" placeholder="帖子ID" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model.number="searchForm.status" placeholder="全部" clearable>
-            <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
+          <el-input v-model="searchForm.postId" placeholder="帖子ID" clearable readonly style="width: 200px">
+            <template #append>
+              <el-button :icon="Search" @click="showPostSelectDialog" />
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
@@ -181,6 +184,150 @@
         <el-button type="primary" @click="confirmReject">确定</el-button>
       </template>
     </el-dialog>
+    
+    <!-- 用户选择对话框 -->
+    <el-dialog
+      v-model="userSelectVisible"
+      title="选择用户"
+      width="70%"
+      destroy-on-close
+    >
+      <div class="user-select-dialog">
+        <!-- 搜索表单 -->
+        <el-form :model="userSearchForm" inline class="user-search-form">
+          <el-form-item label="用户名">
+            <el-input v-model="userSearchForm.username" placeholder="请输入用户名" clearable />
+          </el-form-item>
+          <el-form-item label="昵称">
+            <el-input v-model="userSearchForm.nickName" placeholder="请输入昵称" clearable />
+          </el-form-item>
+          <el-form-item label="手机号">
+            <el-input v-model="userSearchForm.phone" placeholder="请输入手机号" clearable />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleUserSearch">
+              <el-icon><search /></el-icon>搜索
+            </el-button>
+            <el-button @click="resetUserSearch">
+              <el-icon><refresh-right /></el-icon>重置
+            </el-button>
+          </el-form-item>
+        </el-form>
+        
+        <!-- 用户列表 -->
+        <el-table
+          v-loading="userTableLoading"
+          :data="userTableData"
+          border
+          stripe
+          highlight-current-row
+          @current-change="handleUserSelectionChange"
+          style="width: 100%"
+        >
+          <el-table-column type="index" label="序号" width="60" />
+          <el-table-column prop="id" label="用户ID" width="180" show-overflow-tooltip />
+          <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip />
+          <el-table-column prop="nickname" label="昵称" min-width="120" show-overflow-tooltip />
+          <el-table-column label="头像" width="80" align="center">
+            <template #default="{ row }">
+              <el-avatar :size="40" :src="row.avatarUrl">
+                {{ row.nickname?.substr(0, 1) }}
+              </el-avatar>
+            </template>
+          </el-table-column>
+          <el-table-column prop="phone" label="手机号" min-width="120" />
+        </el-table>
+        
+        <!-- 分页 -->
+        <div class="pagination-container">
+          <el-pagination
+            v-model:current-page="userPageParams.pageNum"
+            v-model:page-size="userPageParams.pageSize"
+            :total="userTotal"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @size-change="handleUserSizeChange"
+            @current-change="handleUserCurrentChange"
+          />
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="userSelectVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmUserSelection" :disabled="!selectedUser">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
+    
+    <!-- 帖子选择对话框 -->
+    <el-dialog
+      v-model="postSelectVisible"
+      title="选择帖子"
+      width="70%"
+      destroy-on-close
+    >
+      <div class="post-select-dialog">
+        <!-- 搜索表单 -->
+        <el-form :model="postSearchForm" inline class="post-search-form">
+          <el-form-item label="标题">
+            <el-input v-model="postSearchForm.title" placeholder="请输入标题" clearable />
+          </el-form-item>
+          <el-form-item label="内容">
+            <el-input v-model="postSearchForm.content" placeholder="请输入内容" clearable />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handlePostSearch">
+              <el-icon><search /></el-icon>搜索
+            </el-button>
+            <el-button @click="resetPostSearch">
+              <el-icon><refresh-right /></el-icon>重置
+            </el-button>
+          </el-form-item>
+        </el-form>
+        
+        <!-- 帖子列表 -->
+        <el-table
+          v-loading="postTableLoading"
+          :data="postTableData"
+          border
+          stripe
+          highlight-current-row
+          @current-change="handlePostSelectionChange"
+          style="width: 100%"
+        >
+          <el-table-column type="index" label="序号" width="60" />
+          <el-table-column prop="id" label="帖子ID" width="180" show-overflow-tooltip />
+          <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="nickname" label="发布者" width="120" show-overflow-tooltip />
+          <el-table-column label="浏览量" width="100" align="center">
+            <template #default="{ row }">
+              {{ row.viewCount || 0 }}
+            </template>
+          </el-table-column>
+        </el-table>
+        
+        <!-- 分页 -->
+        <div class="pagination-container">
+          <el-pagination
+            v-model:current-page="postPageParams.page"
+            v-model:page-size="postPageParams.pageSize"
+            :total="postTotal"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @size-change="handlePostSizeChange"
+            @current-change="handlePostCurrentChange"
+          />
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="postSelectVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmPostSelection" :disabled="!selectedPost">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -188,8 +335,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus'
-import { getCommentList, updateCommentStatus, deleteComment } from '@/api/post'
-import type { CommentInfo } from '@/api/post'
+import { getCommentList, updateCommentStatus, deleteComment, getPostList } from '@/api/post'
+import type { CommentInfo, PostInfo } from '@/api/post'
+import { getUserList } from '@/api/user'
+import type { UserInfo } from '@/api/user'
 
 // 敏感词列表（实际项目中可从后端获取）
 const sensitiveWords = ['违禁', '广告', '敏感', '投诉', '辱骂', '歧视']
@@ -203,10 +352,9 @@ const statusOptions = [
 
 // 搜索表单
 const searchForm = reactive({
-  keyword: '',
+  content: '',
   userId: '',
-  postId: '',
-  status: undefined as number | undefined
+  postId: ''
 })
 
 // 表格数据
@@ -240,6 +388,49 @@ const rejectRules: FormRules = {
     { min: 5, max: 200, message: '长度在 5 到 200 个字符', trigger: 'blur' }
   ]
 }
+
+// 用户选择对话框
+const userSelectVisible = ref(false)
+const selectedUser = ref<UserInfo | null>(null)
+
+// 用户搜索表单
+const userSearchForm = reactive({
+  username: '',
+  nickName: '',
+  phone: ''
+})
+
+// 用户表格数据
+const userTableData = ref<UserInfo[]>([])
+const userTableLoading = ref(false)
+
+// 用户分页参数
+const userPageParams = reactive({
+  pageNum: 1,
+  pageSize: 10
+})
+const userTotal = ref(0)
+
+// 帖子选择对话框
+const postSelectVisible = ref(false)
+const selectedPost = ref<PostInfo | null>(null)
+
+// 帖子搜索表单
+const postSearchForm = reactive({
+  title: '',
+  content: ''
+})
+
+// 帖子表格数据
+const postTableData = ref<PostInfo[]>([])
+const postTableLoading = ref(false)
+
+// 帖子分页参数
+const postPageParams = reactive({
+  page: 1,
+  pageSize: 10
+})
+const postTotal = ref(0)
 
 // 获取状态标签类型
 const getStatusType = (status: number): string => {
@@ -321,11 +512,163 @@ const handleSearch = () => {
 
 // 重置搜索条件
 const resetSearch = () => {
-  searchForm.keyword = ''
+  searchForm.content = ''
   searchForm.userId = ''
   searchForm.postId = ''
-  searchForm.status = undefined
   handleSearch()
+}
+
+// 显示用户选择对话框
+const showUserSelectDialog = () => {
+  userSelectVisible.value = true
+  loadUserList()
+}
+
+// 加载用户列表
+const loadUserList = async () => {
+  try {
+    userTableLoading.value = true
+    const params = {
+      ...userPageParams,
+      ...userSearchForm
+    }
+    
+    // 移除空值参数
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null) {
+        delete params[key]
+      }
+    })
+    
+    const res = await getUserList(params)
+    
+    if (res.code === 200) {
+      userTableData.value = res.data.records
+      userTotal.value = res.data.total
+    } else {
+      ElMessage.error(res.message || '获取用户列表失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '获取用户列表失败')
+  } finally {
+    userTableLoading.value = false
+  }
+}
+
+// 用户搜索
+const handleUserSearch = () => {
+  userPageParams.pageNum = 1
+  loadUserList()
+}
+
+// 重置用户搜索条件
+const resetUserSearch = () => {
+  userSearchForm.username = ''
+  userSearchForm.nickName = ''
+  userSearchForm.phone = ''
+  handleUserSearch()
+}
+
+// 用户选择变化
+const handleUserSelectionChange = (user: UserInfo | null) => {
+  selectedUser.value = user
+}
+
+// 确认用户选择
+const confirmUserSelection = () => {
+  if (selectedUser.value) {
+    searchForm.userId = String(selectedUser.value.id)
+    userSelectVisible.value = false
+    ElMessage.success('已选择用户')
+  }
+}
+
+// 用户分页大小变化
+const handleUserSizeChange = (size: number) => {
+  userPageParams.pageSize = size
+  loadUserList()
+}
+
+// 用户页码变化
+const handleUserCurrentChange = (page: number) => {
+  userPageParams.pageNum = page
+  loadUserList()
+}
+
+// 显示帖子选择对话框
+const showPostSelectDialog = () => {
+  postSelectVisible.value = true
+  loadPostList()
+}
+
+// 加载帖子列表
+const loadPostList = async () => {
+  try {
+    postTableLoading.value = true
+    const params = {
+      ...postPageParams,
+      ...postSearchForm
+    }
+    
+    // 移除空值参数
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null) {
+        delete params[key]
+      }
+    })
+    
+    const res = await getPostList(params)
+    
+    if (res.code === 200) {
+      postTableData.value = res.data.records
+      postTotal.value = res.data.total
+    } else {
+      ElMessage.error(res.message || '获取帖子列表失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '获取帖子列表失败')
+  } finally {
+    postTableLoading.value = false
+  }
+}
+
+// 帖子搜索
+const handlePostSearch = () => {
+  postPageParams.page = 1
+  loadPostList()
+}
+
+// 重置帖子搜索条件
+const resetPostSearch = () => {
+  postSearchForm.title = ''
+  postSearchForm.content = ''
+  handlePostSearch()
+}
+
+// 帖子选择变化
+const handlePostSelectionChange = (post: PostInfo | null) => {
+  selectedPost.value = post
+}
+
+// 确认帖子选择
+const confirmPostSelection = () => {
+  if (selectedPost.value) {
+    searchForm.postId = String(selectedPost.value.id)
+    postSelectVisible.value = false
+    ElMessage.success('已选择帖子')
+  }
+}
+
+// 帖子分页大小变化
+const handlePostSizeChange = (size: number) => {
+  postPageParams.pageSize = size
+  loadPostList()
+}
+
+// 帖子页码变化
+const handlePostCurrentChange = (page: number) => {
+  postPageParams.page = page
+  loadPostList()
 }
 
 // 查看评论详情

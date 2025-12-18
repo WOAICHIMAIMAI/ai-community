@@ -68,7 +68,7 @@ public class PostVO {
     /**
      * 评论数
      */
-    private Integer commentCount;
+    private Long commentCount;
     
     /**
      * 是否置顶

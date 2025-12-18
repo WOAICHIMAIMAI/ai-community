@@ -44,7 +44,6 @@ public class AdminUserController {
      *
      * @param pageNum  页码
      * @param pageSize 每页数量
-     * @param keyword  搜索关键字（用户名、手机号、昵称）
      * @param status   状态过滤
      * @return 用户列表
      */
@@ -52,7 +51,9 @@ public class AdminUserController {
     public Result<Page<UserInfoDTO>> listUsers(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String nickName,
             @RequestParam(required = false) Integer status) {
         
         // 权限检查
@@ -64,10 +65,15 @@ public class AdminUserController {
         LambdaQueryWrapper<Users> queryWrapper = new LambdaQueryWrapper<>();
 
         // 添加搜索条件
-        if (StringUtils.hasText(keyword)) {
-            queryWrapper.like(Users::getUsername, keyword)
-                    .or().like(Users::getPhone, keyword)
-                    .or().like(Users::getNickname, keyword);
+        if (StringUtils.hasText(username)) {
+            queryWrapper.like(Users::getUsername, username);
+        }
+
+        if(StringUtils.hasText(phone)){
+            queryWrapper.like(Users::getPhone, phone);
+        }
+        if(StringUtils.hasText(nickName)){
+            queryWrapper.like(Users::getNickname, nickName);
         }
 
         // 添加状态过滤
@@ -104,8 +110,8 @@ public class AdminUserController {
      * @param status 状态（0-禁用 1-正常 2-未激活）
      * @return 更新结果
      */
-    @PutMapping("/{userId}/status")
-    public Result<Void> updateUserStatus(@PathVariable Long userId, @RequestParam Integer status) {
+    @PutMapping("/status")
+    public Result<Void> updateUserStatus(@RequestParam Long userId, @RequestParam Integer status) {
         // 权限检查
         if (!checkAdminPermission()) {
             throw new BaseException("你没有权限进行此操作！");

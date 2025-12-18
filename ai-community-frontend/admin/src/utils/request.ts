@@ -2,11 +2,26 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 import { useAuthStore } from '@/store/auth'
+import JSONbig from 'json-bigint'
+
+// 创建 JSONbig 实例，将大数转换为字符串
+const jsonBig = JSONbig({ storeAsString: true })
 
 // 创建axios实例
 const service = axios.create({
   baseURL: '', // 避免与API路径中的/api重复
   timeout: 15000, // 请求超时时间
+  // 使用 json-bigint 来解析响应，避免大数精度丢失
+  transformResponse: [function (data) {
+    if (typeof data === 'string') {
+      try {
+        return jsonBig.parse(data)
+      } catch (e) {
+        return data
+      }
+    }
+    return data
+  }]
 })
 
 // 请求拦截器

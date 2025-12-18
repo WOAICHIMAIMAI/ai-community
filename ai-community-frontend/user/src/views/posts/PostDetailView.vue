@@ -100,9 +100,13 @@
                   <van-icon :name="comment.hasLiked ? 'like' : 'like-o'" :color="comment.hasLiked ? '#ee0a24' : ''" />
                   {{ comment.likeCount || 0 }}
                 </div>
-                <div class="comment-reply" @click="toggleReplies(comment)">
+                <div class="comment-reply" @click="showReplyInput(comment)">
+                  <van-icon name="edit" />
+                  回复
+                </div>
+                <div class="comment-reply" @click="toggleReplies(comment)" v-if="comment.replyCount > 0">
                   <van-icon name="chat-o" />
-                  回复({{ comment.replyCount || 0 }})
+                  {{ comment.showReplies ? '收起' : '展开' }}({{ comment.replyCount || 0 }})
                 </div>
               </div>
               
@@ -235,11 +239,13 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast, showImagePreview, showFailToast } from 'vant'
 import { getPostDetail, getComments, likeOrUnlike, addComment } from '@/api/post'
-import { getCommentReplies } from '@/api/comment'
+import { getCommentReplies, getCommentCount } from '@/api/comment'
+import { useAuthStore } from '@/store/auth'
 // 暂时移除 getUserPosts 的导入
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 // 帖子数据
 const loading = ref(true)
@@ -375,6 +381,25 @@ const buildTwoLevelComments = (records: any[] = []) => {
   })
 
   return parents
+}
+
+// 获取帖子评论数量
+const fetchCommentCount = async () => {
+  try {
+    const res = await getCommentCount(postId.value)
+    console.log('评论数量响应:', res)
+    
+    if (res.code === 200 && res.data !== undefined) {
+      // 更新帖子的评论数量
+      if (post.value) {
+        post.value.commentCount = res.data
+      }
+      // 更新评论区显示的总数
+      commentTotal.value = res.data
+    }
+  } catch (error) {
+    console.error('获取评论数量失败:', error)
+  }
 }
 
 // 获取评论列表 - 使用真实API数据（构建二级目录展示）
@@ -523,10 +548,36 @@ const submitComment = async () => {
     })
     if (res && res.code === 200) {
       showToast('评论成功')
+      const tempContent = commentContent.value
       commentContent.value = ''
-      // 重新拉取评论，重置到第一页
+      
+      // 立即在前端构造临时评论对象并显示（乐观更新）
+      const tempComment = {
+        id: res.data, // 后端返回的评论ID
+        postId: postId.value,
+        content: tempContent,
+        userId: authStore.userInfo?.id,
+        nickname: authStore.userInfo?.nickname || '用户',
+        avatar: authStore.userInfo?.avatarUrl || 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
+        createTime: new Date().toISOString(),
+        likeCount: 0,
+        replyCount: 0,
+        hasLiked: false,
+        isAuthor: post.value?.userId === authStore.userInfo?.id,
+        replies: [],
+        showReplies: false,
+        loadingReplies: false
+      }
+      
+      // 将新评论添加到列表顶部
+      comments.value = [tempComment, ...comments.value]
+      
+      // 异步刷新真实数据
       commentPage.value = 1
-      await fetchComments()
+      setTimeout(async () => {
+        await fetchComments()
+        await fetchCommentCount()
+      }, 500)
     } else {
       showFailToast(res?.message || '评论失败')
     }
@@ -554,10 +605,11 @@ const submitReply = async () => {
     })
     if (res && res.code === 200) {
       showToast('回复成功')
+      const tempContent = replyContent.value
       replyContent.value = ''
       showReply.value = false
       
-      // 找到父评论并更新其回复列表
+      // 找到父评论
       const parentCommentId = currentComment.value.parentId || currentComment.value.id
       const parentComment = comments.value.find(c => c.id === parentCommentId)
       
@@ -565,24 +617,47 @@ const submitReply = async () => {
         // 更新回复数量
         parentComment.replyCount = (parentComment.replyCount || 0) + 1
         
-        // 如果回复列表已展开,重新加载回复
-        if (parentComment.showReplies) {
-          try {
-            const repliesRes = await getCommentReplies(parentComment.id)
-            if (repliesRes.code === 200 && repliesRes.data) {
-              parentComment.replies = repliesRes.data
-            }
-          } catch (error) {
-            console.error('重新加载回复失败:', error)
-          }
+        // 构造临时回复对象
+        const tempReply = {
+          id: res.data, // 后端返回的评论ID
+          postId: postId.value,
+          content: tempContent,
+          userId: authStore.userInfo?.id,
+          nickname: authStore.userInfo?.nickname || '用户',
+          avatar: authStore.userInfo?.avatarUrl || 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
+          createTime: new Date().toISOString(),
+          likeCount: 0,
+          hasLiked: false,
+          isAuthor: post.value?.userId === authStore.userInfo?.id,
+          parentId: parentCommentId,
+          replyToId: currentComment.value.id,
+          replyToNickname: currentComment.value.nickname
         }
+        
+        // 立即显示新回复
+        if (!parentComment.replies) {
+          parentComment.replies = []
+        }
+        parentComment.replies.push(tempReply)
+        
+        // 自动展开回复列表
+        parentComment.showReplies = true
+        
+        // 异步刷新真实数据
+        setTimeout(async () => {
+          if (parentComment.showReplies) {
+            try {
+              const repliesRes = await getCommentReplies(parentComment.id)
+              if (repliesRes.code === 200 && repliesRes.data) {
+                parentComment.replies = repliesRes.data
+              }
+            } catch (error) {
+              console.error('重新加载回复失败:', error)
+            }
+          }
+          await fetchCommentCount()
+        }, 500)
       }
-      
-      // 更新帖子的评论总数
-      if (post.value) {
-        post.value.commentCount = (post.value.commentCount || 0) + 1
-      }
-      commentTotal.value = (commentTotal.value || 0) + 1
     } else {
       showFailToast(res?.message || '回复失败')
     }
@@ -649,6 +724,8 @@ onMounted(async () => {
   
   await fetchPostDetail()
   await fetchComments()
+  // 获取准确的评论数量
+  await fetchCommentCount()
 }) 
 </script>
 

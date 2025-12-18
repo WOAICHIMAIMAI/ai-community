@@ -28,7 +28,7 @@ public class AdminCommentPageQuery extends PageQuery {
      * 评论内容关键词
      */
     @Schema(description = "评论内容关键词")
-    private String keyword;
+    private String content;
     
     /**
      * 评论状态：0-隐藏 1-显示

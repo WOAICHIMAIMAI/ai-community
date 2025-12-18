@@ -17,6 +17,10 @@ public class AdminPostPageQuery extends PostPageQuery {
      */
     @Schema(description = "用户ID，用于筛选指定用户的帖子", example = "1")
     private Long userId;
+
+    private String title;
+
+    private String content;
     
     /**
      * 是否置顶

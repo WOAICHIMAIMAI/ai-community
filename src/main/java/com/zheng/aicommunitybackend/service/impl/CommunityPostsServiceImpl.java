@@ -218,15 +218,6 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
             throw new BaseException("帖子ID不能为空");
         }
 
-        // 先尝试从缓存获取
-        String cacheKey = CacheConstants.buildPostDetailKey(postId);
-        PostVO cachedPost = (PostVO) redisUtils.get(cacheKey);
-        if (cachedPost != null) {
-            // 更新浏览量（异步更新数据库，不影响缓存）
-            updateViewCountAsync(postId);
-            return cachedPost;
-        }
-
         // 查询帖子
         CommunityPosts post = this.getById(postId);
         if (post == null || post.getStatus() == 2) { // 帖子不存在或已删除
@@ -263,21 +254,11 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
             postVO.setHasFavorited(false);
         }
 
-        // 缓存帖子详情
-        redisUtils.set(cacheKey, postVO, CacheConstants.DETAIL_EXPIRE_TIME);
-
         return postVO;
     }
 
     @Override
     public PageResult listPosts(PostPageQuery query) {
-        // 先尝试从缓存获取
-        String cacheKey = CacheConstants.buildPostPageKey(
-            query.getPage(), query.getPageSize(), query.getCategory());
-        PageResult cachedResult = (PageResult) redisUtils.get(cacheKey);
-        if (cachedResult != null) {
-            return cachedResult;
-        }
 
         // 构建查询条件
         LambdaQueryWrapper<CommunityPosts> queryWrapper = new LambdaQueryWrapper<>();
@@ -332,11 +313,6 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
 
         // 构建返回结果
         PageResult result = new PageResult(pageResult.getTotal(), postVOList);
-
-        // 缓存结果（只缓存无关键字搜索的结果）
-        if (!StringUtils.hasText(query.getKeyword())) {
-            redisUtils.set(cacheKey, result, CacheConstants.DEFAULT_EXPIRE_TIME);
-        }
 
         return result;
     }
@@ -427,7 +403,7 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         }
         
         // 实时查询评论数量（覆盖从数据库复制的冗余字段）
-        Integer commentCount = postCommentsService.countCommentsByPostId(post.getId());
+        Long commentCount = postCommentsService.countCommentsByPostId(post.getId());
         postVO.setCommentCount(commentCount);
         
         return postVO;
@@ -462,7 +438,7 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
                 .collect(Collectors.toSet());
         
         // 批量查询评论数量
-        Map<Long, Integer> commentCountMap = postCommentsService.batchCountCommentsByPostIds(
+        Map<Long, Long> commentCountMap = postCommentsService.batchCountCommentsByPostIds(
                 new ArrayList<>(postIds));
         
         // 如果用户已登录，批量查询点赞和收藏状态
@@ -501,7 +477,7 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         Map<Long, Users> finalUserMap = userMap;
         Map<Long, Boolean> finalLikeMap = likeMap;
         Map<Long, Boolean> finalFavoriteMap = favoriteMap;
-        Map<Long, Integer> finalCommentCountMap = commentCountMap;
+        Map<Long, Long> finalCommentCountMap = commentCountMap;
         
         return postList.stream().map(post -> {
             PostVO postVO = new PostVO();
@@ -531,7 +507,7 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
             postVO.setHasFavorited(finalFavoriteMap.getOrDefault(post.getId(), false));
             
             // 设置实时查询的评论数量（覆盖从数据库复制的冗余字段）
-            postVO.setCommentCount(finalCommentCountMap.getOrDefault(post.getId(), 0));
+            postVO.setCommentCount(finalCommentCountMap.getOrDefault(post.getId(), 0L));
             
             return postVO;
         }).collect(Collectors.toList());
@@ -556,6 +532,14 @@ public class CommunityPostsServiceImpl extends ServiceImpl<CommunityPostsMapper,
         // 按状态筛选
         if (query.getStatus() != null) {
             queryWrapper.eq(CommunityPosts::getStatus, query.getStatus());
+        }
+
+        if(query.getTitle() != null){
+            queryWrapper.like(CommunityPosts::getTitle, query.getTitle());
+        }
+
+        if(query.getContent() != null){
+            queryWrapper.like(CommunityPosts::getContent, query.getContent());
         }
         
         // 按分类筛选

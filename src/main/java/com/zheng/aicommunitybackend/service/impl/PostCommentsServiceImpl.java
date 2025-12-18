@@ -163,15 +163,14 @@ public class PostCommentsServiceImpl extends ServiceImpl<PostCommentsMapper, Pos
     }
 
     @Override
-    public Integer countCommentsByPostId(Long postId) {
-        LambdaQueryWrapper<PostComments> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PostComments::getPostId, postId)
-                .eq(PostComments::getStatus, 1);
-        return Math.toIntExact(this.count(wrapper));
+    public Long countCommentsByPostId(Long postId) {
+        return lambdaQuery().eq(PostComments::getPostId, postId)
+                .eq(PostComments::getStatus, 1)
+                .count();
     }
     
     @Override
-    public Map<Long, Integer> batchCountCommentsByPostIds(List<Long> postIds) {
+    public Map<Long, Long> batchCountCommentsByPostIds(List<Long> postIds) {
         if (postIds == null || postIds.isEmpty()) {
             return new HashMap<>();
         }
@@ -182,19 +181,13 @@ public class PostCommentsServiceImpl extends ServiceImpl<PostCommentsMapper, Pos
                 .eq(PostComments::getStatus, 1);
         
         List<PostComments> comments = this.list(wrapper);
-        
-        // 按帖子ID分组统计评论数量
-        Map<Long, Integer> commentCountMap = new HashMap<>();
-        for (Long postId : postIds) {
-            commentCountMap.put(postId, 0);
-        }
-        
-        for (PostComments comment : comments) {
-            Long postId = comment.getPostId();
-            commentCountMap.put(postId, commentCountMap.get(postId) + 1);
-        }
-        
-        return commentCountMap;
+        Map<Long, Long> postCountMap = comments.stream()
+                .collect(Collectors.groupingBy(
+                        PostComments::getPostId,
+                        Collectors.counting()
+                ));
+
+        return postCountMap;
     }
     
     @Override
@@ -213,8 +206,8 @@ public class PostCommentsServiceImpl extends ServiceImpl<PostCommentsMapper, Pos
         }
         
         // 根据评论内容关键词查询
-        if (StringUtils.hasText(query.getKeyword())) {
-            queryWrapper.like(PostComments::getContent, query.getKeyword());
+        if (StringUtils.hasText(query.getContent())) {
+            queryWrapper.like(PostComments::getContent, query.getContent());
         }
         
         // 根据状态查询

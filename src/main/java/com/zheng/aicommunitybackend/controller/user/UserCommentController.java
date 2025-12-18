@@ -78,9 +78,9 @@ public class UserCommentController {
      */
     @GetMapping("/count/{postId}")
     @Operation(summary = "获取评论数量", description = "获取指定帖子的评论总数")
-    public Result<Integer> countComments(
+    public Result<Long> countComments(
             @Parameter(description = "帖子ID") @PathVariable Long postId) {
-        Integer count = postCommentsService.countCommentsByPostId(postId);
+        Long count = postCommentsService.countCommentsByPostId(postId);
         return Result.success(count);
     }
 } 

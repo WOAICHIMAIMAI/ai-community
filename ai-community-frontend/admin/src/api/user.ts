@@ -3,7 +3,7 @@ import type { PageParams, PageResult, ApiResult } from '@/types/common'
 
 // 用户数据接口
 export interface UserInfo {
-  id: number
+  id: string | number  // 使用 string 避免大数精度丢失
   username: string
   nickname: string
   phone: string
@@ -13,6 +13,7 @@ export interface UserInfo {
   status: number
   createdTime: string
   lastLoginTime: string
+  registerTime?: string | number  // 添加注册时间字段
 }
 
 // 用户状态参数
@@ -55,12 +56,18 @@ export function getUserList(params: PageParams): Promise<PageResult<UserInfo>> {
 
 /**
  * 更新用户状态
- * @param userId 用户ID
- * @param status 状态
+ * @param userId 用户ID（字符串或数字）
+ * @param status 状态（0-禁用 1-正常 2-未激活）
  * @returns 操作结果
  */
-export function updateUserStatus(userId: number, status: number): Promise<ApiResult<boolean>> {
-  return put<ApiResult<boolean>>(`/api/admin/user/${userId}/status?status=${status}`)
+export function updateUserStatus(userId: string | number, status: number): Promise<ApiResult<void>> {
+  // 确保 userId 以字符串形式传递，避免大数精度丢失
+  return put<ApiResult<void>>('/api/admin/user/status', null, { 
+    params: { 
+      userId: String(userId), 
+      status 
+    } 
+  })
 }
 
 /**

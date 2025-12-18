@@ -5,21 +5,18 @@
     <!-- 搜索表单 -->
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="标题/内容关键词" clearable />
+        <el-form-item label="标题">
+          <el-input v-model="searchForm.title" placeholder="请输入标题" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="内容">
+          <el-input v-model="searchForm.content" placeholder="请输入内容" clearable style="width: 200px" />
         </el-form-item>
         <el-form-item label="用户ID">
-          <el-input v-model="searchForm.userId" placeholder="用户ID" clearable />
-        </el-form-item>
-        <el-form-item label="分类">
-          <el-select v-model.number="searchForm.category" placeholder="全部" clearable>
-            <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model.number="searchForm.status" placeholder="全部" clearable>
-            <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
+          <el-input v-model="searchForm.userId" placeholder="用户ID" clearable readonly style="width: 200px">
+            <template #append>
+              <el-button :icon="Search" @click="showUserSelectDialog" />
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
@@ -59,24 +56,27 @@
           </template>
         </el-table-column>
         <el-table-column prop="category" label="分类" width="120" />
-        <el-table-column label="数据统计" width="200">
+        <el-table-column label="浏览量" width="100" align="center">
           <template #default="{ row }">
-            <div class="post-stats">
-              <el-tooltip content="浏览量">
-                <span class="stat-item">
-                  <el-icon><view /></el-icon> {{ row.viewCount }}
-                </span>
-              </el-tooltip>
-              <el-tooltip content="点赞数">
-                <span class="stat-item">
-                  <el-icon><star /></el-icon> {{ row.likeCount }}
-                </span>
-              </el-tooltip>
-              <el-tooltip content="评论数">
-                <span class="stat-item">
-                  <el-icon><chat-dot-round /></el-icon> {{ row.commentCount }}
-                </span>
-              </el-tooltip>
+            <div class="stat-cell">
+              <el-icon><view /></el-icon>
+              <span>{{ row.viewCount || 0 }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="点赞数" width="100" align="center">
+          <template #default="{ row }">
+            <div class="stat-cell">
+              <el-icon><promotion /></el-icon>
+              <span>{{ row.likeCount || 0 }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="评论数" width="100" align="center">
+          <template #default="{ row }">
+            <div class="stat-cell">
+              <el-icon><chat-dot-round /></el-icon>
+              <span>{{ row.commentCount || 0 }}</span>
             </div>
           </template>
         </el-table-column>
@@ -174,15 +174,99 @@
         </div>
       </div>
     </el-dialog>
+    
+    <!-- 用户选择对话框 -->
+    <el-dialog
+      v-model="userSelectVisible"
+      title="选择用户"
+      width="70%"
+      destroy-on-close
+    >
+      <div class="user-select-dialog">
+        <!-- 搜索表单 -->
+        <el-form :model="userSearchForm" inline class="user-search-form">
+          <el-form-item label="用户名">
+            <el-input v-model="userSearchForm.username" placeholder="请输入用户名" clearable />
+          </el-form-item>
+          <el-form-item label="昵称">
+            <el-input v-model="userSearchForm.nickName" placeholder="请输入昵称" clearable />
+          </el-form-item>
+          <el-form-item label="手机号">
+            <el-input v-model="userSearchForm.phone" placeholder="请输入手机号" clearable />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleUserSearch">
+              <el-icon><search /></el-icon>搜索
+            </el-button>
+            <el-button @click="resetUserSearch">
+              <el-icon><refresh-right /></el-icon>重置
+            </el-button>
+          </el-form-item>
+        </el-form>
+        
+        <!-- 用户列表 -->
+        <el-table
+          v-loading="userTableLoading"
+          :data="userTableData"
+          border
+          stripe
+          highlight-current-row
+          @current-change="handleUserSelectionChange"
+          style="width: 100%"
+        >
+          <el-table-column type="index" label="序号" width="60" />
+          <el-table-column prop="id" label="用户ID" width="180" show-overflow-tooltip />
+          <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip />
+          <el-table-column prop="nickname" label="昵称" min-width="120" show-overflow-tooltip />
+          <el-table-column label="头像" width="80" align="center">
+            <template #default="{ row }">
+              <el-avatar :size="40" :src="row.avatarUrl">
+                {{ row.nickname?.substr(0, 1) }}
+              </el-avatar>
+            </template>
+          </el-table-column>
+          <el-table-column prop="phone" label="手机号" min-width="120" />
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+                {{ row.status === 1 ? '启用' : '禁用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+        
+        <!-- 分页 -->
+        <div class="pagination-container">
+          <el-pagination
+            v-model:current-page="userPageParams.pageNum"
+            v-model:page-size="userPageParams.pageSize"
+            :total="userTotal"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @size-change="handleUserSizeChange"
+            @current-change="handleUserCurrentChange"
+          />
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="userSelectVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmUserSelection" :disabled="!selectedUser">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Search, RefreshRight, View, Star, ChatDotRound } from '@element-plus/icons-vue'
+import { Search, RefreshRight, View, Promotion, ChatDotRound } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getPostList, getPostDetail, updatePostStatus, deletePost } from '@/api/post'
 import type { PostInfo } from '@/api/post'
+import { getUserList } from '@/api/user'
+import type { UserInfo } from '@/api/user'
 
 // 敏感词列表（实际项目中可从后端获取）
 const sensitiveWords = ['违禁', '广告', '敏感', '投诉']
@@ -205,15 +289,36 @@ const statusOptions = [
 
 // 搜索表单
 const searchForm = reactive({
-  keyword: '',
-  userId: '',
-  category: undefined as number | undefined,
-  status: undefined as number | undefined
+  title: '',
+  content: '',
+  userId: ''
 })
 
 // 表格数据
 const tableData = ref<PostInfo[]>([])
 const tableLoading = ref(false)
+
+// 用户选择对话框
+const userSelectVisible = ref(false)
+const selectedUser = ref<UserInfo | null>(null)
+
+// 用户搜索表单
+const userSearchForm = reactive({
+  username: '',
+  nickName: '',
+  phone: ''
+})
+
+// 用户表格数据
+const userTableData = ref<UserInfo[]>([])
+const userTableLoading = ref(false)
+
+// 用户分页参数
+const userPageParams = reactive({
+  pageNum: 1,
+  pageSize: 10
+})
+const userTotal = ref(0)
 
 // 分页参数
 const pageParams = reactive({
@@ -325,11 +430,87 @@ const handleSearch = () => {
 
 // 重置搜索条件
 const resetSearch = () => {
-  searchForm.keyword = ''
+  searchForm.title = ''
+  searchForm.content = ''
   searchForm.userId = ''
-  searchForm.category = undefined
-  searchForm.status = undefined
   handleSearch()
+}
+
+// 显示用户选择对话框
+const showUserSelectDialog = () => {
+  userSelectVisible.value = true
+  loadUserList()
+}
+
+// 加载用户列表
+const loadUserList = async () => {
+  try {
+    userTableLoading.value = true
+    const params = {
+      ...userPageParams,
+      ...userSearchForm
+    }
+    
+    // 移除空值参数
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null) {
+        delete params[key]
+      }
+    })
+    
+    const res = await getUserList(params)
+    
+    if (res.code === 200) {
+      userTableData.value = res.data.records
+      userTotal.value = res.data.total
+    } else {
+      ElMessage.error(res.message || '获取用户列表失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '获取用户列表失败')
+  } finally {
+    userTableLoading.value = false
+  }
+}
+
+// 用户搜索
+const handleUserSearch = () => {
+  userPageParams.pageNum = 1
+  loadUserList()
+}
+
+// 重置用户搜索条件
+const resetUserSearch = () => {
+  userSearchForm.username = ''
+  userSearchForm.nickName = ''
+  userSearchForm.phone = ''
+  handleUserSearch()
+}
+
+// 用户选择变化
+const handleUserSelectionChange = (user: UserInfo | null) => {
+  selectedUser.value = user
+}
+
+// 确认用户选择
+const confirmUserSelection = () => {
+  if (selectedUser.value) {
+    searchForm.userId = String(selectedUser.value.id)
+    userSelectVisible.value = false
+    ElMessage.success('已选择用户')
+  }
+}
+
+// 用户分页大小变化
+const handleUserSizeChange = (size: number) => {
+  userPageParams.pageSize = size
+  loadUserList()
+}
+
+// 用户页码变化
+const handleUserCurrentChange = (page: number) => {
+  userPageParams.pageNum = page
+  loadUserList()
 }
 
 // 查看帖子详情
@@ -467,17 +648,19 @@ onMounted(() => {
     }
   }
   
-  .post-stats {
+  .stat-cell {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     
-    .stat-item {
-      display: flex;
-      align-items: center;
-      
-      .el-icon {
-        margin-right: 4px;
-      }
+    .el-icon {
+      font-size: 16px;
+      color: var(--el-color-primary);
+    }
+    
+    span {
+      font-weight: 500;
     }
   }
   

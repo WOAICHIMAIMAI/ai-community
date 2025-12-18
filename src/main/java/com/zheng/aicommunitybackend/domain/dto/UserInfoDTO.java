@@ -75,6 +75,8 @@ public class UserInfoDTO {
     @Schema(description = "用户角色：admin-管理员 user-普通用户")
     private String role;
 
+    private Integer status;
+
     public Long getId() {
         return id;
     }
@@ -161,5 +163,13 @@ public class UserInfoDTO {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public Integer getStatus(){
+            return status;
+    }
+
+    public void setStatus(Integer status){
+        this.status = status;
     }
 } 

@@ -2,10 +2,13 @@ package com.zheng.aicommunitybackend.controller.user;
 
 import com.zheng.aicommunitybackend.domain.dto.PostDTO;
 import com.zheng.aicommunitybackend.domain.dto.PostPageQuery;
+import com.zheng.aicommunitybackend.domain.entity.PostComments;
+import com.zheng.aicommunitybackend.domain.enums.PostCategoryEnum;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.result.Result;
 import com.zheng.aicommunitybackend.domain.vo.PostVO;
 import com.zheng.aicommunitybackend.service.CommunityPostsService;
+import com.zheng.aicommunitybackend.service.PostCommentsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,9 +29,11 @@ import java.util.stream.Collectors;
 public class CommunityPostsController {
 
     private final CommunityPostsService communityPostsService;
+    private final PostCommentsService postCommentsService;
 
-    public CommunityPostsController(CommunityPostsService communityPostsService) {
+    public CommunityPostsController(CommunityPostsService communityPostsService, PostCommentsService postCommentsService) {
         this.communityPostsService = communityPostsService;
+        this.postCommentsService = postCommentsService;
     }
 
     /**
@@ -141,10 +146,14 @@ public class CommunityPostsController {
     @Operation(summary = "获取帖子分类", description = "获取所有帖子分类列表")
     public Result<List<String>> getCategories() {
         log.info("获取帖子分类列表");
-        /*List<String> categories = Arrays.stream(PostCategoryEnum.values())
+        List<String> categories = Arrays.stream(PostCategoryEnum.values())
                 .map(PostCategoryEnum::getName)
                 .collect(Collectors.toList());
-        return Result.success(categories);*/
-        return Result.success();
+        return Result.success(categories);
+    }
+
+    @GetMapping("/count/comment")
+    public Result<Long> countComment(Long postId){
+        return Result.success(postCommentsService.lambdaQuery().eq(PostComments::getPostId, postId).eq(PostComments::getStatus, 1).count());
     }
 }
