@@ -195,6 +195,26 @@ export const getAppointmentStats = () => {
   })
 }
 
+/**
+ * 创建预约服务（商家创建服务）
+ */
+export interface ServiceCreateData {
+  serviceType: string
+  serviceName: string
+  description: string
+  icon: string
+  basePrice: number
+  unit: string
+}
+
+export const createService = (data: ServiceCreateData) => {
+  return request({
+    url: '/api/user/appointment/approve',
+    method: 'post',
+    data
+  })
+}
+
 // 导出默认的API对象
 export default {
   getServiceTypes,
@@ -209,5 +229,6 @@ export default {
   getAvailableTimeSlots,
   getServiceWorkers,
   getRecentAppointments,
-  getAppointmentStats
+  getAppointmentStats,
+  createService
 }

@@ -68,6 +68,45 @@ export function getVerificationInfo(): Promise<{ code: number, data: Verificatio
   return get<{ code: number, data: VerificationInfo, message: string }>('/api/user/verification/info')
 }
 
+/**
+ * 检查用户是否已实名认证
+ * @returns 是否已实名认证
+ */
+export function checkVerificationStatus(): Promise<{ code: number, data: boolean, message: string }> {
+  return get<{ code: number, data: boolean, message: string }>('/api/user/verification/status')
+}
+
+/**
+ * 提交实名认证申请
+ * @param data 认证信息
+ * @returns 提交结果
+ */
+export function submitVerification(data: {
+  realName: string
+  idCardNumber: string
+  idCardFrontUrl: string
+  idCardBackUrl: string
+}): Promise<{ code: number, message: string }> {
+  return post<{ code: number, message: string }>('/api/user/verification/submit', data)
+}
+
+/**
+ * 上传身份证照片
+ * @param file 图片文件
+ * @param type 图片类型：front-正面，back-反面
+ * @returns 图片URL
+ */
+export function uploadIdCardImage(file: File, type: 'front' | 'back'): Promise<{ code: number, data: string, message: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('type', type)
+  return post<{ code: number, data: string, message: string }>('/api/user/verification/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 // 获取指定用户信息（通过用户ID）
 export const getUserInfoById = (userId: string | number) => {
   // 确保userId是字符串，避免大数精度丢失

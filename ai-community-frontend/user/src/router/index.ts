@@ -208,6 +208,12 @@ const routes = [
     component: () => import('@/views/appointment/AppointmentDetailView.vue'),
     meta: { title: '预约详情' }
   },
+  {
+    path: '/appointment/service/create',
+    name: 'ServiceCreate',
+    component: () => import('@/views/appointment/ServiceCreateView.vue'),
+    meta: { title: '创建服务' }
+  },
   // 红包相关路由
   {
     path: '/red-packet',

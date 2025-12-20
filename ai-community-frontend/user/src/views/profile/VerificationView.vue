@@ -182,8 +182,9 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showLoadingToast, showSuccessToast, showFailToast, closeToast } from 'vant'
-import { getVerificationInfo } from '@/api/user'
-import type { VerificationInfo, UploaderFileListItem } from '@/api/user'
+import { getVerificationInfo, submitVerification, uploadIdCardImage } from '@/api/user'
+import type { VerificationInfo } from '@/api/user'
+import type { UploaderFileListItem } from 'vant'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -200,8 +201,8 @@ const verificationData = ref<Partial<VerificationInfo>>({})
 const form = reactive({
   realName: '',
   idCard: '',
-  frontIdCardUrl: '',
-  backIdCardUrl: '',
+  idCardFrontUrl: '',
+  idCardBackUrl: '',
 })
 
 // 身份证照片
@@ -259,25 +260,53 @@ const beforeReadIdCard = (file: File) => {
 }
 
 // 上传身份证照片
-const afterReadIdCard = (file: UploaderFileListItem, type: 'front' | 'back') => {
-  // 实际项目中应该调用上传接口，这里仅做模拟
+const afterReadIdCard = async (file: UploaderFileListItem, type: 'front' | 'back') => {
   file.status = 'uploading'
   file.message = '上传中...'
   
-  setTimeout(() => {
-    // 模拟上传成功，获取图片URL
-    const fileUrl = URL.createObjectURL(file.file!)
+  try {
+    // 调用后端上传接口
+    const res = await uploadIdCardImage(file.file!, type)
     
-    // 更新表单数据
-    if (type === 'front') {
-      form.frontIdCardUrl = fileUrl
+    if (res.code === 200 && res.data) {
+      // 上传成功，获取图片URL
+      const fileUrl = res.data
+      
+      // 更新表单数据
+      if (type === 'front') {
+        form.idCardFrontUrl = fileUrl
+      } else {
+        form.idCardBackUrl = fileUrl
+      }
+      
+      file.status = 'done'
+      file.message = ''
+      showSuccessToast('上传成功')
     } else {
-      form.backIdCardUrl = fileUrl
+      file.status = 'failed'
+      file.message = '上传失败'
+      showFailToast(res.message || '上传失败')
+      
+      // 清空已上传的文件
+      if (type === 'front') {
+        frontIdCard.value = []
+      } else {
+        backIdCard.value = []
+      }
     }
+  } catch (error) {
+    console.error('上传身份证照片失败:', error)
+    file.status = 'failed'
+    file.message = '上传失败'
+    showFailToast('上传失败，请重试')
     
-    file.status = 'done'
-    file.message = ''
-  }, 1000)
+    // 清空已上传的文件
+    if (type === 'front') {
+      frontIdCard.value = []
+    } else {
+      backIdCard.value = []
+    }
+  }
 }
 
 // 同意隐私声明
@@ -287,7 +316,7 @@ const agreePrivacy = () => {
 }
 
 // 提交表单
-const onSubmit = () => {
+const onSubmit = async () => {
   if (!isFormValid.value) {
     if (!privacyAgreed.value) {
       showFailToast('请先阅读并同意《用户隐私声明》')
@@ -297,16 +326,28 @@ const onSubmit = () => {
   
   loading.value = true
   
-  // 模拟提交认证信息
-  setTimeout(() => {
+  try {
+    const res = await submitVerification({
+      realName: form.realName,
+      idCardNumber: form.idCard,
+      idCardFrontUrl: form.idCardFrontUrl,
+      idCardBackUrl: form.idCardBackUrl
+    })
+    
+    if (res.code === 200) {
+      // 提交成功后，更新状态为认证中
+      verificationStatus.value = 1
+      verificationData.value.submitTime = new Date().toISOString()
+      showSuccessToast('提交成功，请等待审核')
+    } else {
+      showFailToast(res.message || '提交失败')
+    }
+  } catch (error) {
+    console.error('提交认证失败:', error)
+    showFailToast('网络错误，请稍后重试')
+  } finally {
     loading.value = false
-    
-    // 提交成功后，更新状态为认证中
-    verificationStatus.value = 1
-    verificationData.value.submitTime = new Date().toISOString()
-    
-    showSuccessToast('提交成功，请等待审核')
-  }, 1500)
+  }
 }
 
 // 格式化日期

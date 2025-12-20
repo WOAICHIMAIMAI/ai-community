@@ -147,6 +147,22 @@
             </div>
           </div>
         </div>
+
+        <!-- 成为商家按钮 -->
+        <div class="become-merchant-section">
+          <van-button 
+            type="primary" 
+            block 
+            round 
+            size="large"
+            @click="handleBecomeMerchant"
+            class="merchant-button"
+          >
+            <van-icon name="shop-o" />
+            <span>成为商家</span>
+          </van-button>
+          <p class="merchant-tip">提供服务，开启创收之旅</p>
+        </div>
       </van-pull-refresh>
     </div>
 
@@ -158,9 +174,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast, showFailToast } from 'vant'
+import { showToast, showFailToast, showDialog } from 'vant'
 import BottomTabbar from '@/components/BottomTabbar.vue'
 import appointmentApi, { type AppointmentService, type AppointmentRecord } from '@/api/appointment'
+import { checkVerificationStatus } from '@/api/user'
 
 const router = useRouter()
 const refreshing = ref(false)
@@ -476,6 +493,39 @@ const loadServiceData = async () => {
   }
 }
 
+// 处理成为商家按钮点击
+const handleBecomeMerchant = async () => {
+  try {
+    // 检查用户是否已实名认证
+    const res = await checkVerificationStatus()
+    
+    if (res.code === 200) {
+      if (res.data) {
+        // 已实名认证，跳转到创建服务页面
+        router.push('/appointment/service/create')
+      } else {
+        // 未实名认证，提示并跳转到实名认证页面
+        showDialog({
+          title: '提示',
+          message: '成为商家需要先完成实名认证，是否前往认证？',
+          confirmButtonText: '去认证',
+          cancelButtonText: '取消',
+          showCancelButton: true
+        }).then(() => {
+          router.push('/profile/verification')
+        }).catch(() => {
+          // 用户取消
+        })
+      }
+    } else {
+      showFailToast(res.message || '检查认证状态失败')
+    }
+  } catch (error) {
+    console.error('检查认证状态失败:', error)
+    showFailToast('网络错误，请稍后重试')
+  }
+}
+
 onMounted(async () => {
   // 页面初始化，加载数据
   await loadServiceData()
@@ -766,6 +816,8 @@ onMounted(async () => {
 
 // 服务推荐
 .recommend-section {
+  margin-bottom: 16px;
+
   .recommend-list {
     padding: 0 16px;
 
@@ -827,6 +879,38 @@ onMounted(async () => {
         // 按钮样式由 van-button 控制
       }
     }
+  }
+}
+
+// 成为商家按钮
+.become-merchant-section {
+  padding: 24px 16px 16px;
+  text-align: center;
+
+  .merchant-button {
+    height: 48px;
+    font-size: 16px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+
+    &:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+
+    .van-icon {
+      margin-right: 6px;
+      font-size: 18px;
+    }
+  }
+
+  .merchant-tip {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: #7f8c8d;
   }
 }
 

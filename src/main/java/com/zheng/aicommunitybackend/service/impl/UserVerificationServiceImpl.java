@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -143,6 +142,24 @@ public class UserVerificationServiceImpl extends ServiceImpl<UserVerificationMap
         
         // 脱敏处理后返回
         return maskSensitiveInfo(verification);
+    }
+
+    @Override
+    public boolean checkUserVerificationStatus() {
+        // 获取当前用户ID
+        Long userId = UserContext.getUserId();
+        if (userId == null) {
+            throw new BaseException("请先登录");
+        }
+        
+        // 查询用户的认证状态
+        Users user = usersService.getById(userId);
+        if (user == null) {
+            throw new BaseException("用户不存在");
+        }
+        
+        // 判断是否已通过实名认证（状态为2表示已认证）
+        return user.getIsVerified() != null && user.getIsVerified() == 2;
     }
 
     @Override
@@ -292,7 +309,7 @@ public class UserVerificationServiceImpl extends ServiceImpl<UserVerificationMap
     }
 
     @Override
-    public PageResult adminListVerifications(VerificationPageQuery query) {
+    public PageResult<AdminVerificationVO> adminListVerifications(VerificationPageQuery query) {
         // 检查当前用户是否是管理员
         checkAdminPermission();
         
@@ -374,7 +391,7 @@ public class UserVerificationServiceImpl extends ServiceImpl<UserVerificationMap
                 .map(this::convertToAdminVO)
                 .collect(Collectors.toList());
         
-        return new PageResult(page.getTotal(), voList);
+        return new PageResult<>(page.getTotal(), voList);
     }
 
     @Override

@@ -57,6 +57,19 @@ public class UserVerificationController {
     }
 
     /**
+     * 检查当前用户是否已实名认证
+     *
+     * @return 是否已认证
+     */
+    @GetMapping("/status")
+    @Operation(summary = "检查认证状态", description = "检查当前用户是否已通过实名认证")
+    public Result<Boolean> checkVerificationStatus() {
+        log.info("检查用户认证状态");
+        boolean isVerified = userVerificationService.checkUserVerificationStatus();
+        return Result.success(isVerified);
+    }
+
+    /**
      * 上传身份证照片
      *
      * @param file 图片文件

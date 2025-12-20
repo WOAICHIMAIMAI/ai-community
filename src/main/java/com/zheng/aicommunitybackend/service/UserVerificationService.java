@@ -33,6 +33,13 @@ public interface UserVerificationService extends IService<UserVerification> {
      * @return 认证信息（脱敏后）
      */
     VerificationVO getCurrentUserVerification();
+
+    /**
+     * 检查当前用户是否已实名认证
+     *
+     * @return 是否已通过实名认证
+     */
+    boolean checkUserVerificationStatus();
     
     /**
      * 上传身份证照片
@@ -65,7 +72,7 @@ public interface UserVerificationService extends IService<UserVerification> {
      * @param query 查询条件
      * @return 分页结果
      */
-    PageResult adminListVerifications(VerificationPageQuery query);
+    PageResult<AdminVerificationVO> adminListVerifications(VerificationPageQuery query);
     
     /**
      * 管理员获取实名认证详情
