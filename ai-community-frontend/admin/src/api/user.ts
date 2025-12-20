@@ -29,20 +29,26 @@ export interface VerificationInfo {
   username: string
   realName: string
   idCardNumber: string
-  idCardFront: string
-  idCardBack: string
+  idCardFront: string  // 前端使用驼峰命名
+  idCardFrontUrl: string  // 对应后端
+  idCardBack: string  // 前端使用驼峰命名
+  idCardBackUrl: string  // 对应后端
   verificationType: number
-  status: number
+  verificationStatus: number  // 改为 verificationStatus，与后端一致：0-未认证 1-认证中 2-已认证 3-认证失败
+  status: number  // 保留兼容
   applyTime: string
+  submitTime: string  // 对应后端
   auditTime: string
+  completeTime: string  // 对应后端
   auditReason: string
+  failureReason: string  // 对应后端
 }
 
 // 认证审核参数
 export interface VerificationAuditParams {
   verificationId: number
-  status: number
-  reason?: string
+  approved: boolean
+  rejectReason?: string
 }
 
 /**
@@ -77,6 +83,15 @@ export function updateUserStatus(userId: string | number, status: number): Promi
  */
 export function getVerificationList(params: PageParams): Promise<PageResult<VerificationInfo>> {
   return post<PageResult<VerificationInfo>>('/api/admin/verification/list', params)
+}
+
+/**
+ * 获取认证详情
+ * @param id 认证记录ID
+ * @returns 认证详情数据
+ */
+export function getVerificationDetail(id: number): Promise<ApiResult<VerificationInfo>> {
+  return get<ApiResult<VerificationInfo>>(`/api/admin/verification/detail/${id}`)
 }
 
 /**

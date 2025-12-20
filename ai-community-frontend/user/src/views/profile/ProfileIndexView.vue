@@ -14,8 +14,11 @@
           <div class="user-name">{{ userInfo.nickname || userInfo.username || '加载中...' }}</div>
           <div class="user-id">ID: {{ userInfo.id || '' }}</div>
           <div class="verification-tag">
-            <template v-if="userInfo.isVerified === 1">
+            <template v-if="userInfo.isVerified === 2">
               <van-tag type="success" size="small">已认证</van-tag>
+            </template>
+            <template v-else-if="userInfo.isVerified === 1">
+              <van-tag type="warning" size="small">认证中</van-tag>
             </template>
             <template v-else>
               <van-tag plain type="primary" size="small" @click="goToVerification">去认证</van-tag>
@@ -121,8 +124,8 @@ const getVerificationStatusText = (status: number | undefined): string => {
   if (status === undefined) return '未知'
   switch (status) {
     case 0: return '未认证'
-    case 1: return '已认证'
-    case 2: return '认证中'
+    case 1: return '认证中'  // 修正：1 表示认证中（审核中）
+    case 2: return '已认证'  // 修正：2 表示已认证（已通过）
     case 3: return '认证失败'
     default: return '未知'
   }
@@ -132,10 +135,10 @@ const getVerificationStatusText = (status: number | undefined): string => {
 const getVerificationStatusClass = (status: number | undefined): string => {
   if (status === undefined) return 'status-unknown'
   switch (status) {
-    case 0: return 'status-pending'
-    case 1: return 'status-success'
-    case 2: return 'status-processing'
-    case 3: return 'status-failed'
+    case 0: return 'status-pending'    // 未认证
+    case 1: return 'status-processing' // 认证中（审核中）
+    case 2: return 'status-success'    // 已认证（已通过）
+    case 3: return 'status-failed'     // 认证失败
     default: return 'status-unknown'
   }
 }

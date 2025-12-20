@@ -21,12 +21,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -43,15 +38,6 @@ public class UserVerificationServiceImpl extends ServiceImpl<UserVerificationMap
     implements UserVerificationService {
 
     private final UsersService usersService;
-    
-    // 图片上传路径
-    private final String uploadPath = "upload/idcard/";
-    
-    // 允许的图片类型
-    private final String[] allowedImageTypes = {".jpg", ".jpeg", ".png"};
-    
-    // 最大文件大小（5MB）
-    private final long maxFileSize = 5 * 1024 * 1024;
 
     public UserVerificationServiceImpl(UsersService usersService) {
         this.usersService = usersService;
@@ -160,69 +146,6 @@ public class UserVerificationServiceImpl extends ServiceImpl<UserVerificationMap
         
         // 判断是否已通过实名认证（状态为2表示已认证）
         return user.getIsVerified() != null && user.getIsVerified() == 2;
-    }
-
-    @Override
-    public String uploadIdCardImage(MultipartFile file, String type) throws IOException {
-        // 获取当前用户ID
-        Long userId = UserContext.getUserId();
-        if (userId == null) {
-            throw new BaseException("请先登录");
-        }
-        
-        // 检查文件是否为空
-        if (file == null || file.isEmpty()) {
-            throw new BaseException("文件不能为空");
-        }
-        
-        // 检查文件类型
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null) {
-            throw new BaseException("文件名不能为空");
-        }
-        
-        // 检查文件类型
-        boolean isValidType = false;
-        for (String allowedType : allowedImageTypes) {
-            if (originalFilename.toLowerCase().endsWith(allowedType)) {
-                isValidType = true;
-                break;
-            }
-        }
-        
-        if (!isValidType) {
-            throw new BaseException("只支持JPG、JPEG、PNG格式的图片");
-        }
-        
-        // 检查文件大小
-        if (file.getSize() > maxFileSize) {
-            throw new BaseException("文件大小不能超过5MB");
-        }
-        
-        // 检查类型参数
-        if (!"front".equals(type) && !"back".equals(type)) {
-            throw new BaseException("图片类型参数错误，应为front或back");
-        }
-        
-        // 创建保存目录
-        Path uploadDir = Paths.get(uploadPath);
-        if (!Files.exists(uploadDir)) {
-            Files.createDirectories(uploadDir);
-        }
-        
-        // 生成新的文件名，避免文件名冲突
-        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        String newFilename = UUID.randomUUID().toString() + fileExtension;
-        
-        // 组合用户ID和类型
-        String finalFilename = userId + "_" + type + "_" + newFilename;
-        Path targetPath = uploadDir.resolve(finalFilename);
-        
-        // 保存文件
-        Files.copy(file.getInputStream(), targetPath);
-        
-        // 返回文件URL
-        return "/upload/idcard/" + finalFilename;
     }
 
     @Override

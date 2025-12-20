@@ -5,14 +5,10 @@ import com.zheng.aicommunitybackend.domain.result.Result;
 import com.zheng.aicommunitybackend.domain.vo.VerificationVO;
 import com.zheng.aicommunitybackend.service.UserVerificationService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 /**
  * 用户实名认证相关接口
@@ -67,24 +63,6 @@ public class UserVerificationController {
         log.info("检查用户认证状态");
         boolean isVerified = userVerificationService.checkUserVerificationStatus();
         return Result.success(isVerified);
-    }
-
-    /**
-     * 上传身份证照片
-     *
-     * @param file 图片文件
-     * @param type 图片类型：front-正面，back-反面
-     * @return 图片URL
-     * @throws IOException 如果上传失败
-     */
-    @PostMapping("/upload")
-    @Operation(summary = "上传身份证照片", description = "上传身份证正面或反面照片")
-    public Result<String> uploadIdCardImage(
-            @RequestParam("file") @Parameter(description = "身份证照片文件") MultipartFile file,
-            @RequestParam("type") @Parameter(description = "照片类型：front-正面，back-反面") String type) throws IOException {
-        log.info("上传身份证照片：type={}", type);
-        String imageUrl = userVerificationService.uploadIdCardImage(file, type);
-        return Result.success(imageUrl);
     }
 
     /**

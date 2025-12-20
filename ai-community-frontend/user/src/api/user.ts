@@ -91,7 +91,7 @@ export function submitVerification(data: {
 }
 
 /**
- * 上传身份证照片
+ * 上传身份证照片（使用通用上传接口）
  * @param file 图片文件
  * @param type 图片类型：front-正面，back-反面
  * @returns 图片URL
@@ -99,8 +99,7 @@ export function submitVerification(data: {
 export function uploadIdCardImage(file: File, type: 'front' | 'back'): Promise<{ code: number, data: string, message: string }> {
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('type', type)
-  return post<{ code: number, data: string, message: string }>('/api/user/verification/upload', formData, {
+  return post<{ code: number, data: string, message: string }>('/api/common/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }

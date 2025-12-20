@@ -170,9 +170,19 @@ const menuItems = [
     index: '/common-problems'
   },
   {
-    title: '预约服务',
+    title: '预约服务管理',
     icon: Calendar,
-    index: '/appointments'
+    index: 'appointments-menu',
+    children: [
+      {
+        title: '服务管理',
+        index: '/appointment-services'
+      },
+      {
+        title: '订单管理',
+        index: '/appointment-orders'
+      }
+    ]
   },
   {
     title: '新闻管理',

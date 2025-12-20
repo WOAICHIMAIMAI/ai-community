@@ -68,6 +68,16 @@ public class AppointmentServices implements Serializable {
     private Integer status;
 
     /**
+     * 审核状态：0-待审核 1-已通过 2-已拒绝
+     */
+    private Integer approvalStatus;
+
+    /**
+     * 拒绝原因
+     */
+    private String rejectReason;
+
+    /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)

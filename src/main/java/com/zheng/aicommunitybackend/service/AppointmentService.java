@@ -1,9 +1,6 @@
 package com.zheng.aicommunitybackend.service;
 
-import com.zheng.aicommunitybackend.domain.dto.AppointmentCreateDTO;
-import com.zheng.aicommunitybackend.domain.dto.AppointmentPageQuery;
-import com.zheng.aicommunitybackend.domain.dto.AppointmentRateDTO;
-import com.zheng.aicommunitybackend.domain.dto.UserAppointServicesApproveDTO;
+import com.zheng.aicommunitybackend.domain.dto.*;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.vo.AppointmentOrderVO;
 import com.zheng.aicommunitybackend.domain.vo.AppointmentServiceVO;
@@ -11,6 +8,7 @@ import com.zheng.aicommunitybackend.domain.vo.AppointmentRecommendVO;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 预约服务接口
@@ -117,4 +115,103 @@ public interface AppointmentService {
     Object getAppointmentStats(Long userId);
 
     void approveService(UserAppointServicesApproveDTO dto, Long userId);
+
+    // ==================== 管理员接口 ====================
+    
+    /**
+     * 管理员分页查询服务列表
+     * @param query 查询条件
+     * @return 分页结果
+     */
+    PageResult<AppointmentServiceVO> adminGetServicePage(ServicePageQuery query);
+    
+    /**
+     * 管理员获取服务详情
+     * @param id 服务ID
+     * @return 服务详情
+     */
+    AppointmentServiceVO adminGetServiceDetail(Long id);
+    
+    /**
+     * 管理员审核服务
+     * @param dto 审核信息
+     */
+    void adminApproveService(ServiceApprovalDTO dto);
+    
+    /**
+     * 管理员修改服务状态
+     * @param id 服务ID
+     * @param status 状态
+     */
+    void adminUpdateServiceStatus(Long id, Integer status);
+    
+    /**
+     * 管理员设置热门服务
+     * @param id 服务ID
+     * @param isHot 是否热门
+     */
+    void adminSetHotService(Long id, Integer isHot);
+    
+    /**
+     * 管理员删除服务
+     * @param id 服务ID
+     */
+    void adminDeleteService(Long id);
+    
+    /**
+     * 管理员获取待审核服务数量
+     * @return 数量
+     */
+    Integer adminGetPendingServiceCount();
+    
+    /**
+     * 管理员分页查询订单列表
+     * @param query 查询条件
+     * @return 分页结果
+     */
+    PageResult<AppointmentOrderVO> adminGetOrderPage(AppointmentPageQuery query);
+    
+    /**
+     * 管理员获取订单详情
+     * @param id 订单ID
+     * @return 订单详情
+     */
+    AppointmentOrderVO adminGetOrderDetail(Long id);
+    
+    /**
+     * 管理员确认订单
+     * @param id 订单ID
+     */
+    void adminConfirmOrder(Long id);
+    
+    /**
+     * 管理员分配服务人员
+     * @param dto 分配信息
+     */
+    void adminAssignWorker(WorkerAssignDTO dto);
+    
+    /**
+     * 管理员修改订单状态
+     * @param dto 状态更新信息
+     */
+    void adminUpdateOrderStatus(OrderStatusUpdateDTO dto);
+    
+    /**
+     * 管理员取消订单
+     * @param id 订单ID
+     * @param reason 取消原因
+     */
+    void adminCancelOrder(Long id, String reason);
+    
+    /**
+     * 管理员删除订单
+     * @param id 订单ID
+     */
+    void adminDeleteOrder(Long id);
+    
+    /**
+     * 管理员获取订单统计
+     * @return 统计信息
+     */
+    Map<String, Object> adminGetOrderStats();
 }

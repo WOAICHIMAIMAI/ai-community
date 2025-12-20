@@ -95,11 +95,20 @@ const router = createRouter({
           }
         },
         {
-          path: 'appointments',
-          name: 'appointments',
+          path: 'appointment-services',
+          name: 'appointment-services',
+          component: () => import('@/views/appointments/ServiceManageView.vue'),
+          meta: {
+            title: '服务管理',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'appointment-orders',
+          name: 'appointment-orders',
           component: () => import('@/views/appointments/AppointmentListView.vue'),
           meta: {
-            title: '预约服务管理',
+            title: '订单管理',
             requiresAuth: true
           }
         },

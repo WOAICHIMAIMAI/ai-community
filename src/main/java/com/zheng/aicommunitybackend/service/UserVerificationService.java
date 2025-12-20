@@ -8,9 +8,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.vo.AdminVerificationVO;
 import com.zheng.aicommunitybackend.domain.vo.VerificationVO;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 /**
 * @author ZhengJJ
@@ -40,16 +37,6 @@ public interface UserVerificationService extends IService<UserVerification> {
      * @return 是否已通过实名认证
      */
     boolean checkUserVerificationStatus();
-    
-    /**
-     * 上传身份证照片
-     *
-     * @param file 图片文件
-     * @param type 图片类型：front-正面，back-反面
-     * @return 图片URL
-     * @throws IOException 如果上传失败
-     */
-    String uploadIdCardImage(MultipartFile file, String type) throws IOException;
     
     /**
      * 取消认证申请（仅认证中状态可取消）

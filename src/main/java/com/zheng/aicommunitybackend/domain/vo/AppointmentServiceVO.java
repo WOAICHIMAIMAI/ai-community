@@ -77,4 +77,8 @@ public class AppointmentServiceVO {
      */
     @Schema(description = "颜色配置")
     private String color;
+
+    private Integer status;
+
+    private Integer approvalStatus;
 }

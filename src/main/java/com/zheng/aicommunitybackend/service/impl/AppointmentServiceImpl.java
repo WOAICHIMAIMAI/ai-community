@@ -392,8 +392,252 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointmentServices.setCreateTime(new Date());
         appointmentServices.setUpdateTime(new Date());
         appointmentServices.setUserId(userId);
-        appointmentServices.setStatus(2);
+        appointmentServices.setApprovalStatus(0);
         appointmentServicesMapper.insert(appointmentServices);
+    }
+
+    // ==================== 管理员方法实现 ====================
+    
+    @Override
+    public PageResult<AppointmentServiceVO> adminGetServicePage(com.zheng.aicommunitybackend.domain.dto.ServicePageQuery query) {
+        Page<AppointmentServices> page = new Page<>(query.getPage(), query.getPageSize());
+        LambdaQueryWrapper<AppointmentServices> wrapper = new LambdaQueryWrapper<>();
+        
+        // 根据审核状态查询
+        if (query.getApprovalStatus() != null) {
+            wrapper.eq(AppointmentServices::getApprovalStatus, query.getApprovalStatus());
+        }
+        
+        // 根据服务状态查询
+        if (query.getStatus() != null) {
+            wrapper.eq(AppointmentServices::getStatus, query.getStatus());
+        }
+        
+        // 关键词搜索
+        if (StringUtils.hasText(query.getKeyword())) {
+            wrapper.and(w -> w.like(AppointmentServices::getServiceName, query.getKeyword())
+                           .or()
+                           .like(AppointmentServices::getDescription, query.getKeyword()));
+        }
+        
+        wrapper.orderByDesc(AppointmentServices::getCreateTime);
+        
+        IPage<AppointmentServices> result = appointmentServicesMapper.selectPage(page, wrapper);
+        List<AppointmentServiceVO> voList = result.getRecords().stream()
+                .map(this::convertToServiceVO)
+                .collect(Collectors.toList());
+        
+        return new PageResult<>(result.getTotal(), voList);
+    }
+    
+    @Override
+    public AppointmentServiceVO adminGetServiceDetail(Long id) {
+        AppointmentServices service = appointmentServicesMapper.selectById(id);
+        if (service == null) {
+            throw new RuntimeException("服务不存在");
+        }
+        return convertToServiceVO(service);
+    }
+    
+    @Override
+    @Transactional
+    public void adminApproveService(com.zheng.aicommunitybackend.domain.dto.ServiceApprovalDTO dto) {
+        AppointmentServices service = appointmentServicesMapper.selectById(dto.getServiceId());
+        if (service == null) {
+            throw new RuntimeException("服务不存在");
+        }
+        
+        if (dto.getApproved()) {
+            // 审核通过
+            service.setApprovalStatus(1);
+            service.setStatus(1); // 自动启用
+        } else {
+            // 审核拒绝
+            service.setApprovalStatus(2);
+            service.setRejectReason(dto.getRejectReason());
+        }
+        service.setUpdateTime(new Date());
+        appointmentServicesMapper.updateById(service);
+    }
+    
+    @Override
+    @Transactional
+    public void adminUpdateServiceStatus(Long id, Integer status) {
+        AppointmentServices service = appointmentServicesMapper.selectById(id);
+        if (service == null) {
+            throw new RuntimeException("服务不存在");
+        }
+        service.setStatus(status);
+        service.setUpdateTime(new Date());
+        appointmentServicesMapper.updateById(service);
+    }
+    
+    @Override
+    @Transactional
+    public void adminSetHotService(Long id, Integer isHot) {
+        AppointmentServices service = appointmentServicesMapper.selectById(id);
+        if (service == null) {
+            throw new RuntimeException("服务不存在");
+        }
+        service.setIsHot(isHot);
+        service.setUpdateTime(new Date());
+        appointmentServicesMapper.updateById(service);
+    }
+    
+    @Override
+    @Transactional
+    public void adminDeleteService(Long id) {
+        appointmentServicesMapper.deleteById(id);
+    }
+    
+    @Override
+    public Integer adminGetPendingServiceCount() {
+        LambdaQueryWrapper<AppointmentServices> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AppointmentServices::getApprovalStatus, 0);
+        return Math.toIntExact(appointmentServicesMapper.selectCount(wrapper));
+    }
+    
+    @Override
+    public PageResult<AppointmentOrderVO> adminGetOrderPage(AppointmentPageQuery query) {
+        Page<AppointmentOrders> page = new Page<>(query.getPage(), query.getPageSize());
+        LambdaQueryWrapper<AppointmentOrders> wrapper = new LambdaQueryWrapper<>();
+        
+        // 根据状态查询
+        if (query.getStatus() != null) {
+            wrapper.eq(AppointmentOrders::getStatus, query.getStatus());
+        }
+        
+        // 根据服务类型查询
+        if (StringUtils.hasText(query.getServiceType())) {
+            wrapper.eq(AppointmentOrders::getServiceType, query.getServiceType());
+        }
+        
+        wrapper.orderByDesc(AppointmentOrders::getCreateTime);
+        
+        IPage<AppointmentOrders> result = appointmentOrdersMapper.selectPage(page, wrapper);
+        List<AppointmentOrderVO> voList = result.getRecords().stream()
+                .map(this::convertToOrderVO)
+                .collect(Collectors.toList());
+        
+        return new PageResult<>(result.getTotal(), voList);
+    }
+    
+    @Override
+    public AppointmentOrderVO adminGetOrderDetail(Long id) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(id);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        return convertToOrderVO(order);
+    }
+    
+    @Override
+    @Transactional
+    public void adminConfirmOrder(Long id) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(id);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        order.setStatus(1); // 已确认
+        order.setUpdateTime(new Date());
+        appointmentOrdersMapper.updateById(order);
+    }
+    
+    @Override
+    @Transactional
+    public void adminAssignWorker(com.zheng.aicommunitybackend.domain.dto.WorkerAssignDTO dto) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(dto.getOrderId());
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        order.setWorkerId(dto.getWorkerId());
+        order.setWorkerName(dto.getWorkerName());
+        order.setUpdateTime(new Date());
+        appointmentOrdersMapper.updateById(order);
+    }
+    
+    @Override
+    @Transactional
+    public void adminUpdateOrderStatus(com.zheng.aicommunitybackend.domain.dto.OrderStatusUpdateDTO dto) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(dto.getOrderId());
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        order.setStatus(dto.getStatus());
+        // 备注字段不存在，改为写入requirements
+        if (StringUtils.hasText(dto.getRemark())) {
+            order.setRequirements(dto.getRemark());
+        }
+        order.setUpdateTime(new Date());
+        appointmentOrdersMapper.updateById(order);
+    }
+    
+    @Override
+    @Transactional
+    public void adminCancelOrder(Long id, String reason) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(id);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        order.setStatus(4); // 已取消
+        order.setCancelReason(reason);
+        order.setUpdateTime(new Date());
+        appointmentOrdersMapper.updateById(order);
+    }
+    
+    @Override
+    @Transactional
+    public void adminDeleteOrder(Long id) {
+        appointmentOrdersMapper.deleteById(id);
+    }
+    
+    @Override
+    public Map<String, Object> adminGetOrderStats() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // 获取所有订单
+        List<AppointmentOrders> allOrders = appointmentOrdersMapper.selectList(null);
+        
+        // 统计各状态数量
+        stats.put("totalOrders", allOrders.size());
+        stats.put("pendingCount", allOrders.stream().filter(o -> o.getStatus() == 0).count());
+        stats.put("confirmedCount", allOrders.stream().filter(o -> o.getStatus() == 1).count());
+        stats.put("inProgressCount", allOrders.stream().filter(o -> o.getStatus() == 2).count());
+        stats.put("completedCount", allOrders.stream().filter(o -> o.getStatus() == 3).count());
+        stats.put("cancelledCount", allOrders.stream().filter(o -> o.getStatus() == 4).count());
+        
+        // 今日订单数 - 使用LocalDate比较
+        LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        long todayCount = allOrders.stream()
+                .filter(o -> {
+                    if (o.getCreateTime() == null) return false;
+                    LocalDateTime createTime = o.getCreateTime().toInstant()
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalDateTime();
+                    return !createTime.isBefore(today);
+                })
+                .count();
+        stats.put("todayOrders", todayCount);
+        
+        return stats;
+    }
+    
+    /**
+     * 转换为订单VO
+     */
+    private AppointmentOrderVO convertToOrderVO(AppointmentOrders order) {
+        AppointmentOrderVO vo = new AppointmentOrderVO();
+        BeanUtils.copyProperties(order, vo);
+        vo.setStatusDesc(getStatusDesc(order.getStatus()));
+        // 设置服务人员信息
+        if (order.getWorkerId() != null) {
+            AppointmentOrderVO.WorkerInfo workerInfo = new AppointmentOrderVO.WorkerInfo();
+            workerInfo.setName(order.getWorkerName());
+            workerInfo.setPhone(order.getWorkerPhone());
+            vo.setWorker(workerInfo);
+        }
+        vo.setRated(order.getRating() != null && order.getRating() > 0);
+        return vo;
     }
 
     /**
@@ -401,6 +645,7 @@ public class AppointmentServiceImpl implements AppointmentService {
      */
     private AppointmentServiceVO convertToServiceVO(AppointmentServices service) {
         AppointmentServiceVO vo = new AppointmentServiceVO();
+        BeanUtils.copyProperties(service, vo);
         vo.setId(service.getId());
         vo.setType(service.getServiceType());
         vo.setName(service.getServiceName());
@@ -408,7 +653,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         vo.setIcon(service.getIcon());
         vo.setPrice(service.getBasePrice().toString());
         vo.setUnit(service.getUnit());
-        vo.setIsHot(service.getIsHot() == 1);
+        vo.setIsHot(service.getIsHot() == null ? false : service.getIsHot() == 1);
         vo.setRating("4.8"); // 默认评分，实际应该从统计数据获取
         vo.setGradient(SERVICE_GRADIENTS.get(service.getServiceType()));
         vo.setColor(SERVICE_COLORS.get(service.getServiceType()));

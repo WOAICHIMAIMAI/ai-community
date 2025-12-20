@@ -50,6 +50,7 @@
           name="gender"
           label="性别"
           readonly
+          clickable
           is-link
           @click="showGenderPicker = true"
           :value="genderOptions[userForm.gender]"
@@ -60,6 +61,7 @@
           name="birthday"
           label="生日"
           readonly
+          clickable
           is-link
           @click="showDatePicker = true"
           :value="formatDate(userForm.birthday)"
@@ -75,7 +77,13 @@
     </van-form>
 
     <!-- 性别选择弹出层 -->
-    <van-popup v-model:show="showGenderPicker" position="bottom">
+    <van-popup 
+      v-model:show="showGenderPicker" 
+      position="bottom"
+      round
+      teleport="body"
+      :style="{ zIndex: 9999 }"
+    >
       <van-picker
         title="请选择性别"
         :columns="genderOptions"
@@ -87,7 +95,13 @@
     </van-popup>
 
     <!-- 日期选择弹出层 -->
-    <van-popup v-model:show="showDatePicker" position="bottom">
+    <van-popup 
+      v-model:show="showDatePicker" 
+      position="bottom"
+      round
+      teleport="body"
+      :style="{ zIndex: 9999 }"
+    >
       <van-date-picker
         title="选择生日"
         :min-date="new Date(1950, 0, 1)"

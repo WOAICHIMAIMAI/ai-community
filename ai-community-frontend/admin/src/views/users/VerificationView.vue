@@ -10,9 +10,9 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="全部" clearable>
-            <el-option label="待审核" :value="0" />
-            <el-option label="已通过" :value="1" />
-            <el-option label="已拒绝" :value="2" />
+            <el-option label="待审核" :value="1" />
+            <el-option label="已通过" :value="2" />
+            <el-option label="已拒绝" :value="3" />
           </el-select>
         </el-form-item>
         <el-form-item label="认证类型">
@@ -59,20 +59,28 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
+            <el-tag :type="getStatusType(row.verificationStatus || row.status)">
+              {{ getStatusText(row.verificationStatus || row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="applyTime" label="申请时间" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="auditTime" label="审核时间" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="applyTime" label="申请时间" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ formatDateTime(row.submitTime || row.applyTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="auditTime" label="审核时间" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ formatDateTime(row.completeTime || row.auditTime) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleViewDetail(row)">
               查看
             </el-button>
             <el-button 
-              v-if="row.status === 0" 
+              v-if="(row.verificationStatus || row.status) === 1" 
               type="success" 
               size="small" 
               @click="handleAudit(row.id, 1)"
@@ -80,7 +88,7 @@
               通过
             </el-button>
             <el-button 
-              v-if="row.status === 0" 
+              v-if="(row.verificationStatus || row.status) === 1" 
               type="danger" 
               size="small" 
               @click="handleAudit(row.id, 2)"
@@ -122,22 +130,22 @@
           <el-descriptions-item label="认证类型">
             {{ currentItem.verificationType === 1 ? '个人认证' : currentItem.verificationType === 2 ? '企业认证' : '未知' }}
           </el-descriptions-item>
-          <el-descriptions-item label="申请时间">{{ currentItem.applyTime }}</el-descriptions-item>
+          <el-descriptions-item label="申请时间">{{ formatDateTime(currentItem.submitTime || currentItem.applyTime) }}</el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="getStatusType(currentItem.status)">
-              {{ getStatusText(currentItem.status) }}
+            <el-tag :type="getStatusType(currentItem.verificationStatus || currentItem.status)">
+              {{ getStatusText(currentItem.verificationStatus || currentItem.status) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="审核时间" v-if="currentItem.auditTime">{{ currentItem.auditTime }}</el-descriptions-item>
-          <el-descriptions-item label="审核理由" v-if="currentItem.auditReason" :span="2">{{ currentItem.auditReason }}</el-descriptions-item>
+          <el-descriptions-item label="审核时间" v-if="currentItem.completeTime || currentItem.auditTime">{{ formatDateTime(currentItem.completeTime || currentItem.auditTime) }}</el-descriptions-item>
+          <el-descriptions-item label="审核理由" v-if="currentItem.failureReason || currentItem.auditReason" :span="2">{{ currentItem.failureReason || currentItem.auditReason }}</el-descriptions-item>
         </el-descriptions>
         
         <div class="id-card-images">
           <div class="image-item">
             <h4>身份证正面</h4>
             <el-image
-              :src="currentItem.idCardFront"
-              :preview-src-list="[currentItem.idCardFront]"
+              :src="currentItem.idCardFrontUrl || currentItem.idCardFront"
+              :preview-src-list="[currentItem.idCardFrontUrl || currentItem.idCardFront]"
               fit="cover"
               style="width: 100%; max-height: 200px"
             />
@@ -145,15 +153,15 @@
           <div class="image-item">
             <h4>身份证背面</h4>
             <el-image
-              :src="currentItem.idCardBack"
-              :preview-src-list="[currentItem.idCardBack]"
+              :src="currentItem.idCardBackUrl || currentItem.idCardBack"
+              :preview-src-list="[currentItem.idCardBackUrl || currentItem.idCardBack]"
               fit="cover"
               style="width: 100%; max-height: 200px"
             />
           </div>
         </div>
         
-        <div class="audit-actions" v-if="currentItem.status === 0">
+        <div class="audit-actions" v-if="(currentItem.verificationStatus || currentItem.status) === 1">
           <el-button type="success" @click="handleAudit(currentItem.id, 1)">通过审核</el-button>
           <el-button type="danger" @click="handleAudit(currentItem.id, 2)">拒绝申请</el-button>
         </div>
@@ -173,9 +181,9 @@
         :rules="rejectRules"
         label-width="80px"
       >
-        <el-form-item prop="reason" label="拒绝原因">
+        <el-form-item prop="rejectReason" label="拒绝原因">
           <el-input
-            v-model="rejectForm.reason"
+            v-model="rejectForm.rejectReason"
             type="textarea"
             :rows="4"
             placeholder="请输入拒绝原因"
@@ -194,7 +202,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus'
-import { getVerificationList, auditVerification } from '@/api/user'
+import { getVerificationList, getVerificationDetail, auditVerification } from '@/api/user'
 import type { VerificationInfo } from '@/api/user'
 
 // 搜索表单
@@ -224,13 +232,12 @@ const rejectFormRef = ref<FormInstance>()
 const rejectFormVisible = ref(false)
 const rejectForm = reactive({
   verificationId: 0,
-  status: 2,
-  reason: ''
+  rejectReason: ''
 })
 
 // 拒绝表单验证规则
 const rejectRules: FormRules = {
-  reason: [
+  rejectReason: [
     { required: true, message: '请输入拒绝原因', trigger: 'blur' },
     { min: 5, max: 200, message: '长度在 5 到 200 个字符', trigger: 'blur' }
   ]
@@ -240,11 +247,13 @@ const rejectRules: FormRules = {
 const getStatusType = (status: number): string => {
   switch (status) {
     case 0:
-      return 'info'
+      return 'info'  // 未认证
     case 1:
-      return 'success'
+      return 'warning'  // 认证中/待审核
     case 2:
-      return 'danger'
+      return 'success'  // 已认证/已通过
+    case 3:
+      return 'danger'  // 认证失败/已拒绝
     default:
       return 'info'
   }
@@ -254,13 +263,43 @@ const getStatusType = (status: number): string => {
 const getStatusText = (status: number): string => {
   switch (status) {
     case 0:
-      return '待审核'
+      return '未认证'
     case 1:
-      return '已通过'
+      return '待审核'  // 认证中
     case 2:
-      return '已拒绝'
+      return '已通过'  // 已认证
+    case 3:
+      return '已拒绝'  // 认证失败
     default:
       return '未知'
+  }
+}
+
+// 格式化时间
+const formatDateTime = (dateTime: string | Date | null | undefined): string => {
+  if (!dateTime) {
+    return '-'
+  }
+  
+  try {
+    const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime
+    
+    // 检查是否是有效日期
+    if (isNaN(date.getTime())) {
+      return '-'
+    }
+    
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  } catch (error) {
+    console.error('时间格式化错误:', error)
+    return '-'
   }
 }
 
@@ -310,9 +349,19 @@ const resetSearch = () => {
 }
 
 // 查看认证详情
-const handleViewDetail = (row: VerificationInfo) => {
-  currentItem.value = row
-  detailVisible.value = true
+const handleViewDetail = async (row: VerificationInfo) => {
+  try {
+    // 调用详情接口获取完整的认证信息
+    const res = await getVerificationDetail(row.id)
+    if (res.code === 200) {
+      currentItem.value = res.data
+      detailVisible.value = true
+    } else {
+      ElMessage.error(res.message || '获取认证详情失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '获取认证详情失败')
+  }
 }
 
 // 审核认证
@@ -320,6 +369,7 @@ const handleAudit = (verificationId: number, status: number) => {
   if (status === 2) {
     // 拒绝需要填写原因
     rejectForm.verificationId = verificationId
+    rejectForm.rejectReason = ''
     rejectFormVisible.value = true
   } else {
     // 通过直接确认
@@ -335,7 +385,7 @@ const handleAudit = (verificationId: number, status: number) => {
       try {
         const res = await auditVerification({
           verificationId,
-          status
+          approved: true
         })
         
         if (res.code === 200 && res.data) {
@@ -365,8 +415,8 @@ const confirmReject = () => {
       try {
         const res = await auditVerification({
           verificationId: rejectForm.verificationId,
-          status: rejectForm.status,
-          reason: rejectForm.reason
+          approved: false,
+          rejectReason: rejectForm.rejectReason
         })
         
         if (res.code === 200 && res.data) {
