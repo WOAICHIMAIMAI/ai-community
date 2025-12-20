@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentCreateDTO;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentPageQuery;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentRateDTO;
+import com.zheng.aicommunitybackend.domain.dto.UserAppointServicesApproveDTO;
 import com.zheng.aicommunitybackend.domain.entity.AppointmentOrders;
 import com.zheng.aicommunitybackend.domain.entity.AppointmentServices;
 import com.zheng.aicommunitybackend.domain.entity.AppointmentWorkers;
@@ -382,6 +383,17 @@ public class AppointmentServiceImpl implements AppointmentService {
         stats.put("cancelledCount", allOrders.stream().mapToInt(o -> o.getStatus() == 4 ? 1 : 0).sum());
 
         return stats;
+    }
+
+    @Override
+    public void approveService(UserAppointServicesApproveDTO dto, Long userId) {
+        AppointmentServices appointmentServices = new AppointmentServices();
+        BeanUtils.copyProperties(dto, appointmentServices);
+        appointmentServices.setCreateTime(new Date());
+        appointmentServices.setUpdateTime(new Date());
+        appointmentServices.setUserId(userId);
+        appointmentServices.setStatus(2);
+        appointmentServicesMapper.insert(appointmentServices);
     }
 
     /**

@@ -5,6 +5,7 @@ import com.zheng.aicommunitybackend.common.UserContext;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentCreateDTO;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentPageQuery;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentRateDTO;
+import com.zheng.aicommunitybackend.domain.dto.UserAppointServicesApproveDTO;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.vo.AppointmentOrderVO;
 import com.zheng.aicommunitybackend.domain.vo.AppointmentServiceVO;
@@ -179,5 +180,15 @@ public class UserAppointmentController {
         Long userId = UserContext.getUserId();
         Object stats = appointmentService.getAppointmentStats(userId);
         return Result.success(stats);
+    }
+
+    /**
+     * 用户申请创建服务
+     */
+    @PostMapping(value = "approve")
+    public Result approve(@RequestBody @Validated UserAppointServicesApproveDTO dto){
+        Long userId = UserContext.getUserId();
+        appointmentService.approveService(dto, userId);
+        return Result.success();
     }
 }

@@ -20,6 +20,8 @@ public class AppointmentServices implements Serializable {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private Long userId;
+
     /**
      * 服务类型标识(cleaning/repair/moving等)
      */
@@ -61,7 +63,7 @@ public class AppointmentServices implements Serializable {
     private Integer sortOrder;
 
     /**
-     * 状态：0-禁用 1-启用
+     * 状态：0-禁用 1-启用 2-待审核 3-拒绝（其中0、1算通过）
      */
     private Integer status;
 

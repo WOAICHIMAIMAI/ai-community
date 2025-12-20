@@ -3,6 +3,7 @@ package com.zheng.aicommunitybackend.service;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentCreateDTO;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentPageQuery;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentRateDTO;
+import com.zheng.aicommunitybackend.domain.dto.UserAppointServicesApproveDTO;
 import com.zheng.aicommunitybackend.domain.result.PageResult;
 import com.zheng.aicommunitybackend.domain.vo.AppointmentOrderVO;
 import com.zheng.aicommunitybackend.domain.vo.AppointmentServiceVO;
@@ -114,4 +115,6 @@ public interface AppointmentService {
      * @return 统计信息
      */
     Object getAppointmentStats(Long userId);
+
+    void approveService(UserAppointServicesApproveDTO dto, Long userId);
 }
