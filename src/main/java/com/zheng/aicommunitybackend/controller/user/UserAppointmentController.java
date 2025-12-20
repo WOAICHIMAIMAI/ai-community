@@ -3,6 +3,7 @@ package com.zheng.aicommunitybackend.controller.user;
 import com.zheng.aicommunitybackend.common.Result;
 import com.zheng.aicommunitybackend.common.UserContext;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentCreateDTO;
+import com.zheng.aicommunitybackend.domain.dto.AppointmentOrderCreateDTO;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentPageQuery;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentRateDTO;
 import com.zheng.aicommunitybackend.domain.dto.UserAppointServicesApproveDTO;
@@ -73,6 +74,17 @@ public class UserAppointmentController {
     public Result<String> createAppointment(@RequestBody @Validated AppointmentCreateDTO dto) {
         Long userId = UserContext.getUserId();
         String orderNo = appointmentService.createAppointment(dto, userId);
+        return Result.success(orderNo);
+    }
+
+    /**
+     * 创建预约订单（支持多服务）
+     */
+    @PostMapping("/order/create")
+    @Operation(summary = "创建预约订单", description = "用户创建预约订单（支持多服务加单）")
+    public Result<String> createAppointmentOrder(@RequestBody @Validated AppointmentOrderCreateDTO dto) {
+        Long userId = UserContext.getUserId();
+        String orderNo = appointmentService.createAppointmentOrder(dto, userId);
         return Result.success(orderNo);
     }
 

@@ -264,7 +264,11 @@ const rateService = () => {
 }
 
 const bookAgain = () => {
-  router.push(`/appointment/booking/${appointment.value.serviceType}`)
+  // 跳转到订单创建页面
+  router.push({
+    path: '/appointment/order/create',
+    query: { serviceId: appointment.value.serviceId }
+  })
 }
 
 const callWorker = () => {

@@ -298,11 +298,23 @@ const onRefresh = async () => {
 }
 
 const quickBook = (service: any) => {
-  router.push(`/appointment/booking/${service.type}`)
+  console.log('快速预约服务:', service)
+  console.log('服务ID:', service.id)
+  // 跳转到订单创建页面，并传递服务ID
+  router.push({
+    path: '/appointment/order/create',
+    query: { serviceId: service.id }
+  })
 }
 
 const bookService = (service: any) => {
-  router.push(`/appointment/booking/${service.type}`)
+  console.log('预约服务:', service)
+  console.log('服务ID:', service.id)
+  // 跳转到订单创建页面，并传递服务ID
+  router.push({
+    path: '/appointment/order/create',
+    query: { serviceId: service.id }
+  })
 }
 
 const goToAppointmentList = () => {

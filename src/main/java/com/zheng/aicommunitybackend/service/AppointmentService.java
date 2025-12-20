@@ -43,6 +43,14 @@ public interface AppointmentService {
     String createAppointment(AppointmentCreateDTO dto, Long userId);
 
     /**
+     * 创建预约订单（支持多服务）
+     * @param dto 预约订单信息
+     * @param userId 用户ID
+     * @return 订单编号
+     */
+    String createAppointmentOrder(AppointmentOrderCreateDTO dto, Long userId);
+
+    /**
      * 分页查询用户预约记录
      * @param query 查询条件
      * @param userId 用户ID

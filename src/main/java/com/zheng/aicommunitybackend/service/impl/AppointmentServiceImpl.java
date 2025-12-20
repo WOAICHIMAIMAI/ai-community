@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import com.zheng.aicommunitybackend.domain.dto.AppointmentCreateDTO;
+import com.zheng.aicommunitybackend.domain.dto.AppointmentOrderCreateDTO;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentPageQuery;
 import com.zheng.aicommunitybackend.domain.dto.AppointmentRateDTO;
 import com.zheng.aicommunitybackend.domain.dto.UserAppointServicesApproveDTO;
@@ -178,19 +179,131 @@ public class AppointmentServiceImpl implements AppointmentService {
         order.setEstimatedPrice(service.getBasePrice());
         order.setStatus(0); // 待确认
 
-        // 如果指定了服务人员
+        // 根据服务提供者查询worker信息
+        if (service.getUserId() != null) {
+            com.zheng.aicommunitybackend.domain.entity.Users serviceProvider = usersMapper.selectById(service.getUserId());
+            if (serviceProvider != null) {
+                order.setWorkerId(serviceProvider.getId());
+                order.setWorkerName(serviceProvider.getNickname() != null ? serviceProvider.getNickname() : serviceProvider.getUsername());
+                order.setWorkerPhone(serviceProvider.getPhone());
+                log.info("自动分配服务人员：{}（ID：{}）", order.getWorkerName(), order.getWorkerId());
+            }
+        }
+
+        // 如果指定了服务人员（覆盖自动分配）
         if (dto.getWorkerId() != null) {
             AppointmentWorkers worker = appointmentWorkersMapper.selectById(dto.getWorkerId());
             if (worker != null && worker.getStatus() == 1) {
                 order.setWorkerId(worker.getId());
                 order.setWorkerName(worker.getWorkerName());
                 order.setWorkerPhone(worker.getWorkerPhone());
+                log.info("手动指定服务人员：{}（ID：{}）", order.getWorkerName(), order.getWorkerId());
             }
         }
 
         appointmentOrdersMapper.insert(order);
 
-        log.info("创建预约成功，订单号：{}，用户ID：{}", orderNo, userId);
+        log.info("创建预约成功，订单号：{}，用户ID：{}，服务人员：{}", orderNo, userId, order.getWorkerName());
+        return orderNo;
+    }
+
+    @Override
+    @Transactional
+    public String createAppointmentOrder(AppointmentOrderCreateDTO dto, Long userId) {
+        // 验证服务项不为空
+        if (dto.getServiceItems() == null || dto.getServiceItems().isEmpty()) {
+            throw new RuntimeException("服务项不能为空");
+        }
+
+        // 生成订单编号
+        String orderNo = generateOrderNo();
+
+        // 计算总价格
+        BigDecimal totalEstimatedPrice = BigDecimal.ZERO;
+        StringBuilder serviceNames = new StringBuilder();
+
+        // 为每个服务项创建订单记录
+        for (AppointmentOrderCreateDTO.ServiceItem item : dto.getServiceItems()) {
+            // 查询服务信息
+            AppointmentServices service = appointmentServicesMapper.selectById(item.getServiceId());
+            if (service == null) {
+                throw new RuntimeException("服务ID " + item.getServiceId() + " 不存在");
+            }
+            if (service.getStatus() != 1) {
+                throw new RuntimeException("服务 " + service.getServiceName() + " 当前不可用");
+            }
+
+            // 计算服务价格
+            BigDecimal servicePrice = service.getBasePrice().multiply(new BigDecimal(item.getQuantity()));
+            totalEstimatedPrice = totalEstimatedPrice.add(servicePrice);
+
+            // 拼接服务名称
+            if (serviceNames.length() > 0) {
+                serviceNames.append(", ");
+            }
+            serviceNames.append(service.getServiceName());
+            if (item.getQuantity() > 1) {
+                serviceNames.append(" x").append(item.getQuantity());
+            }
+        }
+
+        // 处理特殊要求费用
+        if (dto.getSpecialRequests() != null && !dto.getSpecialRequests().isEmpty()) {
+            for (String request : dto.getSpecialRequests()) {
+                if ("urgent".equals(request)) {
+                    totalEstimatedPrice = totalEstimatedPrice.add(new BigDecimal("30"));
+                } else if ("insurance".equals(request)) {
+                    totalEstimatedPrice = totalEstimatedPrice.add(new BigDecimal("20"));
+                }
+            }
+        }
+
+        // 创建主订单记录（使用第一个服务的信息作为主要信息）
+        AppointmentOrderCreateDTO.ServiceItem firstItem = dto.getServiceItems().get(0);
+        AppointmentServices firstService = appointmentServicesMapper.selectById(firstItem.getServiceId());
+
+        AppointmentOrders order = new AppointmentOrders();
+        order.setOrderNo(orderNo);
+        order.setUserId(userId);
+        order.setServiceId(firstService.getId());
+        order.setServiceType(firstService.getServiceType());
+        order.setServiceName(serviceNames.toString()); // 使用拼接后的服务名称
+        order.setAppointmentTime(dto.getAppointmentTime());
+        order.setAddress(dto.getAddress());
+        order.setContactName(dto.getContactName());
+        order.setContactPhone(dto.getContactPhone());
+        
+        // 拼接需求说明和特殊要求
+        StringBuilder requirements = new StringBuilder();
+        if (dto.getRequirements() != null && !dto.getRequirements().isEmpty()) {
+            requirements.append(dto.getRequirements());
+        }
+        if (dto.getSpecialRequests() != null && !dto.getSpecialRequests().isEmpty()) {
+            if (requirements.length() > 0) {
+                requirements.append(" | ");
+            }
+            requirements.append("特殊要求：");
+            for (int i = 0; i < dto.getSpecialRequests().size(); i++) {
+                String request = dto.getSpecialRequests().get(i);
+                if (i > 0) requirements.append("、");
+                switch (request) {
+                    case "tools" -> requirements.append("自带工具");
+                    case "materials" -> requirements.append("自带材料");
+                    case "urgent" -> requirements.append("加急服务");
+                    case "insurance" -> requirements.append("需要保险");
+                    default -> requirements.append(request);
+                }
+            }
+        }
+        order.setRequirements(requirements.toString());
+        
+        order.setEstimatedPrice(totalEstimatedPrice);
+        order.setStatus(0); // 待确认
+
+        appointmentOrdersMapper.insert(order);
+
+        log.info("创建预约订单成功，订单号：{}，用户ID：{}，服务数量：{}，预估价格：{}", 
+                orderNo, userId, dto.getServiceItems().size(), totalEstimatedPrice);
         return orderNo;
     }
 

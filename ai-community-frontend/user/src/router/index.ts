@@ -191,6 +191,12 @@ const routes = [
     meta: { title: '服务分类' }
   },
   {
+    path: '/appointment/order/create',
+    name: 'OrderCreate',
+    component: () => import('@/views/appointment/OrderCreateView.vue'),
+    meta: { title: '创建订单' }
+  },
+  {
     path: '/appointment/booking/:serviceType',
     name: 'AppointmentBooking',
     component: () => import('@/views/appointment/BookingView.vue'),

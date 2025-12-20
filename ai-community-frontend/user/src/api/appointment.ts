@@ -43,6 +43,23 @@ export interface AppointmentCreateData {
   requirements?: string
 }
 
+// 预约订单创建数据接口（支持多服务）
+export interface AppointmentOrderCreateData {
+  serviceItems: ServiceItem[]
+  appointmentTime: string
+  address: string
+  contactName: string
+  contactPhone: string
+  requirements?: string
+  specialRequests?: string[]
+}
+
+// 服务项
+export interface ServiceItem {
+  serviceId: number
+  quantity: number
+}
+
 // 分页查询参数
 export interface AppointmentPageQuery {
   page: number
@@ -87,6 +104,17 @@ export const getRecommendServices = () => {
 export const createAppointment = (data: AppointmentCreateData) => {
   return request({
     url: '/api/user/appointment',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 创建预约订单（支持多服务）
+ */
+export const createAppointmentOrder = (data: AppointmentOrderCreateData) => {
+  return request({
+    url: '/api/user/appointment/order/create',
     method: 'post',
     data
   })
@@ -221,6 +249,7 @@ export default {
   getHotServices,
   getRecommendServices,
   createAppointment,
+  createAppointmentOrder,
   getAppointmentList,
   getAppointmentDetail,
   cancelAppointment,

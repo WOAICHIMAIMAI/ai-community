@@ -432,7 +432,11 @@ const rateService = (id: number) => {
 
 // 再次预约
 const bookAgain = (appointment: any) => {
-  router.push(`/appointment/booking/${appointment.serviceType}`)
+  // 跳转到订单创建页面
+  router.push({
+    path: '/appointment/order/create',
+    query: { serviceId: appointment.serviceId }
+  })
 }
 </script>
 

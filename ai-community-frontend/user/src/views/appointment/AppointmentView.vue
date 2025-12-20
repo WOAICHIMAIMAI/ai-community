@@ -218,7 +218,11 @@ const onClickLeft = () => {
 
 // 选择服务
 const selectService = (service: any) => {
-  router.push(`/appointment/booking/${service.type}`)
+  // 跳转到订单创建页面，并传递服务ID
+  router.push({
+    path: '/appointment/order/create',
+    query: { serviceId: service.id }
+  })
 }
 
 // 跳转到预约列表
