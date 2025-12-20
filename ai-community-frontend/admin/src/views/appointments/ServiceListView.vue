@@ -200,11 +200,12 @@
     <el-dialog
       v-model="viewDialogVisible"
       title="服务详情"
-      width="600px"
+      width="800px"
     >
       <service-detail
         v-if="viewDialogVisible"
-        :service="currentService"
+        :service-id="currentServiceId"
+        :key="currentServiceId"
       />
     </el-dialog>
   </div>
@@ -221,6 +222,12 @@ import {
 } from '@/api/appointment'
 import ServiceForm from './components/ServiceForm.vue'
 import ServiceDetail from './components/ServiceDetail.vue'
+import {
+  getServiceTypeName,
+  getServiceTypeTagType,
+  formatDateTime,
+  truncateText
+} from '@/utils/appointmentHelper'
 
 // 响应式数据
 const loading = ref(false)
@@ -241,6 +248,7 @@ const queryParams = reactive<ServiceQueryParams>({
 const dialogVisible = ref(false)
 const viewDialogVisible = ref(false)
 const currentService = ref<Partial<AppointmentService>>({})
+const currentServiceId = ref<number>(0)
 const serviceFormRef = ref()
 
 // 服务类型选项
@@ -396,7 +404,9 @@ const handleEdit = (row: AppointmentService) => {
 
 // 查看
 const handleView = (row: AppointmentService) => {
-  currentService.value = { ...row }
+  console.log('[ServiceList] 查看服务详情，row:', row)
+  currentServiceId.value = row.id
+  console.log('[ServiceList] 设置currentServiceId:', currentServiceId.value)
   viewDialogVisible.value = true
 }
 
@@ -467,46 +477,6 @@ const handleDialogClose = () => {
   currentService.value = {}
 }
 
-// 获取服务类型名称
-const getServiceTypeName = (type: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: '维修服务',
-    [AppointmentType.CLEANING]: '保洁服务',
-    [AppointmentType.SECURITY]: '安保服务',
-    [AppointmentType.DELIVERY]: '快递代收',
-    [AppointmentType.OTHER]: '其他服务'
-  }
-  return typeMap[type] || '未知'
-}
-
-// 获取服务类型标签类型
-const getServiceTypeTagType = (type: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: 'danger',
-    [AppointmentType.CLEANING]: 'success',
-    [AppointmentType.SECURITY]: 'warning',
-    [AppointmentType.DELIVERY]: 'info',
-    [AppointmentType.OTHER]: ''
-  }
-  return typeMap[type] || ''
-}
-
-// 格式化日期时间
-const formatDateTime = (dateTime: string) => {
-  return new Date(dateTime).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-// 截断文本
-const truncateText = (text: string, maxLength: number) => {
-  if (!text) return ''
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
-}
 </script>
 
 <style scoped lang="scss">

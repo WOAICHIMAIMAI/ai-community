@@ -144,6 +144,7 @@ import {
   type AppointmentService,
   AppointmentType
 } from '@/api/appointment'
+import { getServiceTypeName, getServiceTypeTagType } from '@/utils/appointmentHelper'
 
 // Props
 interface Props {
@@ -395,29 +396,6 @@ const disabledMinutes = (hour: number) => {
   return []
 }
 
-// 获取服务类型名称
-const getServiceTypeName = (type: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: '维修服务',
-    [AppointmentType.CLEANING]: '保洁服务',
-    [AppointmentType.SECURITY]: '安保服务',
-    [AppointmentType.DELIVERY]: '快递代收',
-    [AppointmentType.OTHER]: '其他服务'
-  }
-  return typeMap[type] || '未知'
-}
-
-// 获取服务类型标签类型
-const getServiceTypeTagType = (type: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: 'danger',
-    [AppointmentType.CLEANING]: 'success',
-    [AppointmentType.SECURITY]: 'warning',
-    [AppointmentType.DELIVERY]: 'info',
-    [AppointmentType.OTHER]: ''
-  }
-  return typeMap[type] || ''
-}
 
 // 提交表单
 const handleSubmit = async () => {

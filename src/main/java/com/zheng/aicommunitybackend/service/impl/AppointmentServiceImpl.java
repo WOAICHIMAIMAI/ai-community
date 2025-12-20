@@ -48,6 +48,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Autowired
     private AppointmentOrdersMapper appointmentOrdersMapper;
+    
+    @Autowired
+    private com.zheng.aicommunitybackend.mapper.UsersMapper usersMapper;
 
     // 服务类型渐变色配置
     private static final Map<String, String> SERVICE_GRADIENTS = new HashMap<>();
@@ -498,6 +501,100 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
     
     @Override
+    public com.zheng.aicommunitybackend.domain.vo.ServiceStatisticsVO adminGetServiceStatistics(Long serviceId) {
+        // 验证服务是否存在
+        AppointmentServices service = appointmentServicesMapper.selectById(serviceId);
+        if (service == null) {
+            throw new RuntimeException("服务不存在");
+        }
+        
+        // 查询该服务的所有订单
+        LambdaQueryWrapper<AppointmentOrders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AppointmentOrders::getServiceId, serviceId);
+        List<AppointmentOrders> orders = appointmentOrdersMapper.selectList(wrapper);
+        
+        // 计算统计数据
+        com.zheng.aicommunitybackend.domain.vo.ServiceStatisticsVO statistics = 
+            new com.zheng.aicommunitybackend.domain.vo.ServiceStatisticsVO();
+        
+        statistics.setTotalOrders(orders.size());
+        statistics.setCompletedOrders((int) orders.stream().filter(o -> o.getStatus() == 3).count());
+        statistics.setPendingOrders((int) orders.stream().filter(o -> o.getStatus() == 0).count());
+        statistics.setInProgressOrders((int) orders.stream().filter(o -> o.getStatus() == 2).count());
+        statistics.setCancelledOrders((int) orders.stream().filter(o -> o.getStatus() == 4).count());
+        
+        // 计算总收入（只计算已完成的订单，使用actualPrice）
+        BigDecimal totalRevenue = orders.stream()
+                .filter(o -> o.getStatus() == 3)
+                .map(o -> o.getActualPrice() != null ? o.getActualPrice() : 
+                         (o.getEstimatedPrice() != null ? o.getEstimatedPrice() : BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        statistics.setTotalRevenue(totalRevenue);
+        
+        // 计算平均评分（只计算已评分的订单）
+        List<AppointmentOrders> ratedOrders = orders.stream()
+                .filter(o -> o.getRating() != null && o.getRating() > 0)
+                .collect(Collectors.toList());
+        
+        if (!ratedOrders.isEmpty()) {
+            double avgRating = ratedOrders.stream()
+                    .mapToInt(AppointmentOrders::getRating)
+                    .average()
+                    .orElse(0.0);
+            statistics.setAverageRating(BigDecimal.valueOf(avgRating).setScale(1, java.math.RoundingMode.HALF_UP));
+        } else {
+            statistics.setAverageRating(BigDecimal.ZERO);
+        }
+        
+        return statistics;
+    }
+    
+    @Override
+    public List<com.zheng.aicommunitybackend.domain.vo.ServiceRecentOrderVO> adminGetServiceRecentOrders(Long serviceId, Integer limit) {
+        // 验证服务是否存在
+        AppointmentServices service = appointmentServicesMapper.selectById(serviceId);
+        if (service == null) {
+            throw new RuntimeException("服务不存在");
+        }
+        
+        // 查询最近的预约订单
+        LambdaQueryWrapper<AppointmentOrders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AppointmentOrders::getServiceId, serviceId);
+        wrapper.orderByDesc(AppointmentOrders::getCreateTime);
+        wrapper.last("LIMIT " + (limit != null && limit > 0 ? limit : 10));
+        
+        List<AppointmentOrders> orders = appointmentOrdersMapper.selectList(wrapper);
+        
+        // 转换为VO
+        return orders.stream().map(order -> {
+            com.zheng.aicommunitybackend.domain.vo.ServiceRecentOrderVO vo = 
+                new com.zheng.aicommunitybackend.domain.vo.ServiceRecentOrderVO();
+            vo.setId(order.getId());
+            vo.setAppointmentTime(order.getAppointmentTime());
+            vo.setStatus(order.getStatus());
+            vo.setAddress(order.getAddress());
+            vo.setContactPhone(order.getContactPhone());
+            vo.setCreateTime(order.getCreateTime());
+            
+            // 查询用户昵称
+            try {
+                com.zheng.aicommunitybackend.domain.entity.Users user = 
+                    usersMapper.selectById(order.getUserId());
+                if (user != null) {
+                    vo.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
+                } else {
+                    vo.setUsername("未知用户");
+                }
+            } catch (Exception e) {
+                log.error("查询用户信息失败", e);
+                vo.setUsername("未知用户");
+            }
+            
+            return vo;
+        }).collect(Collectors.toList());
+    }
+    
+    @Override
     public PageResult<AppointmentOrderVO> adminGetOrderPage(AppointmentPageQuery query) {
         Page<AppointmentOrders> page = new Page<>(query.getPage(), query.getPageSize());
         LambdaQueryWrapper<AppointmentOrders> wrapper = new LambdaQueryWrapper<>();
@@ -645,18 +742,44 @@ public class AppointmentServiceImpl implements AppointmentService {
      */
     private AppointmentServiceVO convertToServiceVO(AppointmentServices service) {
         AppointmentServiceVO vo = new AppointmentServiceVO();
-        BeanUtils.copyProperties(service, vo);
+        
+        // 基础信息
         vo.setId(service.getId());
         vo.setType(service.getServiceType());
         vo.setName(service.getServiceName());
+        vo.setServiceName(service.getServiceName());
+        vo.setServiceType(service.getServiceType());
         vo.setDescription(service.getDescription());
         vo.setIcon(service.getIcon());
-        vo.setPrice(service.getBasePrice().toString());
+        
+        // 价格信息
+        vo.setBasePrice(service.getBasePrice());
+        vo.setPrice(service.getBasePrice() != null ? service.getBasePrice().toString() : "0");
         vo.setUnit(service.getUnit());
-        vo.setIsHot(service.getIsHot() == null ? false : service.getIsHot() == 1);
+        
+        // 时长信息 - 实体没有duration字段，设置默认值或从配置获取
+        vo.setDuration(60); // 默认60分钟
+        
+        // 状态信息
+        vo.setStatus(service.getStatus());
+        vo.setIsActive(service.getStatus() != null && service.getStatus() == 1);
+        vo.setApprovalStatus(service.getApprovalStatus());
+        vo.setIsHot(service.getIsHot() != null && service.getIsHot() == 1);
+        
+        // 时间信息 - 转换Date为LocalDateTime
+        if (service.getCreateTime() != null) {
+            vo.setCreatedAt(new java.sql.Timestamp(service.getCreateTime().getTime()).toLocalDateTime());
+        }
+        if (service.getUpdateTime() != null) {
+            vo.setUpdatedAt(new java.sql.Timestamp(service.getUpdateTime().getTime()).toLocalDateTime());
+        }
+        vo.setCreatedBy(service.getUserId());
+        
+        // 前端展示配置
         vo.setRating("4.8"); // 默认评分，实际应该从统计数据获取
         vo.setGradient(SERVICE_GRADIENTS.get(service.getServiceType()));
         vo.setColor(SERVICE_COLORS.get(service.getServiceType()));
+        
         return vo;
     }
 

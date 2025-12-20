@@ -165,6 +165,21 @@ public interface AppointmentService {
     Integer adminGetPendingServiceCount();
     
     /**
+     * 管理员获取服务统计数据
+     * @param serviceId 服务ID
+     * @return 统计数据
+     */
+    com.zheng.aicommunitybackend.domain.vo.ServiceStatisticsVO adminGetServiceStatistics(Long serviceId);
+    
+    /**
+     * 管理员获取服务最近预约列表
+     * @param serviceId 服务ID
+     * @param limit 限制数量
+     * @return 最近预约列表
+     */
+    List<com.zheng.aicommunitybackend.domain.vo.ServiceRecentOrderVO> adminGetServiceRecentOrders(Long serviceId, Integer limit);
+    
+    /**
      * 管理员分页查询订单列表
      * @param query 查询条件
      * @return 分页结果

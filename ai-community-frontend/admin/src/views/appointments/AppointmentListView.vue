@@ -364,11 +364,20 @@ import {
   type AppointmentQueryParams,
   type AppointmentStats,
   AppointmentType,
-  AppointmentStatus
+  AppointmentStatus,
+  getOrderDetail
 } from '@/api/appointment'
 import AppointmentForm from './components/AppointmentForm.vue'
 import AppointmentDetail from './components/AppointmentDetail.vue'
 import WorkerAssign from './components/WorkerAssign.vue'
+import {
+  getServiceTypeName,
+  getServiceTypeTagType,
+  getStatusName,
+  getStatusTagType,
+  formatDateTime,
+  truncateText
+} from '@/utils/appointmentHelper'
 
 // 响应式数据
 const loading = ref(false)
@@ -657,9 +666,22 @@ const handleCreate = () => {
 }
 
 // 查看
-const handleView = (row: AppointmentRecord) => {
-  currentAppointment.value = { ...row }
-  viewDialogVisible.value = true
+const handleView = async (row: AppointmentRecord) => {
+  try {
+    loading.value = true
+    const res = await getOrderDetail(row.id)
+    if (res.code === 200) {
+      currentAppointment.value = res.data
+      viewDialogVisible.value = true
+    } else {
+      ElMessage.error(res.message || '获取订单详情失败')
+    }
+  } catch (error) {
+    console.error('获取订单详情失败:', error)
+    ElMessage.error('获取订单详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 确认预约
@@ -755,70 +777,6 @@ const handleDialogClose = () => {
   currentAppointment.value = {}
 }
 
-// 获取服务类型名称
-const getServiceTypeName = (type: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: '维修服务',
-    [AppointmentType.CLEANING]: '保洁服务',
-    [AppointmentType.SECURITY]: '安保服务',
-    [AppointmentType.DELIVERY]: '快递代收',
-    [AppointmentType.OTHER]: '其他服务'
-  }
-  return typeMap[type] || '未知'
-}
-
-// 获取服务类型标签类型
-const getServiceTypeTagType = (type: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: 'danger',
-    [AppointmentType.CLEANING]: 'success',
-    [AppointmentType.SECURITY]: 'warning',
-    [AppointmentType.DELIVERY]: 'info',
-    [AppointmentType.OTHER]: ''
-  }
-  return typeMap[type] || ''
-}
-
-// 获取状态名称
-const getStatusName = (status: AppointmentStatus) => {
-  const statusMap = {
-    [AppointmentStatus.PENDING]: '待处理',
-    [AppointmentStatus.CONFIRMED]: '已确认',
-    [AppointmentStatus.IN_PROGRESS]: '进行中',
-    [AppointmentStatus.COMPLETED]: '已完成',
-    [AppointmentStatus.CANCELLED]: '已取消'
-  }
-  return statusMap[status] || '未知'
-}
-
-// 获取状态标签类型
-const getStatusTagType = (status: AppointmentStatus) => {
-  const statusMap = {
-    [AppointmentStatus.PENDING]: 'warning',
-    [AppointmentStatus.CONFIRMED]: 'primary',
-    [AppointmentStatus.IN_PROGRESS]: 'info',
-    [AppointmentStatus.COMPLETED]: 'success',
-    [AppointmentStatus.CANCELLED]: 'danger'
-  }
-  return statusMap[status] || ''
-}
-
-// 格式化日期时间
-const formatDateTime = (dateTime: string) => {
-  return new Date(dateTime).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-// 截断文本
-const truncateText = (text: string, maxLength: number) => {
-  if (!text) return ''
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
-}
 </script>
 
 <style scoped lang="scss">

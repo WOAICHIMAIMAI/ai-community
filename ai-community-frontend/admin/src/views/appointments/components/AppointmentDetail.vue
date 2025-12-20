@@ -39,13 +39,13 @@
             {{ formatDateTime(appointment.appointmentTime) }}
           </el-descriptions-item>
           <el-descriptions-item label="服务费用">
-            <span class="price">¥{{ appointment.price }}</span>
+            <span class="price">¥{{ appointment.actualPrice || appointment.estimatedPrice || appointment.price || 0 }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="创建时间">
-            {{ formatDateTime(appointment.createdAt) }}
+            {{ formatDateTime(appointment.createTime || appointment.createdAt) }}
           </el-descriptions-item>
           <el-descriptions-item label="更新时间">
-            {{ formatDateTime(appointment.updatedAt) }}
+            {{ formatDateTime(appointment.updateTime || appointment.updatedAt) }}
           </el-descriptions-item>
         </el-descriptions>
       </div>
@@ -83,10 +83,10 @@
       </div>
       
       <!-- 服务描述 -->
-      <div v-if="appointment.description" class="info-section">
-        <h4>服务描述</h4>
+      <div v-if="appointment.requirements || appointment.description" class="info-section">
+        <h4>特殊要求</h4>
         <div class="description-content">
-          {{ appointment.description }}
+          {{ appointment.requirements || appointment.description }}
         </div>
       </div>
       
@@ -95,7 +95,7 @@
         <h4>完成信息</h4>
         <el-descriptions :column="2" border>
           <el-descriptions-item label="完成时间">
-            {{ formatDateTime(appointment.completedAt) }}
+            {{ formatDateTime(appointment.finishTime || appointment.completedAt) }}
           </el-descriptions-item>
           <el-descriptions-item label="用户评分">
             <el-rate
@@ -184,15 +184,15 @@
             </div>
             <div class="mobile-item">
               <div class="item-label">服务费用</div>
-              <div class="item-value price">¥{{ appointment.price }}</div>
+              <div class="item-value price">¥{{ appointment.actualPrice || appointment.estimatedPrice || appointment.price || 0 }}</div>
             </div>
             <div v-if="appointment.workerName" class="mobile-item">
               <div class="item-label">服务人员</div>
               <div class="item-value">{{ appointment.workerName }} ({{ appointment.workerPhone }})</div>
             </div>
-            <div v-if="appointment.description" class="mobile-item">
-              <div class="item-label">服务说明</div>
-              <div class="item-value description">{{ appointment.description }}</div>
+            <div v-if="appointment.requirements || appointment.description" class="mobile-item">
+              <div class="item-label">特殊要求</div>
+              <div class="item-value description">{{ appointment.requirements || appointment.description }}</div>
             </div>
           </div>
         </div>
@@ -208,6 +208,13 @@ import {
   AppointmentType,
   AppointmentStatus
 } from '@/api/appointment'
+import {
+  getServiceTypeName,
+  getServiceTypeTagType,
+  getStatusName,
+  getStatusTagType,
+  formatDateTime
+} from '@/utils/appointmentHelper'
 
 // Props
 interface Props {
@@ -298,65 +305,6 @@ const operationRecords = computed(() => {
   return records.sort((a, b) => new Date(a.timestamp || '').getTime() - new Date(b.timestamp || '').getTime())
 })
 
-// 获取服务类型名称
-const getServiceTypeName = (type?: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: '维修服务',
-    [AppointmentType.CLEANING]: '保洁服务',
-    [AppointmentType.SECURITY]: '安保服务',
-    [AppointmentType.DELIVERY]: '快递代收',
-    [AppointmentType.OTHER]: '其他服务'
-  }
-  return typeMap[type || AppointmentType.OTHER] || '未知'
-}
-
-// 获取服务类型标签类型
-const getServiceTypeTagType = (type?: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: 'danger',
-    [AppointmentType.CLEANING]: 'success',
-    [AppointmentType.SECURITY]: 'warning',
-    [AppointmentType.DELIVERY]: 'info',
-    [AppointmentType.OTHER]: ''
-  }
-  return typeMap[type || AppointmentType.OTHER] || ''
-}
-
-// 获取状态名称
-const getStatusName = (status?: AppointmentStatus) => {
-  const statusMap = {
-    [AppointmentStatus.PENDING]: '待处理',
-    [AppointmentStatus.CONFIRMED]: '已确认',
-    [AppointmentStatus.IN_PROGRESS]: '进行中',
-    [AppointmentStatus.COMPLETED]: '已完成',
-    [AppointmentStatus.CANCELLED]: '已取消'
-  }
-  return statusMap[status || AppointmentStatus.PENDING] || '未知'
-}
-
-// 获取状态标签类型
-const getStatusTagType = (status?: AppointmentStatus) => {
-  const statusMap = {
-    [AppointmentStatus.PENDING]: 'warning',
-    [AppointmentStatus.CONFIRMED]: 'primary',
-    [AppointmentStatus.IN_PROGRESS]: 'info',
-    [AppointmentStatus.COMPLETED]: 'success',
-    [AppointmentStatus.CANCELLED]: 'danger'
-  }
-  return statusMap[status || AppointmentStatus.PENDING] || ''
-}
-
-// 格式化日期时间
-const formatDateTime = (dateTime?: string) => {
-  if (!dateTime) return '-'
-  return new Date(dateTime).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
 </script>
 
 <style scoped lang="scss">

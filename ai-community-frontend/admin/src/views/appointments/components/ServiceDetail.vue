@@ -1,57 +1,70 @@
 <template>
   <div class="service-detail">
-    <div class="detail-header">
-      <div class="service-title">
-        <h3>{{ service.serviceName }}</h3>
-        <div class="service-meta">
-          <el-tag :type="getServiceTypeTagType(service.serviceType)">
-            {{ getServiceTypeName(service.serviceType) }}
-          </el-tag>
-          <el-tag :type="service.isActive ? 'success' : 'danger'" style="margin-left: 8px;">
-            {{ service.isActive ? '启用中' : '已禁用' }}
-          </el-tag>
-        </div>
-      </div>
-      <div class="service-price">
-        <span class="price">¥{{ service.price }}</span>
-      </div>
+    <!-- Loading状态 -->
+    <div v-if="loading" class="loading-container">
+      <el-icon class="is-loading" :size="40">
+        <Loading />
+      </el-icon>
+      <p>加载中...</p>
     </div>
-    
-    <div class="detail-content">
-      <!-- 基本信息 -->
-      <div class="info-section">
-        <h4>基本信息</h4>
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="服务ID">
-            {{ service.id }}
-          </el-descriptions-item>
-          <el-descriptions-item label="服务状态">
-            <el-tag :type="service.isActive ? 'success' : 'danger'">
-              {{ service.isActive ? '启用中' : '已禁用' }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="服务名称">
-            {{ service.serviceName }}
-          </el-descriptions-item>
-          <el-descriptions-item label="服务类型">
+
+    <!-- 无数据状态 -->
+    <el-empty v-else-if="!service.id" description="暂无数据" />
+
+    <!-- 有数据时显示 -->
+    <template v-else>
+      <div class="detail-header">
+        <div class="service-title">
+          <h3>{{ service.serviceName }}</h3>
+          <div class="service-meta">
             <el-tag :type="getServiceTypeTagType(service.serviceType)">
               {{ getServiceTypeName(service.serviceType) }}
             </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="服务价格">
-            <span class="price">¥{{ service.price }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="预计时长">
-            {{ service.duration }}分钟
-          </el-descriptions-item>
-          <el-descriptions-item label="创建时间">
-            {{ formatDateTime(service.createdAt) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="更新时间">
-            {{ formatDateTime(service.updatedAt) }}
-          </el-descriptions-item>
-        </el-descriptions>
+            <el-tag :type="service.isActive ? 'success' : 'danger'" style="margin-left: 8px;">
+              {{ service.isActive ? '启用中' : '已禁用' }}
+            </el-tag>
+          </div>
+        </div>
+        <div class="service-price">
+          <span class="price">¥{{ service.price }}</span>
+        </div>
       </div>
+    
+      <div class="detail-content">
+        <!-- 基本信息 -->
+        <div class="info-section">
+          <h4>基本信息</h4>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="服务ID">
+              {{ service.id }}
+            </el-descriptions-item>
+            <el-descriptions-item label="服务状态">
+              <el-tag :type="service.isActive ? 'success' : 'danger'">
+                {{ service.isActive ? '启用中' : '已禁用' }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="服务名称">
+              {{ service.serviceName }}
+            </el-descriptions-item>
+            <el-descriptions-item label="服务类型">
+              <el-tag :type="getServiceTypeTagType(service.serviceType)">
+                {{ getServiceTypeName(service.serviceType) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="服务价格">
+              <span class="price">¥{{ service.price }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="预计时长">
+              {{ service.duration }}分钟
+            </el-descriptions-item>
+            <el-descriptions-item label="创建时间">
+              {{ formatDateTime(service.createdAt) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="更新时间">
+              {{ formatDateTime(service.updatedAt) }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
       
       <!-- 服务描述 -->
       <div class="info-section">
@@ -67,25 +80,25 @@
         <el-row :gutter="20">
           <el-col :span="6">
             <div class="stat-card">
-              <div class="stat-number">{{ mockStats.totalOrders }}</div>
+              <div class="stat-number">{{ statistics.totalOrders }}</div>
               <div class="stat-label">总预约数</div>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="stat-card">
-              <div class="stat-number">{{ mockStats.completedOrders }}</div>
+              <div class="stat-number">{{ statistics.completedOrders }}</div>
               <div class="stat-label">已完成</div>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="stat-card">
-              <div class="stat-number">{{ mockStats.averageRating.toFixed(1) }}</div>
+              <div class="stat-number">{{ statistics.averageRating.toFixed(1) }}</div>
               <div class="stat-label">平均评分</div>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="stat-card">
-              <div class="stat-number">¥{{ mockStats.totalRevenue }}</div>
+              <div class="stat-number">¥{{ statistics.totalRevenue }}</div>
               <div class="stat-label">总收入</div>
             </div>
           </el-col>
@@ -95,7 +108,7 @@
       <!-- 最近预约 -->
       <div class="info-section">
         <h4>最近预约</h4>
-        <el-table :data="mockRecentOrders" size="small">
+        <el-table :data="recentOrders" size="small">
           <el-table-column prop="id" label="预约ID" width="80" />
           <el-table-column prop="username" label="用户" width="100" />
           <el-table-column prop="appointmentTime" label="预约时间" width="150">
@@ -139,11 +152,11 @@
               </div>
               <div class="info-item">
                 <span class="info-icon">⭐</span>
-                <span class="info-text">评分：{{ mockStats.averageRating.toFixed(1) }}分</span>
+                <span class="info-text">评分：{{ statistics.averageRating.toFixed(1) }}分</span>
               </div>
               <div class="info-item">
                 <span class="info-icon">📊</span>
-                <span class="info-text">已服务：{{ mockStats.completedOrders }}次</span>
+                <span class="info-text">已服务：{{ statistics.completedOrders }}次</span>
               </div>
             </div>
             <div class="mobile-description">
@@ -157,126 +170,158 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, watch } from 'vue'
+import { Loading } from '@element-plus/icons-vue'
 import {
   type AppointmentService,
   AppointmentType,
-  AppointmentStatus
+  AppointmentStatus,
+  type ServiceStatistics,
+  type ServiceRecentOrder,
+  getServiceDetail,
+  getServiceStatistics,
+  getServiceRecentOrders
 } from '@/api/appointment'
+import { ElMessage } from 'element-plus'
+import {
+  getServiceTypeName,
+  getServiceTypeTagType,
+  getStatusName,
+  getStatusTagType,
+  formatDateTime,
+  truncateText
+} from '@/utils/appointmentHelper'
 
 // Props
 interface Props {
-  service: Partial<AppointmentService>
+  serviceId?: number
 }
 
 const props = defineProps<Props>()
 
-// 模拟统计数据
-const mockStats = computed(() => ({
-  totalOrders: Math.floor(Math.random() * 100) + 20,
-  completedOrders: Math.floor(Math.random() * 80) + 15,
-  averageRating: Math.random() * 2 + 3.5, // 3.5-5.5 之间
-  totalRevenue: Math.floor(Math.random() * 10000) + 2000
-}))
+// 立即输出props
+console.log('[ServiceDetail] Props定义:', props)
+console.log('[ServiceDetail] serviceId:', props.serviceId)
 
-// 模拟最近预约数据
-const mockRecentOrders = computed(() => [
-  {
-    id: 1,
-    username: '张三',
-    appointmentTime: '2024-01-20 14:00:00',
-    status: AppointmentStatus.PENDING,
-    address: '阳光小区1栋2单元301室'
-  },
-  {
-    id: 2,
-    username: '李四',
-    appointmentTime: '2024-01-19 16:00:00',
-    status: AppointmentStatus.COMPLETED,
-    address: '阳光小区2栋1单元201室'
-  },
-  {
-    id: 3,
-    username: '王五',
-    appointmentTime: '2024-01-18 10:00:00',
-    status: AppointmentStatus.IN_PROGRESS,
-    address: '阳光小区3栋3单元101室'
+// 响应式数据
+const loading = ref(false)
+const service = ref<Partial<AppointmentService>>({})
+const statistics = ref<ServiceStatistics>({
+  totalOrders: 0,
+  completedOrders: 0,
+  averageRating: 0,
+  totalRevenue: 0,
+  pendingOrders: 0,
+  inProgressOrders: 0,
+  cancelledOrders: 0
+})
+const recentOrders = ref<ServiceRecentOrder[]>([])
+
+// 加载服务详情
+const loadServiceDetail = async () => {
+  if (!props.serviceId) {
+    console.warn('[ServiceDetail] serviceId为空，无法加载数据')
+    return
   }
-])
-
-// 获取服务类型名称
-const getServiceTypeName = (type?: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: '维修服务',
-    [AppointmentType.CLEANING]: '保洁服务',
-    [AppointmentType.SECURITY]: '安保服务',
-    [AppointmentType.DELIVERY]: '快递代收',
-    [AppointmentType.OTHER]: '其他服务'
+  
+  console.log('[ServiceDetail] 开始加载服务详情，ID:', props.serviceId)
+  
+  try {
+    loading.value = true
+    const res = await getServiceDetail(props.serviceId)
+    console.log('[ServiceDetail] 获取服务详情响应:', res)
+    
+    if (res.code === 200) {
+      service.value = res.data
+      console.log('[ServiceDetail] 服务详情加载成功:', service.value)
+    } else {
+      console.error('[ServiceDetail] 获取服务详情失败:', res.message)
+      ElMessage.error(res.message || '获取服务详情失败')
+    }
+  } catch (error) {
+    console.error('[ServiceDetail] 获取服务详情异常:', error)
+    ElMessage.error('获取服务详情失败')
+  } finally {
+    loading.value = false
   }
-  return typeMap[type || AppointmentType.OTHER] || '未知'
 }
 
-// 获取服务类型标签类型
-const getServiceTypeTagType = (type?: AppointmentType) => {
-  const typeMap = {
-    [AppointmentType.MAINTENANCE]: 'danger',
-    [AppointmentType.CLEANING]: 'success',
-    [AppointmentType.SECURITY]: 'warning',
-    [AppointmentType.DELIVERY]: 'info',
-    [AppointmentType.OTHER]: ''
+// 加载统计数据
+const loadStatistics = async () => {
+  if (!props.serviceId) return
+  
+  try {
+    const res = await getServiceStatistics(props.serviceId)
+    if (res.code === 200) {
+      statistics.value = res.data
+    } else {
+      ElMessage.error(res.message || '获取统计数据失败')
+    }
+  } catch (error) {
+    console.error('获取统计数据失败:', error)
+    ElMessage.error('获取统计数据失败')
   }
-  return typeMap[type || AppointmentType.OTHER] || ''
 }
 
-// 获取状态名称
-const getStatusName = (status: AppointmentStatus) => {
-  const statusMap = {
-    [AppointmentStatus.PENDING]: '待处理',
-    [AppointmentStatus.CONFIRMED]: '已确认',
-    [AppointmentStatus.IN_PROGRESS]: '进行中',
-    [AppointmentStatus.COMPLETED]: '已完成',
-    [AppointmentStatus.CANCELLED]: '已取消'
+// 加载最近预约
+const loadRecentOrders = async () => {
+  if (!props.serviceId) return
+  
+  try {
+    const res = await getServiceRecentOrders(props.serviceId, 10)
+    if (res.code === 200) {
+      recentOrders.value = res.data
+    } else {
+      ElMessage.error(res.message || '获取预约记录失败')
+    }
+  } catch (error) {
+    console.error('获取预约记录失败:', error)
+    ElMessage.error('获取预约记录失败')
   }
-  return statusMap[status] || '未知'
 }
 
-// 获取状态标签类型
-const getStatusTagType = (status: AppointmentStatus) => {
-  const statusMap = {
-    [AppointmentStatus.PENDING]: 'warning',
-    [AppointmentStatus.CONFIRMED]: 'primary',
-    [AppointmentStatus.IN_PROGRESS]: 'info',
-    [AppointmentStatus.COMPLETED]: 'success',
-    [AppointmentStatus.CANCELLED]: 'danger'
+// 加载所有数据
+const loadData = async () => {
+  await loadServiceDetail()
+  await loadStatistics()
+  await loadRecentOrders()
+}
+
+// 监听serviceId变化，重新加载数据
+watch(() => props.serviceId, (newId, oldId) => {
+  console.log('[ServiceDetail] serviceId变化:', oldId, '->', newId)
+  if (newId && newId > 0) {
+    loadData()
   }
-  return statusMap[status] || ''
-}
+}, { immediate: true })
 
-// 格式化日期时间
-const formatDateTime = (dateTime?: string) => {
-  if (!dateTime) return '-'
-  return new Date(dateTime).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-// 截断文本
-const truncateText = (text: string, maxLength: number) => {
-  if (!text) return ''
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
-}
 </script>
 
 <style scoped lang="scss">
 .service-detail {
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #909399;
+    
+    .el-icon {
+      margin-bottom: 16px;
+    }
+    
+    p {
+      margin: 0;
+      font-size: 14px;
+    }
+  }
+  
   .detail-header {
     display: flex;
     justify-content: space-between;

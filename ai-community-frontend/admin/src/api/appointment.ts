@@ -34,28 +34,43 @@ export interface AppointmentService {
 // 预约记录接口
 export interface AppointmentRecord {
   id: number
-  userId: number
-  username: string
-  userPhone: string
-  serviceId: number
+  userId?: number
+  username?: string
+  userPhone?: string
+  serviceId?: number
   serviceName: string
-  serviceType: AppointmentType
+  serviceType: string
   appointmentTime: string
   address: string
+  contactName?: string
   contactPhone: string
-  description: string
+  requirements?: string
+  estimatedPrice?: number
+  actualPrice?: number
+  price?: number
   status: AppointmentStatus
-  price: number
+  statusDesc?: string
   workerId?: number
   workerName?: string
   workerPhone?: string
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  createTime?: string
+  updatedAt?: string
+  confirmTime?: string
+  finishTime?: string
   completedAt?: string
   cancelledAt?: string
   cancelReason?: string
   rating?: number
+  comment?: string
   feedback?: string
+  rated?: boolean
+  worker?: {
+    name: string
+    phone: string
+    avatar?: string
+    rating?: number
+  }
 }
 
 // 预约查询参数
@@ -122,6 +137,28 @@ export interface AppointmentStats {
   todayAppointments: number
   weekAppointments: number
   monthAppointments: number
+}
+
+// 服务统计数据接口
+export interface ServiceStatistics {
+  totalOrders: number       // 总预约数
+  completedOrders: number   // 已完成订单数
+  averageRating: number     // 平均评分
+  totalRevenue: number      // 总收入
+  pendingOrders: number     // 待处理订单数
+  inProgressOrders: number  // 进行中订单数
+  cancelledOrders: number   // 已取消订单数
+}
+
+// 服务最近预约记录接口
+export interface ServiceRecentOrder {
+  id: number
+  username: string
+  appointmentTime: string
+  status: AppointmentStatus
+  address: string
+  contactPhone: string
+  createTime: string
 }
 
 /**
@@ -200,6 +237,22 @@ export const deleteService = (id: number) => {
  */
 export const getPendingServiceCount = () => {
   return request.get<number>('/api/admin/appointment/services/pending/count')
+}
+
+/**
+ * 获取服务统计数据
+ */
+export const getServiceStatistics = (serviceId: number) => {
+  return request.get<ServiceStatistics>(`/api/admin/appointment/services/${serviceId}/statistics`)
+}
+
+/**
+ * 获取服务最近预约列表
+ */
+export const getServiceRecentOrders = (serviceId: number, limit: number = 10) => {
+  return request.get<ServiceRecentOrder[]>(`/api/admin/appointment/services/${serviceId}/recent-orders`, {
+    params: { limit }
+  })
 }
 
 /**
