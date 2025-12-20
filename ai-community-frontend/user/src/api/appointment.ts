@@ -17,6 +17,7 @@ export interface AppointmentService {
 export interface AppointmentRecord {
   id: number
   orderNo: string
+  serviceId: number
   serviceName: string
   serviceType: string
   appointmentTime: string
@@ -41,6 +42,7 @@ export interface AppointmentCreateData {
   contactName: string
   contactPhone: string
   requirements?: string
+  estimatedPrice?: number
 }
 
 // 预约订单创建数据接口（支持多服务）

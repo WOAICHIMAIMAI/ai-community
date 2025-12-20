@@ -26,6 +26,12 @@ public class AppointmentOrderVO {
     private String orderNo;
 
     /**
+     * 服务ID
+     */
+    @Schema(description = "服务ID")
+    private Long serviceId;
+
+    /**
      * 服务名称
      */
     @Schema(description = "服务名称", example = "家政保洁")

@@ -278,7 +278,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { showToast } from 'vant'
+import { showToast, showDialog } from 'vant'
 import BottomTabbar from '@/components/BottomTabbar.vue'
 import { createAppointment } from '@/api/appointment'
 import appointmentApi from '@/api/appointment'
@@ -394,8 +394,18 @@ onMounted(async () => {
   
   // 如果路由带有服务ID参数，加载该服务信息
   const serviceId = route.query.serviceId as string
-  if (serviceId) {
-    await loadServiceInfo(parseInt(serviceId))
+  console.log('接收到的 serviceId:', serviceId, '类型:', typeof serviceId)
+  
+  if (serviceId && serviceId !== 'undefined') {
+    const serviceIdNum = parseInt(serviceId)
+    console.log('转换后的 serviceId:', serviceIdNum)
+    
+    if (!isNaN(serviceIdNum)) {
+      await loadServiceInfo(serviceIdNum)
+    } else {
+      showToast('服务ID格式不正确')
+      router.back()
+    }
   } else {
     showToast('请先选择服务')
     router.back()
@@ -555,13 +565,28 @@ const onSubmit = async () => {
       requirements = `数量：${serviceQuantity.value}份 ${requirements ? '| ' + requirements : ''}`
     }
     
+    // 计算预估价格：基础价格 * 数量 + 特殊要求附加费
+    let estimatedPrice = parseFloat(currentService.value.price) * serviceQuantity.value
+    
+    // 处理特殊要求费用
+    if (formData.value.specialRequests && formData.value.specialRequests.length > 0) {
+      formData.value.specialRequests.forEach(req => {
+        if (req === 'urgent') {
+          estimatedPrice += 30 // 加急服务加30元
+        } else if (req === 'insurance') {
+          estimatedPrice += 20 // 保险加20元
+        }
+      })
+    }
+    
     console.log('提交的数据:', {
       serviceType: currentService.value.type,
       appointmentTime: appointmentDateTime,
       address: formData.value.address,
       contactName: formData.value.contactName,
       contactPhone: formData.value.contactPhone,
-      requirements: requirements
+      requirements: requirements,
+      estimatedPrice: estimatedPrice
     })
     
     // 调用真实的API
@@ -571,7 +596,8 @@ const onSubmit = async () => {
       address: formData.value.address,
       contactName: formData.value.contactName,
       contactPhone: formData.value.contactPhone,
-      requirements: requirements
+      requirements: requirements,
+      estimatedPrice: estimatedPrice
     })
     
     if (res.code === 200) {
@@ -583,7 +609,25 @@ const onSubmit = async () => {
     }
   } catch (error: any) {
     console.error('创建订单失败:', error)
-    showToast(error.message || '预约失败，请重试')
+    // 判断是否是余额不足错误
+    const errorMsg = error.message || error.msg || '预约失败，请重试'
+    
+    if (errorMsg.includes('余额不足') || errorMsg.includes('账户余额不足')) {
+      showDialog({
+        title: '余额不足',
+        message: `当前订单需要支付 ¥${estimatedPrice.toFixed(2)}，您的账户余额不足。请先充值后再继续预约。`,
+        confirmButtonText: '前往充值',
+        cancelButtonText: '取消'
+      }).then(() => {
+        // 跳转到充值页面（如果有的话）
+        // router.push('/user/recharge')
+        showToast('充值功能开发中')
+      }).catch(() => {
+        // 用户点击取消
+      })
+    } else {
+      showToast(errorMsg)
+    }
   } finally {
     submitting.value = false
   }

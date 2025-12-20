@@ -52,6 +52,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     
     @Autowired
     private com.zheng.aicommunitybackend.mapper.UsersMapper usersMapper;
+    
+    @Autowired
+    private com.zheng.aicommunitybackend.service.UserAccountsService userAccountsService;
 
     // 服务类型渐变色配置
     private static final Map<String, String> SERVICE_GRADIENTS = new HashMap<>();
@@ -145,7 +148,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public String createAppointment(AppointmentCreateDTO dto, Long userId) {
         // 将中文服务类型转换为英文
         String convertedType = ServiceTypeConverter.convertToEnglish(dto.getServiceType());
@@ -159,6 +162,14 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentServices service = appointmentServicesMapper.selectOne(serviceWrapper);
         if (service == null) {
             throw new RuntimeException("服务类型不存在");
+        }
+
+        // 使用传入的预估价格，如果没有则使用服务基础价格
+        BigDecimal estimatedPrice = dto.getEstimatedPrice() != null ? dto.getEstimatedPrice() : service.getBasePrice();
+        
+        // 检查余额是否充足
+        if (!userAccountsService.checkBalance(userId, estimatedPrice)) {
+            throw new RuntimeException("账户余额不足，请先充值");
         }
 
         // 生成订单编号
@@ -176,7 +187,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         order.setContactName(dto.getContactName());
         order.setContactPhone(dto.getContactPhone());
         order.setRequirements(dto.getRequirements());
-        order.setEstimatedPrice(service.getBasePrice());
+        order.setEstimatedPrice(estimatedPrice);
         order.setStatus(0); // 待确认
 
         // 根据服务提供者查询worker信息
@@ -201,9 +212,17 @@ public class AppointmentServiceImpl implements AppointmentService {
             }
         }
 
+        // 先插入订单以获取订单ID
         appointmentOrdersMapper.insert(order);
+        
+        // 执行支付（扣除余额并记录流水）
+        boolean paymentSuccess = userAccountsService.payForAppointment(userId, order.getId(), orderNo, estimatedPrice);
+        
+        if (!paymentSuccess) {
+            throw new RuntimeException("支付失败，订单创建失败");
+        }
 
-        log.info("创建预约成功，订单号：{}，用户ID：{}，服务人员：{}", orderNo, userId, order.getWorkerName());
+        log.info("创建预约成功，订单号：{}，用户ID：{}，服务人员：{}，支付金额：{}", orderNo, userId, order.getWorkerName(), estimatedPrice);
         return orderNo;
     }
 
@@ -830,6 +849,220 @@ public class AppointmentServiceImpl implements AppointmentService {
         stats.put("todayOrders", todayCount);
         
         return stats;
+    }
+    
+    // ==================== 商家接口实现 ====================
+    
+    @Override
+    public PageResult<AppointmentOrderVO> getMerchantOrderPage(AppointmentPageQuery query, Long userId) {
+        // 查询该用户提供的所有服务ID列表
+        LambdaQueryWrapper<AppointmentServices> serviceWrapper = new LambdaQueryWrapper<>();
+        serviceWrapper.eq(AppointmentServices::getUserId, userId);
+        List<AppointmentServices> services = appointmentServicesMapper.selectList(serviceWrapper);
+        
+        if (services.isEmpty()) {
+            // 如果用户没有提供任何服务，返回空结果
+            return new PageResult<>(0L, new ArrayList<>());
+        }
+        
+        List<Long> serviceIds = services.stream()
+                .map(AppointmentServices::getId)
+                .collect(Collectors.toList());
+        
+        // 构建查询条件
+        Page<AppointmentOrders> page = new Page<>(query.getPage(), query.getPageSize());
+        LambdaQueryWrapper<AppointmentOrders> wrapper = new LambdaQueryWrapper<>();
+        
+        // 只查询该商家服务的订单
+        wrapper.in(AppointmentOrders::getServiceId, serviceIds);
+        
+        // 状态筛选
+        if (query.getStatus() != null) {
+            wrapper.eq(AppointmentOrders::getStatus, query.getStatus());
+        }
+        
+        // 服务类型筛选
+        if (StringUtils.hasText(query.getServiceType())) {
+            wrapper.eq(AppointmentOrders::getServiceType, query.getServiceType());
+        }
+        
+        // 关键词搜索
+        if (StringUtils.hasText(query.getKeyword())) {
+            wrapper.and(w -> w
+                    .like(AppointmentOrders::getOrderNo, query.getKeyword())
+                    .or().like(AppointmentOrders::getServiceName, query.getKeyword())
+                    .or().like(AppointmentOrders::getContactName, query.getKeyword())
+            );
+        }
+        
+        // 按创建时间倒序
+        wrapper.orderByDesc(AppointmentOrders::getCreateTime);
+        
+        IPage<AppointmentOrders> orderPage = appointmentOrdersMapper.selectPage(page, wrapper);
+        
+        // 转换为VO
+        List<AppointmentOrderVO> voList = orderPage.getRecords().stream()
+                .map(this::convertToOrderVO)
+                .collect(Collectors.toList());
+        
+        return new PageResult<>(orderPage.getTotal(), voList);
+    }
+    
+    @Override
+    public AppointmentOrderVO getMerchantOrderDetail(Long orderId, Long userId) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        // 验证该订单是否属于该商家的服务
+        AppointmentServices service = appointmentServicesMapper.selectById(order.getServiceId());
+        if (service == null || !service.getUserId().equals(userId)) {
+            throw new RuntimeException("无权查看此订单");
+        }
+        
+        return convertToOrderVO(order);
+    }
+    
+    @Override
+    public Map<String, Object> getMerchantOrderStats(Long userId) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // 查询该用户提供的所有服务ID列表
+        LambdaQueryWrapper<AppointmentServices> serviceWrapper = new LambdaQueryWrapper<>();
+        serviceWrapper.eq(AppointmentServices::getUserId, userId);
+        List<AppointmentServices> services = appointmentServicesMapper.selectList(serviceWrapper);
+        
+        if (services.isEmpty()) {
+            // 如果用户没有提供任何服务，返回0统计
+            stats.put("total", 0);
+            stats.put("pending", 0);
+            stats.put("processing", 0);
+            stats.put("completed", 0);
+            return stats;
+        }
+        
+        List<Long> serviceIds = services.stream()
+                .map(AppointmentServices::getId)
+                .collect(Collectors.toList());
+        
+        // 查询该商家的所有订单
+        LambdaQueryWrapper<AppointmentOrders> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(AppointmentOrders::getServiceId, serviceIds);
+        List<AppointmentOrders> orders = appointmentOrdersMapper.selectList(wrapper);
+        
+        // 统计各状态数量
+        stats.put("total", orders.size());
+        stats.put("pending", orders.stream().filter(o -> o.getStatus() == 0).count());
+        stats.put("processing", orders.stream().filter(o -> o.getStatus() == 1 || o.getStatus() == 2).count());
+        stats.put("completed", orders.stream().filter(o -> o.getStatus() == 3).count());
+        
+        return stats;
+    }
+    
+    @Override
+    @Transactional
+    public Boolean merchantConfirmOrder(Long orderId, Long userId) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        // 验证该订单是否属于该商家的服务
+        AppointmentServices service = appointmentServicesMapper.selectById(order.getServiceId());
+        if (service == null || !service.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此订单");
+        }
+        
+        if (order.getStatus() != 0) {
+            throw new RuntimeException("订单状态不正确，无法确认");
+        }
+        
+        order.setStatus(1); // 已确认
+        order.setConfirmTime(new Date());
+        order.setUpdateTime(new Date());
+        
+        return appointmentOrdersMapper.updateById(order) > 0;
+    }
+    
+    @Override
+    @Transactional
+    public Boolean merchantStartService(Long orderId, Long userId) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        // 验证该订单是否属于该商家的服务
+        AppointmentServices service = appointmentServicesMapper.selectById(order.getServiceId());
+        if (service == null || !service.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此订单");
+        }
+        
+        if (order.getStatus() != 1) {
+            throw new RuntimeException("订单状态不正确，无法开始服务");
+        }
+        
+        order.setStatus(2); // 服务中
+        order.setStartTime(new Date());
+        order.setUpdateTime(new Date());
+        
+        return appointmentOrdersMapper.updateById(order) > 0;
+    }
+    
+    @Override
+    @Transactional
+    public Boolean merchantFinishService(Long orderId, Long userId) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        // 验证该订单是否属于该商家的服务
+        AppointmentServices service = appointmentServicesMapper.selectById(order.getServiceId());
+        if (service == null || !service.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此订单");
+        }
+        
+        if (order.getStatus() != 2) {
+            throw new RuntimeException("订单状态不正确，无法完成服务");
+        }
+        
+        order.setStatus(3); // 已完成
+        order.setFinishTime(new Date());
+        order.setUpdateTime(new Date());
+        // 实际价格默认等于预估价格
+        if (order.getActualPrice() == null) {
+            order.setActualPrice(order.getEstimatedPrice());
+        }
+        
+        return appointmentOrdersMapper.updateById(order) > 0;
+    }
+    
+    @Override
+    @Transactional
+    public Boolean merchantRejectOrder(Long orderId, Long userId, String reason) {
+        AppointmentOrders order = appointmentOrdersMapper.selectById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        // 验证该订单是否属于该商家的服务
+        AppointmentServices service = appointmentServicesMapper.selectById(order.getServiceId());
+        if (service == null || !service.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此订单");
+        }
+        
+        if (order.getStatus() != 0) {
+            throw new RuntimeException("订单状态不正确，无法拒绝");
+        }
+        
+        order.setStatus(4); // 已取消
+        order.setCancelTime(new Date());
+        order.setCancelReason(reason != null ? reason : "商家拒绝接单");
+        order.setUpdateTime(new Date());
+        
+        return appointmentOrdersMapper.updateById(order) > 0;
     }
     
     /**

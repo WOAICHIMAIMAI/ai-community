@@ -46,4 +46,14 @@ public interface UserAccountsService extends IService<UserAccounts> {
      * 检查余额是否充足
      */
     boolean checkBalance(Long userId, BigDecimal amount);
+    
+    /**
+     * 预约订单支付（扣款+记录流水）
+     * @param userId 用户ID
+     * @param orderId 订单ID
+     * @param orderNo 订单编号
+     * @param amount 支付金额
+     * @return 是否成功
+     */
+    boolean payForAppointment(Long userId, Long orderId, String orderNo, BigDecimal amount);
 }

@@ -6,6 +6,7 @@ import lombok.Data;
 
 
 import javax.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.util.Date;
 
 /**
@@ -61,4 +62,10 @@ public class AppointmentCreateDTO {
      */
     @Schema(description = "指定服务人员ID")
     private Long workerId;
+    
+    /**
+     * 预估价格
+     */
+    @Schema(description = "预估价格")
+    private BigDecimal estimatedPrice;
 }

@@ -264,10 +264,18 @@ const rateService = () => {
 }
 
 const bookAgain = () => {
+  console.log('详情页再次预约，appointment对象:', appointment.value)
+  console.log('serviceId:', appointment.value.serviceId)
+  
+  if (!appointment.value.serviceId) {
+    showToast('服务ID不存在，无法创建订单')
+    return
+  }
+  
   // 跳转到订单创建页面
   router.push({
     path: '/appointment/order/create',
-    query: { serviceId: appointment.value.serviceId }
+    query: { serviceId: String(appointment.value.serviceId) }
   })
 }
 

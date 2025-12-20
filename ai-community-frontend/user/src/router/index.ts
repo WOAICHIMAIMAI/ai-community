@@ -220,6 +220,18 @@ const routes = [
     component: () => import('@/views/appointment/ServiceCreateView.vue'),
     meta: { title: '创建服务' }
   },
+  {
+    path: '/appointment/merchant/orders',
+    name: 'MerchantOrderList',
+    component: () => import('@/views/appointment/MerchantOrderListView.vue'),
+    meta: { title: '我的服务订单' }
+  },
+  {
+    path: '/appointment/merchant/order/:id',
+    name: 'MerchantOrderDetail',
+    component: () => import('@/views/appointment/MerchantOrderDetailView.vue'),
+    meta: { title: '订单详情' }
+  },
   // 红包相关路由
   {
     path: '/red-packet',

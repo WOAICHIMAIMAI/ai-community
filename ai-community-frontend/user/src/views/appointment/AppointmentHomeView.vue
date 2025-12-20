@@ -23,6 +23,48 @@
           </van-swipe>
         </div>
 
+        <!-- 订单入口区域 -->
+        <div class="order-entry-section">
+          <div class="section-header">
+            <h2>我的订单</h2>
+            <span class="section-subtitle">便捷管理您的订单</span>
+          </div>
+          
+          <div class="order-cards">
+            <!-- 用户订单入口 -->
+            <div class="order-card user-order" @click="goToMyOrders">
+              <div class="order-card-content">
+                <div class="order-icon">
+                  <van-icon name="orders-o" size="28" />
+                </div>
+                <div class="order-info">
+                  <h3>我的预约</h3>
+                  <p>查看我下的订单</p>
+                </div>
+              </div>
+              <div class="order-arrow">
+                <van-icon name="arrow" size="16" />
+              </div>
+            </div>
+
+            <!-- 商家订单入口 -->
+            <div class="order-card merchant-order" @click="goToMerchantOrders">
+              <div class="order-card-content">
+                <div class="order-icon">
+                  <van-icon name="shop-o" size="28" />
+                </div>
+                <div class="order-info">
+                  <h3>服务订单</h3>
+                  <p>管理我的服务订单</p>
+                </div>
+              </div>
+              <div class="order-arrow">
+                <van-icon name="arrow" size="16" />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 快速预约 -->
         <div class="quick-booking-section">
           <div class="section-header">
@@ -323,6 +365,14 @@ const goToAppointmentList = () => {
 
 const goToAppointmentDetail = (id: number) => {
   router.push(`/appointment/detail/${id}`)
+}
+
+const goToMyOrders = () => {
+  router.push('/appointment/list')
+}
+
+const goToMerchantOrders = () => {
+  router.push('/appointment/merchant/orders')
 }
 
 const getServiceIcon = (serviceType: string) => {
@@ -632,6 +682,112 @@ onMounted(async () => {
       flex-direction: column;
     }
   }
+}
+
+// 订单入口区域
+.order-entry-section {
+  margin-bottom: 8px;
+}
+
+.order-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.order-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  &.user-order::before {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  &.merchant-order::before {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+  
+  &:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    
+    &::before {
+      opacity: 0.05;
+    }
+  }
+}
+
+.order-card-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.order-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  
+  .user-order & {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .merchant-order & {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+}
+
+.order-info {
+  flex: 1;
+  
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #323233;
+    margin: 0 0 6px 0;
+  }
+  
+  p {
+    font-size: 13px;
+    color: #969799;
+    margin: 0;
+  }
+}
+
+.order-arrow {
+  display: flex;
+  justify-content: flex-end;
+  color: #c8c9cc;
+  position: relative;
+  z-index: 1;
 }
 
 // 快速预约

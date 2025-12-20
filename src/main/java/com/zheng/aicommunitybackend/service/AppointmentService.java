@@ -124,6 +124,64 @@ public interface AppointmentService {
 
     void approveService(UserAppointServicesApproveDTO dto, Long userId);
 
+    // ==================== 商家接口 ====================
+    
+    /**
+     * 商家分页查询服务订单
+     * @param query 查询条件
+     * @param userId 商家用户ID（服务提供者ID）
+     * @return 分页结果
+     */
+    PageResult<AppointmentOrderVO> getMerchantOrderPage(AppointmentPageQuery query, Long userId);
+    
+    /**
+     * 商家获取订单详情
+     * @param orderId 订单ID
+     * @param userId 商家用户ID
+     * @return 订单详情
+     */
+    AppointmentOrderVO getMerchantOrderDetail(Long orderId, Long userId);
+    
+    /**
+     * 商家获取订单统计
+     * @param userId 商家用户ID
+     * @return 统计信息
+     */
+    Map<String, Object> getMerchantOrderStats(Long userId);
+    
+    /**
+     * 商家确认接单
+     * @param orderId 订单ID
+     * @param userId 商家用户ID
+     * @return 是否成功
+     */
+    Boolean merchantConfirmOrder(Long orderId, Long userId);
+    
+    /**
+     * 商家开始服务
+     * @param orderId 订单ID
+     * @param userId 商家用户ID
+     * @return 是否成功
+     */
+    Boolean merchantStartService(Long orderId, Long userId);
+    
+    /**
+     * 商家完成服务
+     * @param orderId 订单ID
+     * @param userId 商家用户ID
+     * @return 是否成功
+     */
+    Boolean merchantFinishService(Long orderId, Long userId);
+    
+    /**
+     * 商家拒绝订单
+     * @param orderId 订单ID
+     * @param userId 商家用户ID
+     * @param reason 拒绝原因
+     * @return 是否成功
+     */
+    Boolean merchantRejectOrder(Long orderId, Long userId, String reason);
+
     // ==================== 管理员接口 ====================
     
     /**

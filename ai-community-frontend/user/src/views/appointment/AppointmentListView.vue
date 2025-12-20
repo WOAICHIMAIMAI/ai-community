@@ -246,7 +246,22 @@ const filteredAppointments = computed(() => {
   return appointmentList.value.filter(item => getStatusKey(item.status) === activeStatus.value)
 })
 
-// 状态映射函数
+// 状态映射函数 - 将字符串状态转为数字
+const getStatusValue = (statusKey: string): number | undefined => {
+  if (statusKey === 'all') {
+    return undefined
+  }
+  const statusMap: Record<string, number> = {
+    'pending': 0,
+    'confirmed': 1,
+    'inProgress': 2,
+    'completed': 3,
+    'cancelled': 4
+  }
+  return statusMap[statusKey]
+}
+
+// 状态映射函数 - 将数字状态转为字符串
 const getStatusKey = (status: number | string) => {
   if (typeof status === 'number') {
     switch (status) {
@@ -287,7 +302,7 @@ const loadAppointments = async (reset = true) => {
     const params: AppointmentPageQuery = {
       page: currentPage.value,
       pageSize: pageSize,
-      status: activeStatus.value === 'all' ? undefined : activeStatus.value
+      status: getStatusValue(activeStatus.value)
     }
     
     const response = await getAppointmentList(params)
@@ -432,10 +447,18 @@ const rateService = (id: number) => {
 
 // 再次预约
 const bookAgain = (appointment: any) => {
+  console.log('再次预约，appointment对象:', appointment)
+  console.log('serviceId:', appointment.serviceId)
+  
+  if (!appointment.serviceId) {
+    showToast('服务ID不存在，无法创建订单')
+    return
+  }
+  
   // 跳转到订单创建页面
   router.push({
     path: '/appointment/order/create',
-    query: { serviceId: appointment.serviceId }
+    query: { serviceId: String(appointment.serviceId) }
   })
 }
 </script>
