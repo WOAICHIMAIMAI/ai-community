@@ -219,7 +219,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
               <!-- 查看按钮始终显示 -->
@@ -230,17 +230,11 @@
               
               <!-- 根据状态显示不同的操作按钮组 -->
               <template v-if="row.status === 0">
-                <!-- 待处理状态：确认、分配、取消 -->
-                <el-button-group>
-                  <el-button type="success" size="small" @click="handleConfirm(row)">
-                    <el-icon><Select /></el-icon>
-                    确认
-                  </el-button>
-                  <el-button type="info" size="small" @click="handleAssign(row)">
-                    <el-icon><User /></el-icon>
-                    分配
-                  </el-button>
-                </el-button-group>
+                <!-- 待处理状态：确认、取消 -->
+                <el-button type="success" size="small" @click="handleConfirm(row)">
+                  <el-icon><Select /></el-icon>
+                  确认
+                </el-button>
                 <el-button type="danger" size="small" @click="handleCancel(row)">
                   <el-icon><Close /></el-icon>
                   取消
@@ -248,17 +242,11 @@
               </template>
               
               <template v-else-if="row.status === 1">
-                <!-- 已确认状态：分配、取消 -->
-                <el-button-group>
-                  <el-button type="info" size="small" @click="handleAssign(row)">
-                    <el-icon><User /></el-icon>
-                    分配
-                  </el-button>
-                  <el-button type="danger" size="small" @click="handleCancel(row)">
-                    <el-icon><Close /></el-icon>
-                    取消
-                  </el-button>
-                </el-button-group>
+                <!-- 已确认状态：取消 -->
+                <el-button type="danger" size="small" @click="handleCancel(row)">
+                  <el-icon><Close /></el-icon>
+                  取消
+                </el-button>
               </template>
               
               <template v-else-if="row.status === 2">
@@ -315,7 +303,7 @@
       />
     </el-dialog>
 
-    <!-- 分配工作人员弹窗 -->
+    <!-- 分配工作人员弹窗（已禁用）
     <el-dialog
       v-model="assignDialogVisible"
       title="分配工作人员"
@@ -327,6 +315,7 @@
         @submit="handleAssignSubmit"
       />
     </el-dialog>
+    -->
 
     <!-- 取消预约弹窗 -->
     <el-dialog
@@ -365,11 +354,17 @@ import {
   type AppointmentStats,
   AppointmentType,
   AppointmentStatus,
-  getOrderDetail
+  getOrderList,
+  getOrderDetail,
+  getOrderStats,
+  confirmOrder,
+  assignWorker,
+  updateOrderStatus,
+  cancelOrder
 } from '@/api/appointment'
 import AppointmentForm from './components/AppointmentForm.vue'
 import AppointmentDetail from './components/AppointmentDetail.vue'
-import WorkerAssign from './components/WorkerAssign.vue'
+// import WorkerAssign from './components/WorkerAssign.vue'  // 已禁用分配功能
 import {
   getServiceTypeName,
   getServiceTypeTagType,
@@ -453,20 +448,23 @@ onMounted(() => {
 // 加载统计数据
 const loadStats = async () => {
   try {
-    // 使用模拟数据
-    stats.value = {
-      totalAppointments: 128,
-      pendingCount: 15,
-      confirmedCount: 32,
-      inProgressCount: 8,
-      completedCount: 65,
-      cancelledCount: 8,
-      todayAppointments: 12,
-      weekAppointments: 45,
-      monthAppointments: 128
+    const res = await getOrderStats()
+    if (res.code === 200 && res.data) {
+      stats.value = {
+        totalAppointments: res.data.totalOrders || 0,
+        pendingCount: res.data.pendingCount || 0,
+        confirmedCount: res.data.confirmedCount || 0,
+        inProgressCount: res.data.inProgressCount || 0,
+        completedCount: res.data.completedCount || 0,
+        cancelledCount: res.data.cancelledCount || 0,
+        todayAppointments: res.data.todayCount || 0,
+        weekAppointments: res.data.weekCount || 0,
+        monthAppointments: res.data.monthCount || 0
+      }
     }
   } catch (error) {
     console.error('加载统计数据失败:', error)
+    ElMessage.error('加载统计数据失败')
   }
 }
 
@@ -474,153 +472,21 @@ const loadStats = async () => {
 const loadAppointments = async () => {
   try {
     loading.value = true
-
-    // 模拟API延迟
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // 使用模拟数据
-    const mockData: AppointmentRecord[] = [
-      {
-        id: 1,
-        userId: 1,
-        username: '张三',
-        userPhone: '13800138001',
-        serviceId: 1,
-        serviceName: '水管维修',
-        serviceType: AppointmentType.MAINTENANCE,
-        appointmentTime: '2024-01-20 14:00:00',
-        address: '阳光小区1栋2单元301室',
-        contactPhone: '13800138001',
-        description: '厨房水管漏水，需要紧急维修',
-        status: AppointmentStatus.PENDING,
-        price: 150,
-        createdAt: '2024-01-19 10:30:00',
-        updatedAt: '2024-01-19 10:30:00'
-      },
-      {
-        id: 2,
-        userId: 2,
-        username: '李四',
-        userPhone: '13800138002',
-        serviceId: 2,
-        serviceName: '家庭保洁',
-        serviceType: AppointmentType.CLEANING,
-        appointmentTime: '2024-01-21 09:00:00',
-        address: '阳光小区2栋1单元201室',
-        contactPhone: '13800138002',
-        description: '全屋深度清洁',
-        status: AppointmentStatus.CONFIRMED,
-        price: 200,
-        workerId: 1,
-        workerName: '王师傅',
-        workerPhone: '13900139001',
-        createdAt: '2024-01-19 11:00:00',
-        updatedAt: '2024-01-19 15:30:00'
-      },
-      {
-        id: 3,
-        userId: 3,
-        username: '王五',
-        userPhone: '13800138003',
-        serviceId: 3,
-        serviceName: '电器维修',
-        serviceType: AppointmentType.MAINTENANCE,
-        appointmentTime: '2024-01-19 16:00:00',
-        address: '阳光小区3栋3单元101室',
-        contactPhone: '13800138003',
-        description: '空调不制冷',
-        status: AppointmentStatus.IN_PROGRESS,
-        price: 300,
-        workerId: 2,
-        workerName: '刘师傅',
-        workerPhone: '13900139002',
-        createdAt: '2024-01-18 14:20:00',
-        updatedAt: '2024-01-19 16:00:00'
-      },
-      {
-        id: 4,
-        userId: 4,
-        username: '赵六',
-        userPhone: '13800138004',
-        serviceId: 4,
-        serviceName: '快递代收',
-        serviceType: AppointmentType.DELIVERY,
-        appointmentTime: '2024-01-18 10:00:00',
-        address: '阳光小区1栋1单元401室',
-        contactPhone: '13800138004',
-        description: '重要文件，需要本人签收',
-        status: AppointmentStatus.COMPLETED,
-        price: 10,
-        workerId: 3,
-        workerName: '陈师傅',
-        workerPhone: '13900139003',
-        createdAt: '2024-01-17 09:00:00',
-        updatedAt: '2024-01-18 10:30:00',
-        completedAt: '2024-01-18 10:30:00',
-        rating: 5,
-        feedback: '服务很好，很及时'
-      },
-      {
-        id: 5,
-        userId: 5,
-        username: '孙七',
-        userPhone: '13800138005',
-        serviceId: 1,
-        serviceName: '水管维修',
-        serviceType: AppointmentType.MAINTENANCE,
-        appointmentTime: '2024-01-22 15:00:00',
-        address: '阳光小区2栋2单元102室',
-        contactPhone: '13800138005',
-        description: '卫生间水龙头漏水',
-        status: AppointmentStatus.CANCELLED,
-        price: 150,
-        createdAt: '2024-01-19 16:00:00',
-        updatedAt: '2024-01-19 17:00:00',
-        cancelledAt: '2024-01-19 17:00:00',
-        cancelReason: '用户临时有事，需要改期'
-      }
-    ]
-
-    // 根据查询条件过滤数据
-    let filteredData = mockData
-
-    if (queryParams.serviceType !== undefined) {
-      filteredData = filteredData.filter(item => item.serviceType === queryParams.serviceType)
+    
+    const res = await getOrderList(queryParams)
+    if (res.code === 200 && res.data) {
+      tableData.value = res.data.records || []
+      total.value = res.data.total || 0
+    } else {
+      ElMessage.error(res.msg || '加载订单列表失败')
+      tableData.value = []
+      total.value = 0
     }
-
-    if (queryParams.status !== undefined) {
-      filteredData = filteredData.filter(item => item.status === queryParams.status)
-    }
-
-    if (queryParams.keyword) {
-      const keyword = queryParams.keyword.toLowerCase()
-      filteredData = filteredData.filter(item =>
-        item.username.toLowerCase().includes(keyword) ||
-        item.userPhone.includes(keyword) ||
-        item.address.toLowerCase().includes(keyword)
-      )
-    }
-
-    if (queryParams.startDate && queryParams.endDate) {
-      filteredData = filteredData.filter(item => {
-        const appointmentDate = new Date(item.appointmentTime)
-        const startDate = new Date(queryParams.startDate!)
-        const endDate = new Date(queryParams.endDate!)
-        return appointmentDate >= startDate && appointmentDate <= endDate
-      })
-    }
-
-    // 分页处理
-    const start = (queryParams.page! - 1) * queryParams.pageSize!
-    const end = start + queryParams.pageSize!
-    const pageData = filteredData.slice(start, end)
-
-    tableData.value = pageData
-    total.value = filteredData.length
-
   } catch (error) {
     console.error('加载预约列表失败:', error)
-    ElMessage.error('加载数据失败')
+    ElMessage.error('加载订单列表失败')
+    tableData.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -630,6 +496,7 @@ const loadAppointments = async () => {
 const handleQuery = () => {
   queryParams.page = 1
   loadAppointments()
+  loadStats()
 }
 
 // 重置
@@ -645,6 +512,7 @@ const handleReset = () => {
   })
   dateRange.value = null
   loadAppointments()
+  loadStats()
 }
 
 // 日期范围变更
@@ -691,22 +559,27 @@ const handleConfirm = async (row: AppointmentRecord) => {
       type: 'warning'
     })
 
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success('预约确认成功')
-    loadAppointments()
+    const res = await confirmOrder(row.id)
+    if (res.code === 200) {
+      ElMessage.success('预约确认成功')
+      loadAppointments()
+      loadStats()
+    } else {
+      ElMessage.error(res.msg || '预约确认失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('预约确认失败:', error)
       ElMessage.error('预约确认失败')
     }
   }
 }
 
-// 分配工作人员
-const handleAssign = (row: AppointmentRecord) => {
-  currentAppointment.value = { ...row }
-  assignDialogVisible.value = true
-}
+// 分配工作人员（已禁用）
+// const handleAssign = (row: AppointmentRecord) => {
+//   currentAppointment.value = { ...row }
+//   assignDialogVisible.value = true
+// }
 
 // 完成预约
 const handleComplete = async (row: AppointmentRecord) => {
@@ -715,12 +588,17 @@ const handleComplete = async (row: AppointmentRecord) => {
       type: 'warning'
     })
 
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success('预约完成确认成功')
-    loadAppointments()
+    const res = await updateOrderStatus(row.id, AppointmentStatus.COMPLETED, '服务已完成')
+    if (res.code === 200) {
+      ElMessage.success('预约完成确认成功')
+      loadAppointments()
+      loadStats()
+    } else {
+      ElMessage.error(res.msg || '预约完成确认失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('预约完成确认失败:', error)
       ElMessage.error('预约完成确认失败')
     }
   }
@@ -748,11 +626,11 @@ const handleFormSubmit = () => {
   loadAppointments()
 }
 
-// 分配提交
-const handleAssignSubmit = () => {
-  assignDialogVisible.value = false
-  loadAppointments()
-}
+// 分配提交（已禁用）
+// const handleAssignSubmit = () => {
+//   assignDialogVisible.value = false
+//   loadAppointments()
+// }
 
 // 取消提交
 const handleCancelSubmit = async () => {
@@ -762,12 +640,17 @@ const handleCancelSubmit = async () => {
   }
 
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success('预约取消成功')
-    cancelDialogVisible.value = false
-    loadAppointments()
+    const res = await cancelOrder(currentAppointment.value.id!, cancelForm.reason)
+    if (res.code === 200) {
+      ElMessage.success('预约取消成功')
+      cancelDialogVisible.value = false
+      loadAppointments()
+      loadStats()
+    } else {
+      ElMessage.error(res.msg || '预约取消失败')
+    }
   } catch (error) {
+    console.error('预约取消失败:', error)
     ElMessage.error('预约取消失败')
   }
 }

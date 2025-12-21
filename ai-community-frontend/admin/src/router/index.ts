@@ -112,15 +112,15 @@ const router = createRouter({
             requiresAuth: true
           }
         },
-        // {
-        //   path: 'news',
-        //   name: 'news',
-        //   component: () => import('@/views/news/NewsListView.vue'),
-        //   meta: {
-        //     title: '新闻管理',
-        //     requiresAuth: true
-        //   }
-        // },
+        {
+          path: 'news',
+          name: 'news',
+          component: () => import('@/views/news/NewsListView.vue'),
+          meta: {
+            title: '新闻管理',
+            requiresAuth: true
+          }
+        },
         {
           path: 'news-deduplication',
           name: 'news-deduplication',

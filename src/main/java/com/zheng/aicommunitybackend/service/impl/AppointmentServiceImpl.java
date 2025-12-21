@@ -1072,6 +1072,26 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentOrderVO vo = new AppointmentOrderVO();
         BeanUtils.copyProperties(order, vo);
         vo.setStatusDesc(getStatusDesc(order.getStatus()));
+        
+        // 设置用户信息
+        if (order.getUserId() != null) {
+            try {
+                com.zheng.aicommunitybackend.domain.entity.Users user = usersMapper.selectById(order.getUserId());
+                if (user != null) {
+                    vo.setUsername(user.getUsername() != null ? user.getUsername() : user.getNickname());
+                    // 脱敏手机号
+                    if (user.getPhone() != null && user.getPhone().length() >= 11) {
+                        vo.setUserPhone(user.getPhone().substring(0, 3) + "****" + user.getPhone().substring(7));
+                    } else {
+                        vo.setUserPhone(user.getPhone());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("查询用户信息失败 userId: {}", order.getUserId(), e);
+                vo.setUsername("未知用户");
+            }
+        }
+        
         // 设置服务人员信息
         if (order.getWorkerId() != null) {
             AppointmentOrderVO.WorkerInfo workerInfo = new AppointmentOrderVO.WorkerInfo();

@@ -50,6 +50,9 @@
     </van-cell-group>
 
     <van-cell-group inset title="服务" class="menu-group">
+      <van-cell title="我的钱包" is-link to="/wallet">
+        <template #icon><van-icon name="balance-o" class="menu-icon wallet-icon" /></template>
+      </van-cell>
       <van-cell title="我的帖子" is-link to="/my-posts">
         <template #icon><van-icon name="notes-o" class="menu-icon" /></template>
       </van-cell>
@@ -211,6 +214,10 @@ onMounted(() => {
       margin-right: 8px;
       font-size: 20px;
       color: var(--primary-color);
+      
+      &.wallet-icon {
+        color: #f59e0b;
+      }
     }
     
     :deep(.van-cell__title) {

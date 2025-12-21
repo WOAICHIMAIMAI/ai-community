@@ -197,3 +197,38 @@ export interface PaymentMethod {
 export const getPaymentMethods = () => {
   return request.get<PaymentMethod[]>('/api/user/payment/methods')
 }
+
+// 账户流水接口
+export interface AccountTransaction {
+  id: number
+  userId: number
+  accountId: number
+  transactionNo: string
+  transactionType: number
+  transactionTypeName: string
+  amount: number
+  balanceBefore: number
+  balanceAfter: number
+  relatedId: number
+  relatedType: string
+  description: string
+  createdTime: string
+}
+
+// 账户流水查询参数
+export interface TransactionQueryParams {
+  transactionType?: number
+  relatedType?: string
+  startDate?: string
+  endDate?: string
+  page?: number
+  pageSize?: number
+}
+
+/**
+ * 分页查询账户流水
+ */
+export const getAccountTransactions = (params: TransactionQueryParams) => {
+  return request.get<PageResponse<AccountTransaction>>('/api/user/payment/account/transactions', { params })
+}
+

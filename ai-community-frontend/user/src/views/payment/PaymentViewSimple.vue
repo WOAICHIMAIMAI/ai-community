@@ -10,11 +10,18 @@
 
     <div class="content">
       <!-- 账户余额卡片 -->
-      <div class="balance-card">
+      <div class="balance-card" @click="goToWallet">
         <div class="balance-content">
           <div class="balance-left">
             <div class="balance-label">账户余额</div>
             <div class="balance-amount">¥{{ accountBalance }}</div>
+            <div class="balance-hint">
+              <van-icon name="gold-coin-o" />
+              <span>点击查看钱包详情</span>
+            </div>
+          </div>
+          <div class="balance-right">
+            <van-icon name="arrow" />
           </div>
         </div>
       </div>
@@ -90,6 +97,10 @@ const totalAmount = computed(() => {
 // 事件处理函数
 const goBack = () => {
   router.back()
+}
+
+const goToWallet = () => {
+  router.push('/wallet')
 }
 
 // 获取账户信息
@@ -181,15 +192,28 @@ onMounted(async () => {
   margin-bottom: 16px;
   color: white;
   box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s;
+
+  &:active {
+    transform: scale(0.98);
+  }
 
   .balance-content {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .balance-left {
     flex: 1;
+  }
+
+  .balance-right {
+    .van-icon {
+      font-size: 20px;
+      opacity: 0.7;
+    }
   }
 
   .balance-label {
@@ -201,7 +225,19 @@ onMounted(async () => {
   .balance-amount {
     font-size: 28px;
     font-weight: bold;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
+  }
+
+  .balance-hint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    opacity: 0.8;
+
+    .van-icon {
+      font-size: 14px;
+    }
   }
 }
 

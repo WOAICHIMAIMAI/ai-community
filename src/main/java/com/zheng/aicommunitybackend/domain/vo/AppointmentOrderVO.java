@@ -26,6 +26,24 @@ public class AppointmentOrderVO {
     private String orderNo;
 
     /**
+     * 用户ID
+     */
+    @Schema(description = "用户ID")
+    private Long userId;
+
+    /**
+     * 用户名/昵称
+     */
+    @Schema(description = "用户名", example = "张三")
+    private String username;
+
+    /**
+     * 用户手机号
+     */
+    @Schema(description = "用户手机号", example = "138****8888")
+    private String userPhone;
+
+    /**
      * 服务ID
      */
     @Schema(description = "服务ID")

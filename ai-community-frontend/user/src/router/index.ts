@@ -179,6 +179,12 @@ const routes = [
     meta: { title: '缴费历史' }
   },
   {
+    path: '/wallet',
+    name: 'Wallet',
+    component: () => import('@/views/payment/WalletView.vue'),
+    meta: { title: '我的钱包' }
+  },
+  {
     path: '/appointment',
     name: 'Appointment',
     component: () => import('@/views/appointment/AppointmentHomeView.vue'),

@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zheng.aicommunitybackend.common.Result;
 import com.zheng.aicommunitybackend.common.UserContext;
 import com.zheng.aicommunitybackend.domain.dto.AccountRechargeDTO;
+import com.zheng.aicommunitybackend.domain.dto.AccountTransactionQueryDTO;
 import com.zheng.aicommunitybackend.domain.dto.PaymentBillQueryDTO;
 import com.zheng.aicommunitybackend.domain.dto.PaymentCreateDTO;
 import com.zheng.aicommunitybackend.domain.vo.*;
+import com.zheng.aicommunitybackend.service.AccountTransactionsService;
 import com.zheng.aicommunitybackend.service.PaymentBillsService;
 import com.zheng.aicommunitybackend.service.PaymentRecordsService;
 import com.zheng.aicommunitybackend.service.UserAccountsService;
@@ -38,6 +40,9 @@ public class PaymentController {
 
     @Autowired
     private UserAccountsService userAccountsService;
+
+    @Autowired
+    private AccountTransactionsService accountTransactionsService;
 
     /**
      * 获取用户账户信息
@@ -197,5 +202,18 @@ public class PaymentController {
 
         List<PaymentMethodVO> methods = paymentRecordsService.getPaymentMethods(userId);
         return Result.success(methods);
+    }
+
+    /**
+     * 分页查询账户流水
+     */
+    @GetMapping("/account/transactions")
+    @Operation(summary = "分页查询账户流水", description = "查询用户的账户交易流水记录")
+    public Result<IPage<AccountTransactionVO>> getAccountTransactions(AccountTransactionQueryDTO query) {
+        Long userId = UserContext.getUserId();
+        log.info("分页查询账户流水 - userId: {}, query: {}", userId, query);
+
+        IPage<AccountTransactionVO> page = accountTransactionsService.getTransactionPage(userId, query);
+        return Result.success(page);
     }
 }
